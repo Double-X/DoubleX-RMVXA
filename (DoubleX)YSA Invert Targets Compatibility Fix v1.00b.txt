@@ -1,0 +1,146 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Compatibility Fixes v1.00b to YSA Battle Add-On: Invert Targets|
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00b(GMT 0600 25-5-2014):                                               |
+#    - Fixed set_skill bug for confused battlers                               |
+#    v1.00a(GMT 0300 5-2-2014):                                                |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Authors                                                                   |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle Add-On: Invert Targets                                       |
+#    Yanfly:                                                                   |
+#    - Yanfly Engine Ace - Command Autobattle                                  |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as those of                                                          |
+#    - YSA Battle Add-On: Invert Targets                                       |
+#    - Yanfly Engine Ace - Command Autobattle                                  |
+#    except that you must also give Yami and Yanfly credits(you should do this |
+#    anyway) if you give DoubleX or his alias credit                           |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle Add-On: Invert Targets            |
+#    Knowledge:                                                                |
+#    That of using scripts                                                     |
+#    - YSA Battle Add-On: Invert Targets                                       |
+#    - Yanfly Engine Ace - Command Autobattle                                  | 
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Tries to fix compatibility issues I've found in                         |
+#      YSA Battle Add-On: Invert Targets                                       |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot below scripts:                                                  |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle Add-On: Invert Targets            |
+#    - Yanfly Engine Ace - Command Autobattle                                  |
+#    but above ¡¿ Main. Save to take effect.                                    |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle Add-On: Invert Targets except those fixed in |
+#      this script                                                             |
+#==============================================================================|
+
+#==============================================================================|
+#  ** Fixes                                                                    |
+#------------------------------------------------------------------------------|
+#  * YEA-CommandAutobattle issues(Fix_YEA_CommandAutobattle_Bug):              |
+#    - Rewritten method command_aautobattle and command_aautobattle under      |
+#      class Scene_Battle                                                      |
+#==============================================================================|
+
+$imported = {} if $imported.nil?
+$imported["DoubleX RMVXA Compatibility Fixes to YSA-InvertTargets"] = true
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YSA-InvertTargets"] && $imported["DoubleX RMVXA Bug Fixes to YSA-InvertTargets"]
+
+#------------------------------------------------------------------------------|
+#  * Fixes:                                                                    |
+#    - YEA-CommandAutobattle issues                                            |
+#------------------------------------------------------------------------------|
+if $imported["YEA-CommandAutobattle"]
+
+class Game_Action
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: set_skill                                                 |
+  #----------------------------------------------------------------------------|
+  def set_skill(skill_id)
+    invert_target_set_skill(skill_id)
+    # This part is rewritten by this script to return self when command_autobattle is true
+    subject.auto_battle? || subject.confusion? || subject.command_autobattle? ? self : subject.invert_target = false
+    # Fix_YEA_CommandAutobattle_Bug
+  end # set_skill
+
+end # Game_Action
+
+class Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  New method: command_autobattle=                                           |
+  #----------------------------------------------------------------------------|
+  def command_autobattle=(command_autobattle)
+    @command_autobattle = command_autobattle
+  end # command_autobattle=
+
+  #----------------------------------------------------------------------------|
+  #  New method: command_autobattle?                                           |
+  #----------------------------------------------------------------------------|
+  def command_autobattle?
+    @command_autobattle
+  end # command_autobattle?
+
+end # Game_BattlerBase
+
+class Scene_Battle
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: command_pautobattle                                         |
+  #----------------------------------------------------------------------------|
+  alias invert_target_command_pautobattle command_pautobattle
+  def command_pautobattle
+    # This part is added by this script to set command_autobattle as true before making autobattle actions
+    for member in $game_party.battle_members
+      next unless member.inputable?
+      member.command_autobattle = true
+    end
+    # Fix_YEA_CommandAutobattle_Bug
+    invert_target_command_pautobattle
+    # This part is added by this script to set command_autobattle as false after making autobattle actions
+    for member in $game_party.battle_members
+      next unless member.inputable?
+      member.command_autobattle = false
+    end
+    # Fix_YEA_CommandAutobattle_Bug
+  end # command_pautobattle
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: command_aautobattle                                         |
+  #----------------------------------------------------------------------------|
+  alias invert_target_command_aautobattle command_aautobattle
+  def command_aautobattle
+    # This part is rewritten by this script to set command_autobattle as true and false before and after making autobattle actions respectively
+    BattleManager.actor.command_autobattle = true
+    invert_target_command_aautobattle
+    BattleManager.actor.command_autobattle = false
+    # Fix_YEA_CommandAutobattle_Bug
+  end # command_aautobattle
+
+end # Scene_Battle
+
+end # if $imported["YEA-CommandAutobattle"]
+
+#------------------------------------------------------------------------------|
+
+end # $imported["YSA-InvertTargets"] && $imported["DoubleX RMVXA Bug Fixes to YSA-InvertTargets"]
+
+#==============================================================================|

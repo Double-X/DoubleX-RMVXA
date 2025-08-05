@@ -1,0 +1,389 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Color Addon v1.02b to YSA Battle System: Classical ATB     |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.02b(GMT 0700 3-12-2014):                                               |
+#    - Fixed atb bar colors not updating bug                                   |
+#    v1.02a(GMT 1200 29-7-2014):                                               |
+#    - Lets users set enemy back gauge rgba values                             |
+#    v1.01a(GMT 0500 10-3-2014):                                               |
+#    - Added <custom catb rgba: R1, G1, B1, A1, R2, G2, B2, A2> notetag        |
+#    - Added ways to set rgba values of the default atb and charge bar colors  |
+#    v1.00a(GMT 1100 5-2-2014):                                                |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of YSA Battle System: Classical ATB except that you must also|
+#    give Yami credit(you should do this anyway) if you give DoubleX or his    |
+#    alias credit                                                              |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB             |
+#    Knowledge:                                                                |
+#    - That of using the script YSA Battle System: Classical ATB               |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Changes charge and atb bar color of specific skills or items and states |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script                                              |
+#    DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB and ¡¿ Main.   |
+#    Save to take effect.                                                      |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle System: Classical ATB                        |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Color Addon to YSA-CATB"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#  * Skill/Item/State Notetags:(skill/item/state notebox in the database)      |
+#    - (v1.01a+)<custom catb rgba: R1, G1, B1, A1, R2, G2, B2, A2>             |
+#      Sets charge and atb bar colors of specific skills or items and states   |
+#      respectively as color 1 and color 2 with rgba values R1, G1, B1 and A1  |
+#      and R2, G2, B2 and A2 respectively.                                     |
+#    - <custom catb color: COLOR1, COLOR2>                                     |
+#      Sets charge and atb bar colors of specific skills or items and states   |
+#      respectively as COLOR1 and COLOR2.                                      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module YSA_CATB_Color_Addon
+
+    # (v1.01a+)Use rgba values instead of text colors for default back, atb and
+    # chargem bars respectively, default = false, false, false
+    ENEMY_BACK_RGBA = false
+    ATB_RGBA = false
+    CHARGE_RGBA = false
+    #
+
+    if ENEMY_BACK_RGBA
+    # (v1.02a+)Sets the rgba values of back bar colors
+    # default = Color.new(0, 0, 0, 0), Color.new(0, 0, 0, 0)
+    ENEMY_BACK_COLOR1 = Color.new(0, 0, 0, 0)
+    ENEMY_BACK_COLOR2 = Color.new(0, 0, 0, 0)
+    end # ENEMY_BACK_RGBA
+
+    if ATB_RGBA
+    # (v1.01a+)Sets the rgba values of atb bar colors
+    # default = Color.new(0, 0, 0, 0), Color.new(0, 0, 0, 0)
+    ATB_COLOR1 = Color.new(0, 0, 0, 0)
+    ATB_COLOR2 = Color.new(0, 0, 0, 0)
+    end # ATB_RGBA
+
+    if CHARGE_RGBA
+    # (v1.01a+)Sets the rgba values of charge bar colors
+    # default = Color.new(0, 0, 0, 0), Color.new(0, 0, 0, 0)
+    CHARGE_COLOR1 = Color.new(0, 0, 0, 0)
+    CHARGE_COLOR2 = Color.new(0, 0, 0, 0)
+    end # CHARGE_RGBA
+
+  end # YSA_CATB_Color_Addon
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: load_database                                               |
+  #----------------------------------------------------------------------------|
+  alias load_database_catb_color_addon load_database
+  def load_database
+    load_database_catb_color_addon
+    # This part is added by this script to load color notetags
+    load_notetags_catb_color_addon
+    #
+  end # load_database
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_catb_color_addon                                |
+  #----------------------------------------------------------------------------|
+  def load_notetags_catb_color_addon
+    [$data_skills, $data_items, $data_states].each { |data|
+      data.each { |obj| obj.load_notetags_catb_color_addon if obj }
+    }
+  end # load_notetags_catb_color_addon
+
+end # DataManager
+
+class RPG::BaseItem
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  attr_accessor :catb_color1
+  attr_accessor :catb_color2
+  attr_accessor :catb_color
+  attr_accessor :catb_rgba1
+  attr_accessor :catb_rgba2
+  attr_accessor :catb_rgba
+
+  #----------------------------------------------------------------------------|
+  #  New common cache: load_notetags_catb_color_addon                          |
+  #----------------------------------------------------------------------------|
+  def load_notetags_catb_color_addon
+    @catb_color1 = @catb_color2 = nil
+    @catb_rgba1, @catb_rgba2 = [], []
+    @catb_color = @catb_rgba = false
+    self.note.split(/[\r\n]+/).each { |line|
+      case line
+      when /<(?:CUSTOM_CATB_COLOR|custom catb color):[ ](\d+(?:\s*,\s*\d+)*)>/i
+        $1.scan(/\d+/).each { |num|
+          @catb_color2 = num.to_i if num.to_i >= 0 && @catb_color1 && !@catb_color2
+          @catb_color1 = num.to_i if num.to_i >= 0 && !@catb_color1
+        }
+        @catb_color ||= @catb_color1 && @catb_color2
+        next
+      when /<(?:CUSTOM_CATB_RGBA|custom catb rgba):[ ](\d+(?:\s*,\s*\d+)*)>/i
+        $1.scan(/\d+/).each_with_index { |num, i|
+          @catb_rgba1.push(num.to_i % 256) if i < 4
+          @catb_rgba2.push(num.to_i % 256) if i >= 4 && i < 8
+        }
+        @catb_rgba ||= @catb_rgba1.size == 4 && @catb_rgba2.size == 4
+        @catb_color = false if @catb_rgba
+        next
+      end
+    }
+  end # load_notetags_catb_color_addon
+
+end # RPG::BaseItem
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  attr_reader :custom_catb_item_color
+  attr_reader :custom_catb_item_color1
+  attr_reader :custom_catb_item_color2
+  attr_reader :custom_catb_state_color
+  attr_reader :custom_catb_state_color1
+  attr_reader :custom_catb_state_color2
+
+  #----------------------------------------------------------------------------|
+  #  New method: custom_catb_colors                                            |
+  #----------------------------------------------------------------------------|
+  def custom_catb_colors
+    custom_catb_item_colors
+    custom_catb_state_colors
+  end # custom_catb_colors
+
+  #----------------------------------------------------------------------------|
+  #  New method: custom_catb_item_colors                                       |
+  #----------------------------------------------------------------------------|
+  def custom_catb_item_colors
+    if @custom_catb_item_color || @ct_catb_value <= 0 || !current_action || !current_action.item
+      return @custom_catb_item_color = @custom_catb_item_color && @ct_catb_value > 0 && current_action && current_action.item && (current_action.item.catb_color || current_action.item.catb_rgba)
+    end
+    if current_action.item.catb_color
+      @custom_catb_item_color1 = current_action.item.catb_color1
+      @custom_catb_item_color2 = current_action.item.catb_color2
+    elsif current_action.item.catb_rgba
+      @custom_catb_item_color1 = current_action.item.catb_rgba1
+      @custom_catb_item_color2 = current_action.item.catb_rgba2
+    end
+    @custom_catb_item_color = current_action.item.catb_color || current_action.item.catb_rgba
+  end # custom_catb_item_colors
+
+  #----------------------------------------------------------------------------|
+  #  New method: custom_catb_state_colors                                      |
+  #----------------------------------------------------------------------------|
+  def custom_catb_state_colors
+    return if @state_temp_catb && @state_temp_catb == states
+    @state_temp_catb = states
+    @custom_catb_state_color = false
+    @state_temp_catb.each { |state|
+      next if !state.catb_color && !state.catb_rgba
+      if state.catb_color
+        @custom_catb_state_color1 = state.catb_color1
+        @custom_catb_state_color2 = state.catb_color2
+      else
+        @custom_catb_state_color1 = state.catb_rgba1
+        @custom_catb_state_color2 = state.catb_rgba2
+      end
+      @custom_catb_state_color = true
+    }
+  end # custom_catb_state_colors
+
+end # Game_Battler
+
+class Window_Base < Window
+
+  if DoubleX_RMVXA::YSA_CATB_Color_Addon::ATB_RGBA
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)Rewrite method: catb_color1                                      |
+  #----------------------------------------------------------------------------|
+  def catb_color1
+    DoubleX_RMVXA::YSA_CATB_Color_Addon::ATB_COLOR1
+  end # catb_color1
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)Rewrite method: catb_color2                                      |
+  #----------------------------------------------------------------------------|
+  def catb_color2
+    DoubleX_RMVXA::YSA_CATB_Color_Addon::ATB_COLOR2
+  end # catb_color2
+  end # if DoubleX_RMVXA::YSA_CATB_Color_Addon::ATB_RGBA
+
+  if DoubleX_RMVXA::YSA_CATB_Color_Addon::CHARGE_RGBA
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)Rewrite method: charge_color1                                    |
+  #----------------------------------------------------------------------------|
+  def charge_color1
+    DoubleX_RMVXA::YSA_CATB_Color_Addon::CHARGE_COLOR1
+  end # charge_color1
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)Rewrite method: charge_color2                                    |
+  #----------------------------------------------------------------------------|
+  def charge_color2
+    DoubleX_RMVXA::YSA_CATB_Color_Addon::CHARGE_COLOR2
+  end # charge_color2
+  end # if DoubleX_RMVXA::YSA_CATB_Color_Addon::CHARGE_RGBA
+
+end # Window_Base
+
+class Window_BattleStatus < Window_Selectable
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: draw_actor_catb                                           |
+  #----------------------------------------------------------------------------|
+  def draw_actor_catb(actor, dx, dy, width = 124)
+    # This part is rewritten by this script to change atb and charge bar colors
+    actor.custom_catb_colors
+    if actor.custom_catb_state_color
+      color1 = actor.custom_catb_state_color1.is_a?(Numeric) ? text_color(actor.custom_catb_state_color1) : Color.new(actor.custom_catb_state_color1[0], actor.custom_catb_state_color1[1], actor.custom_catb_state_color1[2], actor.custom_catb_state_color1[3])
+      color2 = actor.custom_catb_state_color2.is_a?(Numeric) ? text_color(actor.custom_catb_state_color2) : Color.new(actor.custom_catb_state_color2[0], actor.custom_catb_state_color2[1], actor.custom_catb_state_color2[2], actor.custom_catb_state_color2[3])
+    else
+      color1, color2 = catb_color1, catb_color2
+    end
+    draw_gauge(dx, dy, width, actor.catb_filled_rate, color1, color2)
+    if actor.catb_ct_filled_rate > 0
+      if actor.custom_catb_item_color
+        color1 = actor.custom_catb_item_color1.is_a?(Numeric) ? text_color(actor.custom_catb_item_color1) : Color.new(actor.custom_catb_item_color1[0], actor.custom_catb_item_color1[1], actor.custom_catb_item_color1[2], actor.custom_catb_item_color1[3])
+        color2 = actor.custom_catb_item_color2.is_a?(Numeric) ? text_color(actor.custom_catb_item_color2) : Color.new(actor.custom_catb_item_color2[0], actor.custom_catb_item_color2[1], actor.custom_catb_item_color2[2], actor.custom_catb_item_color2[3])
+      else
+        color1, color2 = charge_color1, charge_color2
+      end
+      draw_gauge(dx, dy, width, actor.catb_ct_filled_rate, color1, color2)
+    end
+    #
+    # This part is added by this script to be compatible with DoubleX RMVXA Cooldown Addon to YSA Battle System: Classical ATB
+    if $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"] && actor.catb_cd_filled_rate > 0
+      draw_gauge(dx, dy, width, actor.catb_cd_filled_rate, cooldown_color1, actor.max_catb_value? ? catb_color2 : cooldown_color2)
+    end
+    #
+    change_color(system_color)
+    cy = (Font.default_size - contents.font.size) / 2 + 1
+    draw_text(dx+2, dy+cy, 30, line_height, YSA::CATB::ATB_PHRASE)
+  end # draw_actor_catb
+
+end # Window_BattleStatus
+
+class Enemy_CATB_Gauge_Viewport < Viewport
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02a+)Rewrite method: create_gauge_sprites                             |
+  #----------------------------------------------------------------------------|
+  def create_gauge_sprites
+    @sprite = Plane.new(self)
+    dw = self.rect.width * 2
+    @sprite.bitmap = Bitmap.new(dw, self.rect.height)
+    case @type
+    # This part is rewritten by this script to use rgba values according to user settings
+    when :back
+      back_rgba = DoubleX_RMVXA::YSA_CATB_Color_Addon::ENEMY_BACK_RGBA
+      color1 = back_rgba ? DoubleX_RMVXA::YSA_CATB_Color_Addon::ENEMY_BACK_COLOR1 : Colour.text_colour(YSA::CATB::ENEMY_BACKGAUGE_COLOUR)
+      color2 = back_rgba ? DoubleX_RMVXA::YSA_CATB_Color_Addon::ENEMY_BACK_COLOR2 : Colour.text_colour(YSA::CATB::ENEMY_BACKGAUGE_COLOUR)
+    when :catb
+      atb_rgba = DoubleX_RMVXA::YSA_CATB_Color_Addon::ATB_RGBA
+      color1 = atb_rgba ? DoubleX_RMVXA::YSA_CATB_Color_Addon::ATB_COLOR1 : Colour.text_colour(YSA::CATB::ENEMY_ATB_GAUGE_COLOUR1)
+      color2 = atb_rgba ? DoubleX_RMVXA::YSA_CATB_Color_Addon::ATB_COLOR2 : Colour.text_colour(YSA::CATB::ENEMY_ATB_GAUGE_COLOUR2)
+    when :catbct
+      charge_rgba = DoubleX_RMVXA::YSA_CATB_Color_Addon::CHARGE_RGBA
+      color1 = charge_rgba ? DoubleX_RMVXA::YSA_CATB_Color_Addon::CHARGE_COLOR1 : Colour.text_colour(YSA::CATB::CHARGE_COLOR1)
+      color2 = charge_rgba ? DoubleX_RMVXA::YSA_CATB_Color_Addon::CHARGE_COLOR2 : Colour.text_colour(YSA::CATB::CHARGE_COLOR2)
+    #
+    when :catbcd
+      if $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"]
+        color1 = DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR1.is_a?(Numeric) ? Colour.text_colour(DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR1) : DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR1
+        color2 = DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR2.is_a?(Numeric) ? Colour.text_colour(DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR2) : DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR2
+      end
+    when :percent
+      if $imported["DoubleX RMVXA Percentage Addon to YSA-CATB"]
+        color1, color2 = Color.new(0, 0, 0, 0), Color.new(0, 0, 0, 0)
+      end
+    end
+    dx, dy, dw, dh = 0, 0, self.rect.width, self.rect.height
+    self.rect.width = target_gauge_width if ![:back, :percent].include?(@type)
+    set_percentage_font if @type == :percent && $imported["DoubleX RMVXA Percentage Addon to YSA-CATB"]
+    @gauge_width = target_gauge_width
+    @sprite.bitmap.gradient_fill_rect(dx, dy, dw, dh, color1, color2)
+    @sprite.bitmap.gradient_fill_rect(dw, dy, dw, dh, color2, color1)
+  end # create_gauge_sprites
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: update                                                      |
+  #----------------------------------------------------------------------------|
+  alias update_color_addon update
+  def update
+    update_color_addon
+    # This part is rewritten by this script to change atb and charge bar colors
+    @battler.custom_catb_colors
+    update_color if [:catb, :catbct].include?(@type)
+    #
+  end # update
+
+  #----------------------------------------------------------------------------|
+  #  New method: update_color                                                  |
+  #----------------------------------------------------------------------------|
+  def update_color
+    case @type
+    when :catb
+      if @battler.custom_catb_state_color
+        color1 = @battler.custom_catb_state_color1.is_a?(Numeric) ? Colour.text_colour(@battler.custom_catb_state_color1) : Color.new(@battler.custom_catb_state_color1[0], @battler.custom_catb_state_color1[1], @battler.custom_catb_state_color1[2], @battler.custom_catb_state_color1[3])
+        color2 = @battler.custom_catb_state_color2.is_a?(Numeric) ? Colour.text_colour(@battler.custom_catb_state_color2) : Color.new(@battler.custom_catb_state_color2[0], @battler.custom_catb_state_color2[1], @battler.custom_catb_state_color2[2], @battler.custom_catb_state_color2[3])
+      else
+        atb_rgba = DoubleX_RMVXA::YSA_CATB_Color_Addon::ATB_RGBA
+        color1 = atb_rgba ? DoubleX_RMVXA::YSA_CATB_Color_Addon::ATB_COLOR1 : Colour.text_colour(YSA::CATB::ENEMY_ATB_GAUGE_COLOUR1)
+        color2 = atb_rgba ? DoubleX_RMVXA::YSA_CATB_Color_Addon::ATB_COLOR2 : Colour.text_colour(YSA::CATB::ENEMY_ATB_GAUGE_COLOUR2)
+      end
+    when :catbct
+      if @battler.custom_catb_item_color
+        color1 = @battler.custom_catb_item_color1.is_a?(Numeric) ? Colour.text_colour(@battler.custom_catb_item_color1) : Color.new(@battler.custom_catb_item_color1[0], @battler.custom_catb_item_color1[1], @battler.custom_catb_item_color1[2], @battler.custom_catb_item_color1[3])
+        color2 = @battler.custom_catb_item_color2.is_a?(Numeric) ? Colour.text_colour(@battler.custom_catb_item_color2) : Color.new(@battler.custom_catb_item_color2[0], @battler.custom_catb_item_color2[1], @battler.custom_catb_item_color2[2], @battler.custom_catb_item_color2[3])
+      else
+        charge_rgba = DoubleX_RMVXA::YSA_CATB_Color_Addon::CHARGE_RGBA
+        color1 = charge_rgba ? DoubleX_RMVXA::YSA_CATB_Color_Addon::CHARGE_COLOR1 : Colour.text_colour(YSA::CATB::CHARGE_COLOR1)
+        color2 = charge_rgba ? DoubleX_RMVXA::YSA_CATB_Color_Addon::CHARGE_COLOR2 : Colour.text_colour(YSA::CATB::CHARGE_COLOR2)
+      end
+    end
+    dx, dy, dw, dh = 0, 0, self.rect.width, self.rect.height
+    @sprite.bitmap.gradient_fill_rect(dx, dy, dw, dh, color1, color2)
+    @sprite.bitmap.gradient_fill_rect(dw, dy, dw, dh, color2, color1)
+  end # update_color
+
+end # Enemy_CATB_Gauge_Viewport
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#==============================================================================|

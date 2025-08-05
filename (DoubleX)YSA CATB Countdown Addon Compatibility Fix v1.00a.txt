@@ -1,0 +1,125 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Countdown Addon Compatibility Fix v1.00a                   |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00a(GMT 0900 31-1-2015):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#    Yanfly:                                                                   |
+#    - Yanfly Engine Ace - Buff & State Manager                                |
+#    - Yanfly Engine Ace - Passive States                                      |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as those of                                                          |
+#    - YSA Battle System: Classical ATB                                        |
+#    - Yanfly Engine Ace - Buff & State Manager                                |
+#    - Yanfly Engine Ace - Passive States                                      |
+#    except that you must also give Yami and Yanfly credits(you should do this |
+#    anyway) if you give DoubleX or his alias credit                           |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB             |
+#    - DoubleX RMVXA Countdown Addon to YSA Battle System: Classical ATB       |
+#    - Yanfly Engine Ace - Buff & State Manager                                |
+#    - Yanfly Engine Ace - Passive States                                      |
+#    Knowledge:                                                                |
+#    That of using scripts                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB             |
+#    - Yanfly Engine Ace - Buff & State Manager                                |
+#    - Yanfly Engine Ace - Passive States                                      |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Tries to fix compatibility issues I've found in                         |
+#      DoubleX RMVXA Countdown Addon to YSA Battle System: Classical ATB       |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the scripts                                             |
+#    - DoubleX RMVXA Countdown Addon to YSA Battle System: Classical ATB       |
+#    - Yanfly Engine Ace - Passive States                                      |
+#    and Main. Save to take effect.                                            |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as those of                                                        |
+#      YSA Battle System: Classical ATB                                        |
+#      Yanfly Engine Ace - Buff & State Manager                                |
+#    - Yanfly Engine Ace - Passive States                                      |
+#==============================================================================|
+
+#==============================================================================|
+#  ** Fixes                                                                    |
+#------------------------------------------------------------------------------|
+#  * YEA-PassiveStates issues(Fix_PassiveStates_Bug):                          |
+#    - Aliased method create_passive_state_array under Game_BattlerBase        |
+#    - Rewritten method reset_state_catb_countdown under Game_Battler          |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Countdown Addon Compatibility Fix"] = true
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"] && $imported["YEA-Buff&StateManager"] && $imported["DoubleX RMVXA Countdown Addon to YSA-CATB"]
+
+#------------------------------------------------------------------------------|
+
+# Fixes:
+# Compatibility issues with Yanfly Engine Ace - Passive States
+if $imported["YEA-PassiveStates"]
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_BattlerBase                                              |
+#------------------------------------------------------------------------------|
+
+class Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: evaluate_item_with_target                                   |
+  #----------------------------------------------------------------------------|
+  alias create_passive_state_array_catb_countdown_addon create_passive_state_array
+  def create_passive_state_array(array)
+    create_passive_state_array_catb_countdown_addon(array)
+    # Added to create the enemy countdown sprites and set the countdown
+    @passive_states.each { |state_id| reset_state_catb_countdown(state_id) }
+    # Fix_PassiveStates_Bug
+  end # create_passive_state_array
+
+end # Game_BattlerBase
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_Battler                                                  |
+#------------------------------------------------------------------------------|
+
+class Game_Battler
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: reset_state_catb_countdown                                |
+  #----------------------------------------------------------------------------|
+  def reset_state_catb_countdown(state_id)
+    return if $data_states[state_id].catb_cs_note <= 0
+    @init_state_turns[state_id] = @state_turns[state_id]
+    @countdown_state_tick[state_id] = 0
+    @countdown_state_freeze[state_id] = false
+    # Rewritten to keep a spriteset from being called before it's initialized
+    enemy_sprite = enemy? && SceneManager.scene_is?(Scene_Battle) && SceneManager.scene.spriteset ? SceneManager.scene.spriteset.battler_sprites.find { |sprite| sprite.battler == self } : nil
+    # Fix_PassiveStates_Bug
+    return unless enemy_sprite
+    enemy_sprite.create_enemy_countdown_catb($data_states[state_id], @init_state_turns[state_id])
+    enemy_sprite.update_enemy_countdown_catb($data_states[state_id], @init_state_turns[state_id]) if [1, 2].include?($data_states[state_id].state_reapply_rules)
+  end # reset_state_catb_countdown
+
+end # Game_Battler
+end # if $imported["YEA-PassiveStates"]
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"] && $imported["YEA-Buff&StateManager"] && $imported["DoubleX RMVXA Countdown Addon to YSA-CATB"]
+
+#==============================================================================|

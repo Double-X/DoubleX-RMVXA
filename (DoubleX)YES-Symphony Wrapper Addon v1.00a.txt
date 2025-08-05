@@ -1,0 +1,244 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Wrapper Addon v1.00a to Yami Engine Symphony - Battle Symphony|
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00a(GMT 0300 16-5-2015):                                                |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - Yami Engine Symphony - Battle Symphony                                  |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of Yami Engine Symphony - Battle Symphony except that you    |
+#    must also give Yami credit(you should do this anyway) if you give DoubleX |
+#    or his aliases credit                                                     |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - Yami Engine Symphony - Battle Symphony                                  |
+#    Knowledge:                                                                |
+#    Same as that of Yami Engine Symphony - Battle Symphony                    |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Lets users wraps many symphony tags into user-defined constants         |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot below the script Yami Engine Symphony - Battle Symphony but     |
+#    above ¡¿ Main. Save to take effect.                                        |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Same as that of Yami Engine Symphony - Battle Symphony                    |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Wrapper Addon To YES-BattleSymphony"] = true
+
+#==============================================================================|
+#  ** Notetag Info                                                             |
+#------------------------------------------------------------------------------|
+#  * Skill/Item Notetags:                                                      |
+#    1. <symphony wrapper: wrapper>                                            |
+#       - Encapsulates all symphony tags included in wrapper into a single line|
+#       - wrapper names can only use alphanumeric characters                   |
+#==============================================================================|
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module YES_BattleSymphony_Wrapper_Addon
+
+    # Example symphony wrapper: <symphony wrapper: THUNDER_BLADE>
+    # Wraps all symphony tags in skill "Thunder Blade"
+    THUNDER_BLADE = %Q(
+    <whole action>
+    immortal: targets, true
+    move user: forward, wait
+    pose: user, cast
+    stance: user, cast
+    animation 81: user, wait
+    hide nonfocus
+    icon create: user, weapon
+    </whole action>
+    
+    <target action>
+    pose: user, 2h swing
+    stance: user, attack
+    icon: user, weapon, swing
+    animation 65: target
+    ani wait: 3
+    skill effect: dmg
+    wait for animation
+    </target action>
+    
+    <follow action>
+    animation 81: user, wait
+    pose: user, 2h swing
+    stance: user, attack
+    icon: user, weapon, swing
+    animation 68: targets
+    ani wait: 2
+    skill effect: whole
+    ani wait: 2
+    skill effect: whole
+    ani wait: 2
+    skill effect: whole
+    ani wait: 2
+    skill effect: whole
+    show nonfocus
+    immortal: targets, false
+    </follow action>
+    )
+
+    # Adds new symphony wrappers here
+    
+
+  end # YES_BattleSymphony_Wrapper_Addon
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YES-BattleSymphony"]
+
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#  * Edit class: RPG::BaseItem                                                 |
+#------------------------------------------------------------------------------|
+
+class RPG::BaseItem
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: battle_symphony_initialize                                  |
+  #----------------------------------------------------------------------------|
+  alias battle_symphony_initialize_wrapper_addon battle_symphony_initialize
+  def battle_symphony_initialize
+    # Added to read symphony wrappers
+    read_symphony_wrappers
+    #
+    battle_symphony_initialize_wrapper_addon
+  end # battle_symphony_initialize
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: create_default_animation                                    |
+  #----------------------------------------------------------------------------|
+  alias create_default_animation_wrapper_addon create_default_animation
+  def create_default_animation
+    create_default_animation_wrapper_addon
+    # Added to read from symphony wrappers as well
+    @symphony_wrappers.split(/[\r\n]+/).each { |line|
+      case line
+      when REGEXP::SYMPHONY::ATK_ANI1
+        @atk_animation_id1 = $1.to_i
+      when REGEXP::SYMPHONY::ATK_ANI2
+        @atk_animation_id2 = $1.to_i
+      end
+    }
+    #
+  end # create_default_animation
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: create_tags_symphony                                        |
+  #----------------------------------------------------------------------------|
+  alias create_tags_symphony_wrapper_addon create_tags_symphony
+  def create_tags_symphony
+    create_tags_symphony_wrapper_addon
+    # Added to read from symphony wrappers as well
+    @symphony_wrappers.split(/[\r\n]+/).each { |line|
+      case line
+      when REGEXP::SYMPHONY::SETUP_ANI_ON
+        @symphony_tag = true
+        @setup_actions_list = []
+        @setup_action_flag = true
+      when REGEXP::SYMPHONY::SETUP_ANI_OFF
+        @symphony_tag = false
+        @setup_action_flag = false
+      when REGEXP::SYMPHONY::WHOLE_ANI_ON
+        @symphony_tag = true
+        @whole_actions_list = []
+        @whole_action_flag = true
+      when REGEXP::SYMPHONY::WHOLE_ANI_OFF
+        @symphony_tag = false
+        @whole_action_flag = false
+      when REGEXP::SYMPHONY::TARGET_ANI_ON
+        @symphony_tag = true
+        @target_actions_list = []
+        @target_action_flag = true
+      when REGEXP::SYMPHONY::TARGET_ANI_OFF
+        @symphony_tag = false
+        @target_action_flag = false
+      when REGEXP::SYMPHONY::FOLLOW_ANI_ON
+        @symphony_tag = true
+        @follow_actions_list = []
+        @follow_action_flag = true
+      when REGEXP::SYMPHONY::FOLLOW_ANI_OFF
+        @symphony_tag = false
+        @follow_action_flag = false
+      when REGEXP::SYMPHONY::FINISH_ANI_ON
+        @symphony_tag = true
+        @finish_actions_list = []
+        @finish_action_flag = true
+      when REGEXP::SYMPHONY::FINISH_ANI_OFF
+        @symphony_tag = false
+        @finish_action_flag = false
+     #---
+      else
+        next unless @symphony_tag
+        case line
+        when REGEXP::SYMPHONY::SYMPHONY_TAG_VALUES
+          action = $1
+          value = $2.scan(/[^, ]+[^,]*/i)
+        when REGEXP::SYMPHONY::SYMPHONY_TAG_NONE
+          action = $1
+          value = [nil]
+        else; next
+        end
+        array = [action, value]
+        if @setup_action_flag
+          @setup_actions_list.push(array)
+        elsif @whole_action_flag
+          @whole_actions_list.push(array)
+        elsif @target_action_flag
+          @target_actions_list.push(array)
+        elsif @follow_action_flag
+          @follow_actions_list.push(array)
+        elsif @finish_action_flag
+          @finish_actions_list.push(array)
+        end
+      end
+    }
+    #
+  end # create_tags_symphony
+
+  #----------------------------------------------------------------------------|
+  #  New method: read_symphony_wrappers                                        |
+  #  - Loads each <symphony wrapper: wrapper> notetag from its notebox         |
+  #----------------------------------------------------------------------------|
+  def read_symphony_wrappers
+    # Stores each symphony wrapper in a new line sequentially
+    @symphony_wrappers = ""
+    @note.split(/[\r\n]+/).each { |line|
+      case line
+      when /<symphony wrapper:\s*(\w+)\s*>/
+        @symphony_wrappers += "#{eval("DoubleX_RMVXA::YES_BattleSymphony_Wrapper_Addon::#{$1}")}
+                              "
+      end
+    }
+    #
+  end # read_symphony_wrappers
+
+end # RPG::BaseItem
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["YES-BattleSymphony"]
+
+#==============================================================================|

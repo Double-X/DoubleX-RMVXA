@@ -1,0 +1,165 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Hotkey Addon v1.00a to YSA Battle System: Classical ATB    |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00a(GMT 0500 28-2-2015):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of YSA Battle System: Classical ATB except that you must also|
+#    give Yami credit(you should do this anyway) if you give DoubleX or his    |
+#    alias credit                                                              |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB             |
+#    Knowledge:                                                                |
+#    - That of using the script YSA Battle System: Classical ATB               |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Lets users use hotkeys to select party members that can input actions   |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script                                              |
+#    DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB and ¡¿ Main.   |
+#    Save to take effect.                                                      |
+#    Suggested Complete CATB Scripts Order(Excluding Dhoom Manipulate State):  |
+#    1.  Yanfly Engine Ace - Ace Core Engine                                   |
+#    2.  Yanfly Engine Ace - Ace Battle Engine                                 |
+#    3.  YSA Battle System: Classical ATB                                      |
+#    4.  YSA Battle Add-on: Lunatic CATB Rate                                  |
+#    5.  YSA Battle Add-on: Lunatic CATB Reset                                 |
+#    6.  YSA Battle Add-on: Lunatic CATB Start                                 |
+#    7.  DoubleX RMVXA Bug Fix to YSA Battle System: Classical ATB             |
+#    8.  DoubleX RMVXA Compatibility Fix to YSA Battle System: Classical ATB   |
+#    9.  DoubleX RMVXA Action Addon to YSA Battle System: Classical ATB        |
+#    10. DoubleX RMVXA ATB Addon to YSA Battle System: Classical ATB           |
+#    11. DoubleX RMVXA Cancel Addon to YSA Battle System: Classical ATB        |
+#    12. DoubleX RMVXA Clear Addon to YSA Battle System: Classical ATB         |
+#    13. DoubleX RMVXA CATB Clear Addon Compatibility Fix                      |
+#    14. DoubleX RMVXA Cooldown Addon to YSA Battle System: Classical ATB      |
+#    15. DoubleX RMVXA Charge Addon to YSA Battle System: Classical ATB        |
+#    16. DoubleX RMVXA Countdown Addon to YSA Battle System: Classical ATB     |
+#    17. DoubleX RMVXA Countdown Addon Compatibility Fix                       |
+#    18. DoubleX RMVXA Escape Addon to YSA Battle System: Classical ATB        |
+#    19. DoubleX RMVXA Hotkey Addon to YSA Battle System: Classical ATB        |
+#    20. DoubleX RMVXA Percentage Addon to YSA Battle System: Classical ATB    |
+#    21. DoubleX RMVXA Reset Addon to YSA Battle Add-on: Lunatic CATB Reset    |
+#    22. DoubleX RMVXA SE Addon to YSA Battle System: Classical ATB            |
+#    23. DoubleX RMVXA Tick Addon to YSA Battle System: Classical ATB          |
+#    24. DoubleX RMVXA Turn Addon to YSA Battle System: Classical ATB          |
+#    25. DoubleX RMVXA Unison Addon to YSA Battle System: Classical ATB        |
+#    26. DoubleX RMVXA Update Addon to YSA Battle System: Classical ATB        |
+#    27. DoubleX RMVXA Wait Addon to YSA Battle System: Classical ATB          |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle System: Classical ATB                        |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Hotkey Addon to YSA-CATB"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module YSA_CATB_Hotkey_Addon
+
+#------------------------------------------------------------------------------|
+#    A custom keymap binding script maybe helpful for setting the keys below   |
+#------------------------------------------------------------------------------|
+
+    # Sets the hotkeys for selecting the party members that can input actions
+    # The ith hotkey calls the ith party member
+    # Nothing will happen if the corresponding party member can't input actions
+    PARTY_HOTKEYS = [
+      :NUMPAD1, # 1st party member
+      :NUMPAD2, # 2nd party member
+      :NUMPAD3, # 3rd party member
+      :NUMPAD4, # 4th party member
+      :NUMPAD5, # 5th party member
+      :NUMPAD6, # 6th party member
+      :NUMPAD7, # 7th party member
+      :NUMPAD8, # 8th party member
+      :NUMPAD9, # 9th party member
+      :NUMPAD0 # 10th party member
+    ]
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+    PARTY_HOTKEY_DEFS = []
+    PARTY_HOTKEYS.each_index { |index| PARTY_HOTKEY_DEFS.push(%Q(
+  def catb_party_hotkey_#{index}
+    actor = $game_party.members[#{index}]
+    return unless BattleManager.action_list(:actor).include?(actor) && !actor.auto_battle? && !actor.confusion? && actor.ct_catb_value <= 0.0 && (!$imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"] || actor.cd_catb_value <= 0.0)
+    BattleManager.set_actor(#{index})
+    @status_window.select(#{index})
+    @actor_command_window.setup(actor)
+    @hotkeys_bar_window.setup(actor) if $imported['RIFF_HOTKEYS']
+  end
+      ))
+    }
+
+  end # YSA_CATB_Hotkey_Addon
+end # DoubleX_RMVXA
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#------------------------------------------------------------------------------|
+#  * (Edit)Window_Selectable                                                   |
+#------------------------------------------------------------------------------|
+class Window_Selectable < Window_Base
+
+  #----------------------------------------------------------------------------|
+  #  (Alias)process_handling                                                   |
+  #----------------------------------------------------------------------------|
+  alias process_handling_catb_hotkey_addon process_handling
+  def process_handling
+    process_handling_catb_hotkey_addon
+    # Added to call the party member hotkey handlers if the hotkeys are pressed
+    DoubleX_RMVXA::YSA_CATB_Hotkey_Addon::PARTY_HOTKEYS.each { |hotkey| return call_handler(hotkey) if Input.trigger?(hotkey) } if BattleManager.btype?(:catb)
+    #
+  end # process_handling
+
+end # Window_Selectable
+
+#------------------------------------------------------------------------------|
+#  * (Edit)Scene_Battle                                                        |
+#------------------------------------------------------------------------------|
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  (Alias)create_actor_command_window                                        |
+  #----------------------------------------------------------------------------|
+  alias create_actor_command_window_catb_hotkey_addon create_actor_command_window
+  def create_actor_command_window
+    create_actor_command_window_catb_hotkey_addon
+    # Added to set the party member hotkey handlers
+    DoubleX_RMVXA::YSA_CATB_Hotkey_Addon::PARTY_HOTKEYS.each_with_index { |hotkey, index| @actor_command_window.set_handler(hotkey, method("catb_party_hotkey_#{index.to_s}".to_sym)) } if BattleManager.btype?(:catb)
+    #
+  end # create_actor_command_window
+
+  #----------------------------------------------------------------------------|
+  #  (New)catb_party_hotkey_x                                                  |
+  #----------------------------------------------------------------------------|
+  DoubleX_RMVXA::YSA_CATB_Hotkey_Addon::PARTY_HOTKEY_DEFS.each { |method| module_eval(method) }
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+end # $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#==============================================================================|

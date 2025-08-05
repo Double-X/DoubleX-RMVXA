@@ -1,0 +1,285 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Tick Addon v1.01c to YSA Battle System: Classical ATB      |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.01c(GMT 0900 4-9-2014):                                                |
+#    - Compatible with DoubleX RMVXA Turn Addon to YSA Battle System: Classical ATB|
+#    v1.01b(GMT 0200 20-8-2014):                                               |
+#    - Updated the on turn end bug fix                                         |
+#    v1.01a(GMT 1300 28-7-2014):                                               |
+#    - Added tick bar, turn increment se sound and turn count                  |
+#    - Lets users set the x, y and z values of the tick window                 |
+#    v1.00a(GMT 0400 23-3-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of YSA Battle System: Classical ATB except that you must also|
+#    give Yami credit(you should do this anyway) if you give DoubleX or his    |
+#    alias credit                                                              |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB             |
+#    Knowledge:                                                                |
+#    - That of using the script YSA Battle System: Classical ATB               |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Displays the tick clock/action in battle                                |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script                                              |
+#    DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB and ¡¿ Main.   |
+#    Save to take effect.                                                      |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle System: Classical ATB                        |
+#==============================================================================|
+
+$imported = {} if $imported.nil?
+$imported["DoubleX RMVXA Tick Addon to YSA-CATB"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module YSA_CATB_Tick_Addon
+
+    # (v1.01a+)Turn_Increment_SE, default = RPG::SE.new(File, Volume, Pitch)
+    # Sets the se played when the turn increases as File(without specifying its
+    # extension and with or without specifying its path) with volume Volume and
+    # pitch Pitch ranging from 1 to 100 and 5 to 200 respectively 
+    # Setting Turn_Increment_SE as nil or false will disable this feature
+    Turn_Increment_SE = RPG::SE.new(File, Volume, Pitch)
+
+    # (v1.01a+)Tick_Gauge_Color1, Tick_Gauge_Color2
+    # default = Colour.text_colour(0)
+    # Sets the color 1 and 2 of the tick gauge
+    # Colour.text_colour uses text colour while Color.new uses rgba values
+    Tick_Gauge_Color1 = Colour.text_colour(0)#Color.new(0, 0, 0, 0)
+    Tick_Gauge_Color2 = Colour.text_colour(0)#Color.new(0, 0, 0, 0)
+
+    # (v1.01a+)Tick_Window_X, Tick_Window_Y, Tick_Window_Y, default = 0, 0, 0
+    # Sets the x, y and z values of the tick window
+    Tick_Window_X = 0
+    Tick_Window_Y = 0
+    Tick_Window_Z = 0
+
+  end # YSA_CATB_Tick_Addon
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+class Game_Temp
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  attr_accessor :catb_tick
+
+end # Game_Temp
+
+#------------------------------------------------------------------------------|
+#  New class: CATB_Tick_Window                                                 |
+#------------------------------------------------------------------------------|
+
+class CATB_Tick_Window < Window_Base
+
+  #----------------------------------------------------------------------------|
+  #  New method: initialize                                                    |
+  #----------------------------------------------------------------------------|
+  def initialize
+    super(0, 0, window_width, fitting_height(1))
+    $game_temp.catb_tick = 0
+    @catb_tick_guage.dispose if @catb_tick_bar
+    @catb_tick_guage = CATB_Tick_Viewport.new(window_width, fitting_height(1))
+    refresh
+  end # initialize
+
+  #----------------------------------------------------------------------------|
+  #  New method: window_width                                                  |
+  #----------------------------------------------------------------------------|
+  def window_width
+    128
+  end # window_width
+
+  #----------------------------------------------------------------------------|
+  #  New method: refresh                                                       |
+  #----------------------------------------------------------------------------|
+  def refresh
+    return @catb_tick_guage.dispose if !BattleManager.phase
+    self.contents.clear
+    @catb_tick_guage.update_gauge(tick_count, tick_limit)
+	  tick = sprintf("%02d/%02d", tick_count, tick_limit)
+	  self.contents.draw_text(0, 4, contents.width, contents.height, tick + " " + $game_troop.turn_count.to_s, 0)
+  end # refresh
+
+  #----------------------------------------------------------------------------|
+  #  New method: tick_count                                                    |
+  #----------------------------------------------------------------------------|
+  def tick_count
+    $game_temp.catb_tick ? $game_temp.catb_tick : 0
+  end # tick_count
+
+  #----------------------------------------------------------------------------|
+  #  New method: tick_limit                                                    |
+  #----------------------------------------------------------------------------|
+  def tick_limit
+    case $game_system.catb_turn_type
+    when :tick
+      return $game_system.catb_tick_count ? $game_system.catb_tick_count : 0
+    when :action
+      return $game_system.catb_after_action ? $game_system.catb_after_action : 0
+    when :battler
+      return $imported["DoubleX RMVXA Turn Addon to YSA-CATB"] && $game_system.catb_battler_count ? $game_system.catb_battler_count : 0
+    else
+      0
+    end
+  end # tick_limit
+
+  #----------------------------------------------------------------------------|
+  #  New method: open                                                          |
+  #----------------------------------------------------------------------------|
+  def open
+    refresh
+    super
+  end # open
+
+end # CATB_Tick_Window
+
+#------------------------------------------------------------------------------|
+#  * New class: CATB_Tick_Viewport                                             |
+#------------------------------------------------------------------------------|
+
+class CATB_Tick_Viewport < Viewport
+
+  include DoubleX_RMVXA::YSA_CATB_Tick_Addon
+  #----------------------------------------------------------------------------|
+  #  New method: initialize                                                    |
+  #----------------------------------------------------------------------------|
+  def initialize(dw, dh)
+    @max_width = dw - 16
+    rect = Rect.new(Tick_Window_X + 8, Tick_Window_Y + 8, @max_width, 12)
+    super(rect)
+    self.z = Tick_Window_Z
+    create_gauge_sprites
+    self.visible = true
+  end # initialize
+
+  #----------------------------------------------------------------------------|
+  #  New method: dispose                                                       |
+  #----------------------------------------------------------------------------|
+  def dispose
+    return if @sprite.disposed?
+    @sprite.bitmap.dispose if @sprite.bitmap
+    @sprite.dispose
+    super
+  end # dispose
+
+  #----------------------------------------------------------------------------|
+  #  New method: create_gauge_sprites                                          |
+  #----------------------------------------------------------------------------|
+  def create_gauge_sprites
+    @sprite = Plane.new(self)
+    @sprite.bitmap = Bitmap.new(self.rect.width * 2, self.rect.height)
+    colour1 = Tick_Gauge_Color1
+    colour2 = Tick_Gauge_Color2
+    dw = self.rect.width
+    dh = self.rect.height
+    self.rect.width = 0
+    @sprite.bitmap.gradient_fill_rect(0, 0, dw, dh, colour1, colour2)
+    @sprite.bitmap.gradient_fill_rect(0, 0, dw, dh, colour2, colour1)
+  end # create_gauge_sprites
+
+  #----------------------------------------------------------------------------|
+  #  New method: update_gauge                                                  |
+  #----------------------------------------------------------------------------|
+  def update_gauge(tick_count, tick_limit)
+    update
+    self.rect.width = @max_width * 1.0 * tick_count / tick_limit
+  end # update_gauge
+
+end # CATB_Tick_Viewport
+
+class Scene_Battle < Scene_Base
+
+  include DoubleX_RMVXA::YSA_CATB_Tick_Addon
+  #----------------------------------------------------------------------------|
+  #  Alias method: create_all_windows                                          |
+  #----------------------------------------------------------------------------|
+  alias create_all_windows_catb_tick_addon create_all_windows
+  def create_all_windows
+    create_all_windows_catb_tick_addon
+    # This part is added by this script to create tick window
+    create_catb_tick_window if BattleManager.btype?(:catb)
+    #
+  end # create_all_windows
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: process_catb                                                |
+  #----------------------------------------------------------------------------|
+  alias process_catb_tick_addon process_catb
+  def process_catb
+    process_catb_tick_addon
+    # This part is added by this script to refresh the tick window
+    return if !SceneManager.scene_is?(Scene_Battle) || scene_changing? || !BattleManager.btype?(:catb) || catb_pause?
+    update_catb_tick_count(["tick", "clock"])
+    update_catb_tick_count(["battler", "battler"])
+    #
+  end # process_catb
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: perform_catb_action                                         |
+  #----------------------------------------------------------------------------|
+  alias perform_catb_action_tick_addon perform_catb_action
+  def perform_catb_action(subject, forced = false)
+    perform_catb_action_tick_addon(subject, forced)
+    # This part is added by this script to refresh the tick window
+    update_catb_tick_count(["action"])
+    #
+  end # perform_catb_action
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)New method: update_catb_tick_count                               |
+  #----------------------------------------------------------------------------|
+  def update_catb_tick_count(turn)
+    return if ![["tick", "clock"], ["action"], ["battler", "battler"]].include?(turn)
+    if eval("$game_system.catb_turn_type == :" + turn[0])
+      @prior_catb_increse_turn = $game_temp.catb_tick == 0
+      eval("$game_temp.catb_tick = @tick_" + turn[turn.size - 1])
+      @next_catb_increse_turn = $game_temp.catb_tick == 0
+      Turn_Increment_SE.play if Turn_Increment_SE && @prior_catb_increse_turn != @next_catb_increse_turn
+      @catb_tick_window.refresh
+    end
+  end # update_catb_tick_count
+
+  #----------------------------------------------------------------------------|
+  #  New method: create_catb_tick_window                                       |
+  #----------------------------------------------------------------------------|
+  def create_catb_tick_window
+    @catb_tick_window   = CATB_Tick_Window.new
+    @catb_tick_window.x = Tick_Window_X
+    @catb_tick_window.y = Tick_Window_Y
+    @catb_tick_window.z = Tick_Window_Z
+  end # create_catb_tick_window
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#==============================================================================|

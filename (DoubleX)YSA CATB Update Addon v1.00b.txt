@@ -1,0 +1,131 @@
+#==============================================================================|
+#  ** DoubleX RMVXA CATB Update Addon v1.00b to YSA Battle System: Classical ATB|
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00b(GMT 1400 25-5-2015):                                               |
+#    - Increased this script's efficiency                                      |
+#    v1.00a(GMT 1200 25-2-2015):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of YSA Battle System: Classical ATB except that you must also|
+#    give Yami credit(you should do this anyway) if you give DoubleX or his    |
+#    alias credit                                                              |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB             |
+#    Knowledge:                                                                |
+#    - That of using the script YSA Battle System: Classical ATB               |
+#    - Decent scripting knowledge is needed to fully utilize this script       |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Lets users run their script codes right before and/or after an atb update|
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script                                              |
+#    DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB and ¡¿ Main.   |
+#    Save to take effect.                                                      |
+#    Suggested Complete CATB Scripts Order(Excluding Dhoom Manipulate State):  |
+#    1.  Yanfly Engine Ace - Ace Core Engine                                   |
+#    2.  Yanfly Engine Ace - Ace Battle Engine                                 |
+#    3.  YSA Battle System: Classical ATB                                      |
+#    4.  YSA Battle Add-on: Lunatic CATB Rate                                  |
+#    5.  YSA Battle Add-on: Lunatic CATB Reset                                 |
+#    6.  YSA Battle Add-on: Lunatic CATB Start                                 |
+#    7.  DoubleX RMVXA Bug Fix to YSA Battle System: Classical ATB             |
+#    8.  DoubleX RMVXA Compatibility Fix to YSA Battle System: Classical ATB   |
+#    9.  DoubleX RMVXA Action Addon to YSA Battle System: Classical ATB        |
+#    10. DoubleX RMVXA ATB Addon to YSA Battle System: Classical ATB           |
+#    11. DoubleX RMVXA Cancel Addon to YSA Battle System: Classical ATB        |
+#    12. DoubleX RMVXA Clear Addon to YSA Battle System: Classical ATB         |
+#    13. DoubleX RMVXA CATB Clear Addon Compatibility Fix                      |
+#    14. DoubleX RMVXA Color Addon to YSA Battle System: Classical ATB         |
+#    15. DoubleX RMVXA Cooldown Addon to YSA Battle System: Classical ATB      |
+#    16. DoubleX RMVXA Charge Addon to YSA Battle System: Classical ATB        |
+#    17. DoubleX RMVXA Speed Addon to YSA Battle System: Classical ATB         |
+#    18. DoubleX RMVXA Countdown Addon to YSA Battle System: Classical ATB     |
+#    19. DoubleX RMVXA Countdown Addon Compatibility Fix                       |
+#    20. DoubleX RMVXA Escape Addon to YSA Battle System: Classical ATB        |
+#    21. DoubleX RMVXA Hotkey Addon to YSA Battle System: Classical ATB        |
+#    22. DoubleX RMVXA CATB Input Addon to YSA Battle System: Classical ATB    |
+#    23. DoubleX RMVXA Percentage Addon to YSA Battle System: Classical ATB    |
+#    24. DoubleX RMVXA Reset Addon to YSA Battle Add-on: Lunatic CATB Reset    |
+#    25. DoubleX RMVXA SE Addon to YSA Battle System: Classical ATB            |
+#    26. DoubleX RMVXA Tick Addon to YSA Battle System: Classical ATB          |
+#    27. DoubleX RMVXA Turn Addon to YSA Battle System: Classical ATB          |
+#    28. DoubleX RMVXA Unison Addon to YSA Battle System: Classical ATB        |
+#    29. DoubleX RMVXA Update Addon to YSA Battle System: Classical ATB        |
+#    30. DoubleX RMVXA Wait Addon to YSA Battle System: Classical ATB          |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle System: Classical ATB                        |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Update Addon to YSA-CATB"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module YSA_CATB_Update_Addon
+
+    # RGSS3 codes stored as string form in PRE_ATB_UPDATE will be evaluated
+    # right before updating the atb if the atb's running
+    PRE_ATB_UPDATE = ""
+
+    # RGSS3 codes stored as string form in POST_ATB_UPDATE will be evaluated
+    # right after updating the atb if the atb's running
+    POST_ATB_UPDATE = ""
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+    PROCESS_CATB = %Q(
+  alias process_catb_update_addon process_catb
+  def process_catb
+    pause = catb_pause?
+    unless pause
+      #{PRE_ATB_UPDATE}
+    end
+    process_catb_update_addon
+    unless pause
+      #{POST_ATB_UPDATE}
+    end
+  end
+    )
+
+  end # YSA_CATB_Update_Addon
+end # DoubleX_RMVXA
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Scene_Battle                                                  |
+#------------------------------------------------------------------------------|
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: process_catb                                                |
+  #----------------------------------------------------------------------------|
+  module_eval(DoubleX_RMVXA::YSA_CATB_Update_Addon::PROCESS_CATB)
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+end # $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#==============================================================================|

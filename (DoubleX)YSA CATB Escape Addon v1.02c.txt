@@ -1,0 +1,204 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Escape Addon v1.02c to YSA Battle System: Classical ATB    |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.02c(GMT 1200 25-2-2014):                                               |
+#    - In sync with the latest version of other CATB scripts                   |
+#    v1.02b(GMT 1400 19-9-2014):                                               |
+#    - Fixed ESCAPE_ACTION and ESCAPE_COOLDOWN not working bug                 |
+#    v1.02a(GMT 0700 4-9-2014):                                                |
+#    - Added ESCAPE_ACTION, ESCAPE_COOLDOWN, ESCAPE_CONDITION and ESCAPE_RESET |
+#    v1.01a(GMT 0900 13-2-2014):                                               |
+#    - Compatible with DoubleX RMVXA Constants Edit                            |
+#    v1.00a(GMT 0400 13-1-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of YSA Battle System: Classical ATB except that you must also|
+#    give Yami credit(you should do this anyway) if you give DoubleX or his    |
+#    alias credit                                                              |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB             |
+#    Knowledge:                                                                |
+#    - That of using the script YSA Battle System: Classical ATB               |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Modifies party escape cost of YSA Battle System: Classical ATB          |
+#    - This addon doesn't work if the battle system isn't :catb                |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script                                              |
+#    DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB and ¡¿ Main.   |
+#    Save to take effect.                                                      |
+#    Suggested Complete CATB Scripts Order(Excluding Dhoom Manipulate State):  |
+#    1.  Yanfly Engine Ace - Ace Core Engine                                   |
+#    2.  Yanfly Engine Ace - Ace Battle Engine                                 |
+#    3.  YSA Battle System: Classical ATB                                      |
+#    4.  YSA Battle Add-on: Lunatic CATB Rate                                  |
+#    5.  YSA Battle Add-on: Lunatic CATB Reset                                 |
+#    6.  YSA Battle Add-on: Lunatic CATB Start                                 |
+#    7.  DoubleX RMVXA Bug Fix to YSA Battle System: Classical ATB             |
+#    8.  DoubleX RMVXA Compatibility Fix to YSA Battle System: Classical ATB   |
+#    9.  DoubleX RMVXA Reset Addon to YSA Battle Add-on: Lunatic CATB Reset    |
+#    10. DoubleX RMVXA Action Addon to YSA Battle System: Classical ATB        |
+#    11. DoubleX RMVXA ATB Addon to YSA Battle System: Classical ATB           |
+#    12. DoubleX RMVXA Cancel Addon to YSA Battle System: Classical ATB        |
+#    13. DoubleX RMVXA Clear Addon to YSA Battle System: Classical ATB         |
+#    14. DoubleX RMVXA CATB Clear Addon Compatibility Fix                      |
+#    15. DoubleX RMVXA Cooldown Addon to YSA Battle System: Classical ATB      |
+#    16. DoubleX RMVXA Charge Addon to YSA Battle System: Classical ATB        |
+#    17. DoubleX RMVXA Countdown Addon to YSA Battle System: Classical ATB     |
+#    18. DoubleX RMVXA Countdown Addon Compatibility Fix                       |
+#    19. DoubleX RMVXA Escape Addon to YSA Battle System: Classical ATB        |
+#    20. DoubleX RMVXA Percentage Addon to YSA Battle System: Classical ATB    |
+#    21. DoubleX RMVXA Reset Addon to YSA Battle Add-on: Lunatic CATB Reset    |
+#    22. DoubleX RMVXA SE Addon to YSA Battle System: Classical ATB            |
+#    23. DoubleX RMVXA Tick Addon to YSA Battle System: Classical ATB          |
+#    24. DoubleX RMVXA Turn Addon to YSA Battle System: Classical ATB          |
+#    25. DoubleX RMVXA Unison Addon to YSA Battle System: Classical ATB        |
+#    26. DoubleX RMVXA Update Addon to YSA Battle System: Classical ATB        |
+#    27. DoubleX RMVXA Wait Addon to YSA Battle System: Classical ATB          |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle System: Classical ATB                        |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Escape Addon to YSA-CATB"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module YSA_CATB_Escape_Addon
+
+    # This feature needs
+    # DoubleX RMVXA Action Addon to YSA Battle System: Classical ATB
+    # ESCAPE_ACTION, default = 1
+    # All party members need ESCAPE_ACTION actions to make a party escape
+    ESCAPE_ACTION = 1
+
+    # This feature needs
+    # DoubleX RMVXA Cooldown Addon to YSA Battle System: Classical ATB
+    # ESCAPE_COOLDOWN, default = 0
+    # All party members will cooldown with rate ESCAPE_COOLDOWN after
+    # failed escapes
+    # Setting ESCAPE_COOLDOWN as 0 will disable this feature
+    ESCAPE_COOLDOWN = 0
+
+    # This feature needs decent understanding of RGSS3 and YSA-CATB scripts
+    # ESCAPE_CONDITION, default =
+    %Q(@action_actors.size < $game_party.members.size || 
+    @action_actors.any? { |actor| actor.catb_action_times < ESCAPE_ACTION || 
+    actor.ct_catb_value > 0 || 
+    $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"] && 
+    actor.cd_catb_value > 0 })
+    # ESCAPE_COMDITION must be met to be possible to make a party escape
+    ESCAPE_CONDITION = %Q(@action_actors.size < $game_party.members.size || 
+    @action_actors.any? { |actor| actor.catb_action_times < ESCAPE_ACTION || 
+    actor.ct_catb_value > 0 || 
+    $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"] && 
+    actor.cd_catb_value > 0 })
+
+    # This feature needs
+    # DoubleX RMVXA Reset Addon to YSA Battle Add-on: Lunatic CATB Reset
+    # ESCAPE_RESET, default = "0"
+    # Sets the Party escape reset value as an actual value ESCAPE_RESET
+    # The default MAX_CATB_VALUE is 100000.0
+    ESCAPE_RESET = "0"
+
+  end # YSA_CATB_Escape_Addon
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#------------------------------------------------------------------------------|
+#  * Edit module: BattleManager                                                |
+#------------------------------------------------------------------------------|
+
+class << BattleManager
+
+  Reset_Addon = $imported["DoubleX RMVXA Reset Addon to YSA-LunaticCATBReset"]
+  include DoubleX_RMVXA::YSA_CATB_Escape_Addon
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: self.process_escape                                       |
+  #----------------------------------------------------------------------------|
+  def process_escape
+    @catb_escape ||= :true
+    return false if @catb_escape != :true || eval(ESCAPE_CONDITION)
+    $game_message.add(sprintf(Vocab::EscapeStart, $game_party.name))
+    success = @preemptive || rand < @escape_ratio
+    Sound.play_escape
+    if success
+      process_abort
+    else
+      # Rewritten to be compatible with DoubleX RMVXA Constants Edit
+      @escape_ratio += $imported["DoubleX RMVXA Constants Edit"] ? DoubleX_RMVXA::Constants_Edit::Escape_Ratio : 0.1
+      #
+      $game_message.add('\.' + Vocab::EscapeFailure)
+      $game_party.clear_actions
+      # Aded to clear catb after failed escape
+      $game_party.members.each { |member|
+        member.item_action = ESCAPE_ACTION
+        member.item_cooldown = ESCAPE_COOLDOWN
+        if Reset_Addon
+          member.reset_value ||= 0
+          member.reset_value += eval(ESCAPE_RESET)
+        end
+        member.ct_catb_value = member.max_catb_value
+        if !Reset_Addon || member.catb_action_times > ESCAPE_ACTION
+          member.clear_catb(0)
+        else
+          member.clear_catb(eval(ESCAPE_RESET))
+          member.reset_value = 0 if Reset_Addon
+        end
+        member.ct_catb_value = 0
+      }
+      #
+    end
+    wait_for_message
+    success
+  end # process_escape
+
+end # BattleManager
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_Battler                                                  |
+#------------------------------------------------------------------------------|
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_accessor :ct_catb_value
+
+  #----------------------------------------------------------------------------|
+  #  New method: max_catb_value                                                |
+  #----------------------------------------------------------------------------|
+  def max_catb_value
+    MAX_CATB_VALUE
+  end # max_catb_value
+
+end # Game_Battler
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#==============================================================================|

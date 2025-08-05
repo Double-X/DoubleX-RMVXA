@@ -1,0 +1,502 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Countdown Addon v1.00a to YSA Battle System: Classical ATB |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00a(GMT 0100 8-9-2014):                                                |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#    Yanfly:                                                                   |
+#    - Yanfly Engine Ace - Buff & State Manager                                |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as those of                                                          |
+#    - YSA Battle System: Classical ATB                                        |
+#    - Yanfly Engine Ace - Buff & State Manager                                |
+#    except that you must also give Yami and Yanfly credits(you should do this |
+#    anyway) if you give DoubleX or his alias credit                           |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB             |
+#    - Yanfly Engine Ace - Buff & State Manager                                |
+#    Knowledge:                                                                |
+#    - That of using scripts                                                   |
+#      YSA Battle System: Classical ATB                                        |
+#      Yanfly Engine Ace - Buff & State Manager                                |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Lets users set up to 4 states with duration being 1-99 seconds          |
+#    - They can trigger actions under conditions checked every x seconds       |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the scripts                                             |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB             |
+#    - Yanfly Engine Ace - Buff & State Manager                                |
+#    and ¡¿ Main. Save to take effect.                                          |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as those of                                                        |
+#      YSA Battle System: Classical ATB                                        |
+#      Yanfly Engine Ace - Buff & State Manager                                |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Countdown Addon to YSA-CATB"] = true
+
+#------------------------------------------------------------------------------|
+#  * State Notetags: <custom catb cs: i, c, a>                                 |
+#    Sets a state to use the "Duration In Turns" as the duration in seconds    |
+#    "Auto Removal Timing" is ignored and duration ranges from 1 to 99 seconds |
+#    Actions a will be triggered if condition c is met and c will be checked   |
+#    every i seconds, where s ranges from 1 to 99 seconds                      |
+#------------------------------------------------------------------------------|
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module YSA_CATB_Countdown_Addon
+
+#------------------------------------------------------------------------------|
+#  * Custom catb countdown condition: c in <custom catb cs: i, c, a>           |
+#    To make <custom catb cs: i, c, a> work, the requirements in c must be met.|
+#    These requirements are ruby scripts like those in events.                 |
+#    The below CATBCX are examples of writing such codes and abtracting them in|
+#    random cast notetags to aid users in understanding and using c there.     |
+#    To use CATBCX, set the value of c in random cast notetag as CATBCX.       |
+#    Users can set their own CATBCX(or whatever name they set) to be used by c.|
+#    CATBCX names must start with letters and only use alphanumeric characters.|
+#    (Needs decent scripting knowledge)CATBCX is evaluated in the new method   |
+#    update_state_catb_countdown(called every second) under class Game_Battler.|
+#------------------------------------------------------------------------------|
+
+    # CATBC1, default = "true"
+    # c is always true
+    CATBC1 = "true"
+
+    # CATBC2, default = "state?(x)"
+    # c is true if and only if the battler has state with id x
+    CATBC2 = "state?(x)"
+
+    # CATBC3, default = "rand(x) < y"
+    # c is true if and only the random number is smaller than y
+    CATBC3 = "rand(x) < y"
+
+    # CATBC4, default = CATBC2 + " || " + CATBC3
+    # c is true if and only CATBC2 or CATBC3 is true
+    CATBC4 = CATBC2 + " || " + CATBC3
+
+    # CATBC5, default = "!state_resist?(x)"
+    # c is true if and only the battler isn't resistant to state with id x
+    CATBC5 = "!state_resist?(state_id)"
+
+    # CATBC6, default = "(" + CATBC4 + ") && " + CATBC5
+    # c is true if and only CATBC4 and CATBC5 are true
+    CATBC6 = "(" + CATBC4 + ") && " + CATBC5
+
+    # CATBC7, default = "@ct_catb_value > 0 && !charge_skill_done?"
+    # c is true if and only the battler started but not finished charging
+    CATBC7 = "@ct_catb_value > 0 && !charge_skill_done?"
+
+    # CATBC8, default = "@catb_action_times == x"
+    # c is true if and only the battler has eactly x action points
+    CATBC8 = "@catb_action_times == x"
+
+    # CATBC9, default = "$game_system.catb_turn_type == :tick"
+    # c is true if and only the battle system turn type is :tick
+    CATBC9 = "$game_system.catb_turn_type == :tick"
+
+#------------------------------------------------------------------------------|
+#  * Custom catb countdown action: a in <custom catb cs: i, c, a>              |
+#    To make <custom catb cs: i, c, a> work, the actions in a must be defined. |
+#    These actions are ruby scripts like those in events.                      |
+#    The below CATBAX are examples of writing such codes and abtracting them in|
+#    random cast notetags to aid users in understanding and using a there.     |
+#    To use CATBAX, set the value of a in random cast notetag as CATBAX.       |
+#    Users can set their own CATBAX(or whatever name they set) to be used by a.|
+#    CATBAX names must start with letters and only use alphanumeric characters.|
+#    (Needs decent scripting knowledge)CATBAX is evaluated in the new method   |
+#    update_state_catb_countdown(called every second) under class Game_Battler.|
+#------------------------------------------------------------------------------|
+
+    # CATBA1, default = "$game_temp.reserve_common_event(common_event_id)"
+    # a calls common event with id common_event_id
+    CATBA1 = "$game_temp.reserve_common_event(common_event_id)"
+
+    # CATBA2, default =
+    # "@result.clear; @result.make_damage(x, $data_skills[y]); execute_damage(self)"
+    # a executes x damage to self with type equal to that of skill with id y
+    CATBA2 = "@result.clear; @result.make_damage(100, $data_skills[1]); execute_damage(self)"
+
+    # CATBA3, default = "add_state(x)"
+    # a adds state with id x to self
+    CATBA3 = "add_state(x)"
+
+    # CATBA4, default = CATBA2 + "; " + CATBA3
+    # a first does CATBA2 and then does CATBA3
+    CATBA4 = CATBA2 + "; " + CATBA3
+
+    # CATBA5, default =
+    # "if rand(x) < y; " + CATBA2 + "; end; else; " + CATBA3 + "; end"
+    # a does either CATBA2 or CATBA3 depending on the value of a random number
+    CATBA5 = "if rand(x) < y; " + CATBA2 + "; end; else; " + CATBA3 + "; end"
+
+    # CATBA6, default = "hide"
+    # a does the same as what Special Effect Escape does
+    CATBA6 = "hide"
+
+    # CATBA7, default = "clear_catb"
+    # a clears the battler's atb bar
+    CATBA7 = "clear_catb"
+
+    # CATBA8, default = "@state_turns[x] -= y"
+    # a reduces the state's remaining turn by y
+    CATBA8 = "@state_turns[x] -= y"
+
+    # CATBA9, default = "@countdown_state_freeze[x] = true"
+    # a freezes the countdown timer of a countdown state with id x
+    CATBA9 = "@countdown_state_freeze[x] = true"
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+    CATB_DATA = ["interval", "condition", "action"]
+    CUSTOM_CATB_CS = /<(?:CUSTOM_CATB_CS|custom catb cs):[ ](\w+(?:\s*,\s*\w+)*)>/i
+
+  end # YSA_CATB_Countdown_Addon
+end # DoubleX_RMVXA
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"] && $imported["YEA-Buff&StateManager"]
+
+#------------------------------------------------------------------------------|
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: load_database                                               |
+  #----------------------------------------------------------------------------|
+  alias load_database_catb_countdown_addon load_database
+  def load_database
+    load_database_catb_countdown_addon
+    # This part is added by this script to load countdown addon notetags
+    load_notetags_catb_countdown_addon
+    #
+  end # load_database
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_catb_countdown_addon                            |
+  #----------------------------------------------------------------------------|
+  def load_notetags_catb_countdown_addon
+    $data_states.each { |data| data.load_notetags_catb_countdown_addon if data }
+  end # load_notetags_catb_countdown_addon
+
+end # DataManager
+
+class RPG::State < RPG::BaseItem
+
+  include DoubleX_RMVXA::YSA_CATB_Countdown_Addon
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  CATB_DATA.each { |data| eval("attr_reader :catb_cs_" + data) }
+  attr_reader :catb_cs_note
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_catb_countdown_addon                            |
+  #----------------------------------------------------------------------------|
+  def load_notetags_catb_countdown_addon
+    CATB_DATA.each { |data| eval("@catb_cs_" + data + " = []") }
+    @catb_cs_note = 0
+    self.note.split(/[\r\n]+/).each { |line|
+      case line
+      when CUSTOM_CATB_CS
+        interval = 0
+        condition, action = nil, nil
+        $1.scan(/\w+/).each_with_index { |input, index|
+          case index
+          when 0
+            interval = input.to_i if input.to_i > 0
+            next
+          when 1
+            condition = eval(input.to_s)
+            next
+          when 2
+            action = eval(input.to_s)
+            next
+          else
+            break
+          end
+        }
+        if interval != 0 && condition && action
+          CATB_DATA.each { |data| eval("@catb_cs_" + data + ".push(" + data + ")") }
+          @catb_cs_note += 1
+        end
+      end
+    }
+    @auto_removal_timing = 3 if @catb_cs_note > 0
+  end # load_notetags_catb_countdown_addon
+
+end # RPG::BaseItem
+
+class Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: clear_states                                                |
+  #----------------------------------------------------------------------------|
+  alias clear_states_catb_countdown_addon clear_states
+  def clear_states
+    # This part is added by this script to clear countdown states
+    @init_state_turns = {}
+    @countdown_state_tick = {}
+    @countdown_state_freeze = {}
+    enemy_sprite = enemy? && SceneManager.scene_is?(Scene_Battle) ? SceneManager.scene.spriteset.battler_sprites.find { |sprite| sprite.battler == self } : nil
+    states.each { |state| enemy_sprite.dispose_enemy_countdown_catb(state) if state.catb_cs_note > 0 } if enemy_sprite
+    #
+    clear_states_catb_countdown_addon
+  end # clear_states
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: erase_state                                                 |
+  #----------------------------------------------------------------------------|
+  alias erase_state_catb_countdown_addon erase_state
+  def erase_state(state_id)
+    erase_state_catb_countdown_addon(state_id)
+    # This part is added by this script to erase countdown states
+    return if $data_states[state_id].catb_cs_note <= 0
+    @init_state_turns.delete(state_id)
+    @countdown_state_tick.delete(state_id)
+    @countdown_state_freeze.delete(state_id)
+    enemy_sprite = enemy? && SceneManager.scene_is?(Scene_Battle) ? SceneManager.scene.spriteset.battler_sprites.find { |sprite| sprite.battler == self } : nil
+    enemy_sprite.dispose_enemy_countdown_catb($data_states[state_id]) if enemy_sprite
+    #
+  end # erase_state
+
+end # Game_BattlerBase
+
+class Game_Battler < Game_BattlerBase
+
+  include DoubleX_RMVXA::YSA_CATB_Countdown_Addon
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_accessor :actor_countdown
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: reset_state_counts                                          |
+  #----------------------------------------------------------------------------|
+  alias reset_state_counts_catb_countdown_addon reset_state_counts
+  def reset_state_counts(state_id)
+    reset_state_counts_catb_countdown_addon(state_id)
+    # This part is added by this script to reset countdown states
+    reset_state_catb_countdown(state_id)
+    #
+  end # reset_state_counts
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: total_state_counts                                          |
+  #----------------------------------------------------------------------------|
+  alias total_state_counts_catb_countdown_addon total_state_counts
+  def total_state_counts(state_id)
+    total_state_counts_catb_countdown_addon(state_id)
+    # This part is added by this script to reset countdown states
+    reset_state_catb_countdown(state_id)
+    #
+  end # total_state_counts
+
+  #----------------------------------------------------------------------------|
+  #  New method: reset_state_catb_countdown                                    |
+  #----------------------------------------------------------------------------|
+  def reset_state_catb_countdown(state_id)
+    return if $data_states[state_id].catb_cs_note <= 0
+    @init_state_turns[state_id] = @state_turns[state_id]
+    @countdown_state_tick[state_id] = 0
+    @countdown_state_freeze[state_id] = false
+    enemy_sprite = enemy? && SceneManager.scene_is?(Scene_Battle) ? SceneManager.scene.spriteset.battler_sprites.find { |sprite| sprite.battler == self } : nil
+    return if !enemy_sprite
+    enemy_sprite.create_enemy_countdown_catb($data_states[state_id], @init_state_turns[state_id])
+    enemy_sprite.update_enemy_countdown_catb($data_states[state_id], @init_state_turns[state_id]) if [1, 2].include?($data_states[state_id].state_reapply_rules)
+  end # reset_state_catb_countdown
+
+  #----------------------------------------------------------------------------|
+  #  New method: update_state_catb_countdown                                   |
+  #----------------------------------------------------------------------------|
+  def update_state_catb_countdown
+    enemy_sprite = enemy? ? SceneManager.scene.spriteset.battler_sprites.find { |sprite| sprite.battler == self } : nil
+    states.each { |state|
+      next if state.catb_cs_note <= 0
+      @countdown_state_tick[state.id] += 1
+      @countdown_state_tick[state.id] %= 60
+      next if @countdown_state_tick[state.id] != 0
+      @state_turns[state.id] -= 1 if @state_turns[state.id] > 0 if !@countdown_state_freeze[state.id]
+      turn = @state_turns[state.id]
+      state.catb_cs_note.times { |index|
+        if (@init_state_turns[state.id] - turn) % state.catb_cs_interval[index] == 0 && eval(state.catb_cs_condition[index])
+          eval(state.catb_cs_action[index])
+        end
+      }
+      enemy_sprite.update_enemy_countdown_catb(state, turn) if enemy_sprite
+      @actor_countdown = actor?
+    }
+    remove_states_auto(3)
+  end # update_state_catb_countdown
+
+  #----------------------------------------------------------------------------|
+  #  New method: catb_countdown_state_icons                                    |
+  #----------------------------------------------------------------------------|
+  def catb_countdown_state_icons
+    icons = states.collect {|state| state.icon_index if state.catb_cs_note > 0 }
+    icons.delete(0)
+    icons
+  end # catb_countdown_state_icons
+
+end # Game_Battler
+
+class Sprite_Battler < Sprite_Base
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: initialize                                                  |
+  #----------------------------------------------------------------------------|
+  alias initialize_catb_countdown_addon initialize
+  def initialize(viewport, battler = nil)
+    initialize_catb_countdown_addon(viewport, battler)
+    # This part is added by this script to initialize @catb_countdown_viewport
+    @catb_countdown_sprite ||= {}
+    #
+  end # initialize
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: dispose                                                     |
+  #----------------------------------------------------------------------------|
+  alias dispose_catb_countdown_addon dispose
+  def dispose
+    dispose_catb_countdown_addon
+    # This part is added by this script to dispose all countdown state icons
+    @catb_countdown_sprite.each_key { |key| dispose_enemy_countdown_catb(key) }
+    #
+  end # dispose
+
+  #----------------------------------------------------------------------------|
+  #  New method: create_enemy_countdown_catb                                   |
+  #----------------------------------------------------------------------------|
+  def create_enemy_countdown_catb(state, turn)
+    @catb_countdown_sprite[state] = Sprite_CATB_Countdown.new(SceneManager.scene.spriteset.viewport1, @battler, state, turn, @catb_countdown_sprite.keys.size) if @battler && !@battler.actor? && BattleManager.btype?(:catb) && !@catb_countdown_sprite[state] && @catb_countdown_sprite.keys.size < 4
+  end # create_enemy_countdown_catb
+
+  #----------------------------------------------------------------------------|
+  #  New method: dispose_enemy_countdown_catb                                  |
+  #----------------------------------------------------------------------------|
+  def dispose_enemy_countdown_catb(state)
+    return if !@catb_countdown_sprite[state]
+    @catb_countdown_sprite[state].dispose if BattleManager.btype?(:catb)
+    @catb_countdown_sprite.delete(state)
+    return
+  end # dispose_enemy_countdown_catb
+
+  #----------------------------------------------------------------------------|
+  #  New method: update_enemy_countdown_catb                                   |
+  #----------------------------------------------------------------------------|
+  def update_enemy_countdown_catb(state, turn)
+    @catb_countdown_sprite[state].update_turn(turn) if @catb_countdown_sprite[state] && BattleManager.btype?(:catb)
+  end # update_enemy_countdown_catb
+
+end # Sprite_Battler
+
+#------------------------------------------------------------------------------|
+#  * New class: Sprite_CATB_Countdown                                          |
+#------------------------------------------------------------------------------|
+class Sprite_CATB_Countdown < Sprite
+
+  MP_TP_ADDON = $imported["DoubleX RMVXA Enemy MP/TP Bars Addon to YEA-BattleEngine"]
+  include DoubleX_RMVXA::YEA_BattleEngine_Enemy_MP_TP_Bars_Addon if MP_TP_ADDON
+
+  #----------------------------------------------------------------------------|
+  #  New method: initialize                                                    |
+  #----------------------------------------------------------------------------|
+  def initialize(viewport, battler, state, turn, offset)
+    super(viewport)
+    @battler = battler
+    @state = state
+    @turn = turn
+    @offset = offset
+    create_state_bitmap
+  end # initialize
+
+  #----------------------------------------------------------------------------|
+  #  New method: create_state_bitmap                                           |
+  #----------------------------------------------------------------------------|
+  def create_state_bitmap
+    @bw ||= Graphics.width + 48
+    @bh ||= Font.default_size * 3
+    self.bitmap = Bitmap.new(@bw, @bh)
+    self.bitmap.font.size = YEA::BUFF_STATE_MANAGER::TURNS_REMAINING_SIZE
+    self.bitmap.font.out_color.set(0, 0, 0, 255)
+    update_turn(@turn)
+    self.x, self.y, self.z = @battler.screen_x - 24 * (1.5 - @offset), @battler.screen_y - 12 - YSA::CATB::ENEMY_GAUGE_HEIGHT, 125
+    self.y -= YEA::BATTLE::ENEMY_GAUGE_HEIGHT if $imported["YEA-EnemyHPBars"]
+    self.y -= ENEMY_MP_GAUGE_HEIGHT + ENEMY_TP_GAUGE_HEIGHT if MP_TP_ADDON
+    self.ox, self.oy = @bw / 2, @bh / 2
+  end # create_state_bitmap
+
+  #----------------------------------------------------------------------------|
+  #  New method: update                                                        |
+  #----------------------------------------------------------------------------|
+  def update_turn(turn)
+    return if disposed? || self.bitmap.disposed? || !@bw || !@bh
+    update
+    self.bitmap.clear
+    icon_index = @state.icon_index
+    @rect ||= Rect.new(icon_index % 16 * 24, icon_index / 16 * 24, 24, 24)
+    self.bitmap.blt(24 + @bw / 2 - 36, (@bh - 24) / 2, $game_temp.iconset, @rect, 255)
+    self.bitmap.draw_text(12, YEA::BUFF_STATE_MANAGER::TURNS_REMAINING_Y, @bw - 24, @bh, turn.to_s, 1)
+  end # update
+
+  #----------------------------------------------------------------------------|
+  #  New method: dispose                                                       |
+  #----------------------------------------------------------------------------|
+  def dispose
+    return if disposed?
+    self.bitmap.dispose if !self.bitmap.disposed?
+    super
+  end # dispose
+
+end # Sprite_CATB_Countdown
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: process_catb                                                |
+  #----------------------------------------------------------------------------|
+  alias process_catb_countdown_addon process_catb
+  def process_catb
+    process_catb_countdown_addon
+    # This part is added by this script to refresh countdown states
+    return if !SceneManager.scene_is?(Scene_Battle) || scene_changing? || !BattleManager.btype?(:catb) || catb_pause? || BattleManager.catb_escape == :false
+    all_battle_members.each { |battler|
+      battler.update_state_catb_countdown
+      if battler.actor_countdown
+        @status_window.draw_item(battler.index)
+        battler.actor_countdown = false
+      end
+      battler.perform_collapse_effect if battler.enemy? && battler.can_collapse?
+    }
+    #
+  end # process_catb
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"] && $imported["YEA-Buff&StateManager"]
+
+#==============================================================================|

@@ -1,0 +1,134 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Bar Addon v1.00a to YSA Battle System: Classical ATB       |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00a(GMT 1400 15-12-2015):                                              |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of YSA Battle System: Classical ATB except that you must also|
+#    give Yami credit(you should do this anyway) if you give DoubleX or his    |
+#    alias credit                                                              |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB             |
+#    Knowledge:                                                                |
+#    - That of using the script YSA Battle System: Classical ATB               |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Adds atb bars on actor sprites and lets users set their behaviors       |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script                                              |
+#    DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB and ¡¿ Main.   |
+#    Save to take effect.                                                      |
+#    Some Hidden YSA Battle System: Classical ATB Tips and Tricks:             |
+#    http://forums.rpgmakerweb.com/index.php?/topic/38568-some-hidden-ysa-battle-system-classical-atb-tips-and-tricks/|
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle System: Classical ATB                        |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Bar Addon to YSA-CATB"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+
+  module YSA_CATB_Bar_Addon
+
+    # Sets the additional battler sprite atb bar visibility condition in RGSS3
+    # codes stored in a string which will be evaluated under
+    # Enemy_CATB_Gauge_Viewport as CATB_BAR_VISIBLE_COND
+    # E.g.: To make the battler sprite atb bars invisible when that battler's
+    #       executing actions, set this as
+    #       "@battler != SceneManager.scene.subject"
+    CATB_BAR_VISIBLE_COND = "@battler != SceneManager.scene.subject"
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+    UPDATE = %Q(
+  alias update_catb_bar_addon update
+  def update
+    update_catb_bar_addon
+    self.visible &&= #{CATB_BAR_VISIBLE_COND}
+  end
+    )
+
+  end # YSA_CATB_Bar_Addon
+
+end # DoubleX_RMVXA
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#------------------------------------------------------------------------------|
+
+class Sprite_Battler < Sprite_Base
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: initialize                                                  |
+  #----------------------------------------------------------------------------|
+  alias initialize_catb_bar_addon initialize
+  def initialize(viewport, battler = nil)
+    initialize_catb_bar_addon(viewport, battler)
+    # Added to create atb bars on actor sprites as well
+    create_actor_gauges_catb
+    #
+  end # initialize
+
+  #----------------------------------------------------------------------------|
+  #  New method: create_actor_gauges_catb                                      |
+  #----------------------------------------------------------------------------|
+  def create_actor_gauges_catb
+    return unless @battler && @battler.actor? && BattleManager.btype?(:catb)
+    @catb_back_gauge_viewport = Enemy_CATB_Gauge_Viewport.new(@battler, self, :back)
+    @catb_gauge_viewport = Enemy_CATB_Gauge_Viewport.new(@battler, self, :catb)
+    @catb_ct_gauge_viewport = Enemy_CATB_Gauge_Viewport.new(@battler, self, :catbct)
+    @catb_cd_gauge_viewport = Enemy_CATB_Gauge_Viewport.new(@battler, self, :catbcd) if $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"]
+    @catb_percent_gauge_viewport = Enemy_CATB_Gauge_Viewport.new(@battler, self, :percent) if $imported["DoubleX RMVXA Percentage Addon to YSA-CATB"]
+  end # create_actor_gauges_catb
+
+end # Sprite_Battler
+
+class Spriteset_Battle
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: create_actors                                               |
+  #----------------------------------------------------------------------------|
+  alias create_actors_catb_bar_addon create_actors
+  def create_actors
+    create_actors_catb_bar_addon
+    # Added to insert actors into the actor sprites if it's not already done
+    @actor_sprites = $game_party.members.reverse.collect { |actor|
+      Sprite_Battler.new(@viewport1, actor)
+    }
+    #
+  end # create_actors
+
+end # Spriteset_Battle
+
+class Enemy_CATB_Gauge_Viewport < Viewport
+
+  module_eval(DoubleX_RMVXA::YSA_CATB_Bar_Addon::UPDATE)
+
+end # Enemy_CATB_Gauge_Viewport
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#==============================================================================|

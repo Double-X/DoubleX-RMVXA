@@ -1,0 +1,214 @@
+#==============================================================================|
+#  ** DoubleX RMVXA CTB Addon v1.00a to YSA Battle System: Classical ATB       |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00a(GMT 1000 26-7-2015):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of YSA Battle System: Classical ATB except that you must also|
+#    give Yami credit(you should do this anyway) if you give DoubleX or his    |
+#    alias credit                                                              |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB             |
+#    Knowledge:                                                                |
+#    - That of using the script YSA Battle System: Classical ATB               |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Replicate a CTB system by skipping all atb types' filling times         |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script                                              |
+#    DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB and ¡¿ Main.   |
+#    Save to take effect.                                                      |
+#    Suggested Complete CATB Scripts Order(Excluding Dhoom Manipulate State):  |
+#    1.  Yanfly Engine Ace - Ace Core Engine                                   |
+#    2.  Yanfly Engine Ace - Ace Battle Engine                                 |
+#    3.  YSA Battle System: Classical ATB                                      |
+#    4.  YSA Battle Add-on: Lunatic CATB Rate                                  |
+#    5.  YSA Battle Add-on: Lunatic CATB Reset                                 |
+#    6.  YSA Battle Add-on: Lunatic CATB Start                                 |
+#    7.  DoubleX RMVXA Bug Fix to YSA Battle System: Classical ATB             |
+#    8.  DoubleX RMVXA Compatibility Fix to YSA Battle System: Classical ATB   |
+#    9.  DoubleX RMVXA Action Addon to YSA Battle System: Classical ATB        |
+#    10. DoubleX RMVXA ATB Addon to YSA Battle System: Classical ATB           |
+#    11. DoubleX RMVXA Cancel Addon to YSA Battle System: Classical ATB        |
+#    12. DoubleX RMVXA Clear Addon to YSA Battle System: Classical ATB         |
+#    13. DoubleX RMVXA CATB Clear Addon Compatibility Fix                      |
+#    14. DoubleX RMVXA Color Addon to YSA Battle System: Classical ATB         |
+#    15. DoubleX RMVXA Cooldown Addon to YSA Battle System: Classical ATB      |
+#    16. DoubleX RMVXA Charge Addon to YSA Battle System: Classical ATB        |
+#    17. DoubleX RMVXA Speed Addon to YSA Battle System: Classical ATB         |
+#    18. DoubleX RMVXA Countdown Addon to YSA Battle System: Classical ATB     |
+#    19. DoubleX RMVXA Countdown Addon Compatibility Fix                       |
+#    20. DoubleX RMVXA Escape Addon to YSA Battle System: Classical ATB        |
+#    21. DoubleX RMVXA Hotkey Addon to YSA Battle System: Classical ATB        |
+#    22. DoubleX RMVXA CATB Input Addon to YSA Battle System: Classical ATB    |
+#    23. DoubleX RMVXA Percentage Addon to YSA Battle System: Classical ATB    |
+#    24. DoubleX RMVXA Reset Addon to YSA Battle Add-on: Lunatic CATB Reset    |
+#    25. DoubleX RMVXA SE Addon to YSA Battle System: Classical ATB            |
+#    26. DoubleX RMVXA Tick Addon to YSA Battle System: Classical ATB          |
+#    27. DoubleX RMVXA Turn Addon to YSA Battle System: Classical ATB          |
+#    28. DoubleX RMVXA Unison Addon to YSA Battle System: Classical ATB        |
+#    29. DoubleX RMVXA Update Addon to YSA Battle System: Classical ATB        |
+#    30. DoubleX RMVXA CTB Addon to YSA Battle System: Classical ATB           |
+#    31. DoubleX RMVXA Wait Addon to YSA Battle System: Classical ATB          |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle System: Classical ATB                        |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA CTB Addon to YSA-CATB"] = true
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Scene_Battle                                                  |
+#------------------------------------------------------------------------------|
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: process_catb                                              |
+  #----------------------------------------------------------------------------|
+  def process_catb
+    if @status_window.index >= 0 && (!$game_party.members[@status_window.index] || $game_party.members[@status_window.index].dead? || !BattleManager.action_list(:actor).include?($game_party.members[@status_window.index]))
+      $game_party.members[@status_window.index].clear_catb if $game_party.members[@status_window.index]
+      if @skill_window.visible || @item_window.visible || @actor_window.visible || @enemy_window.visible
+        @status_window.open.show
+        @status_aid_window.hide
+      end
+      @actor_window.hide.deactivate
+      @enemy_window.hide.deactivate
+      @actor_command_window.deactivate.close
+      @skill_window.hide.deactivate
+      @item_window.hide.deactivate
+      @status_window.unselect
+    end
+    @party_command_window.deactivate.close if BattleManager.action_list(:actor).empty?
+    return if !SceneManager.scene_is?(Scene_Battle) || scene_changing? || !BattleManager.btype?(:catb) || catb_pause?
+    # Rewritten to update all atb types of all owners until players can input actions
+    return if !BattleManager.phase || $game_party.all_dead? || $game_troop.all_dead?
+    begin
+      eval(DoubleX_RMVXA::YSA_CATB_Update_Addon::PRE_ATB_UPDATE) if $imported["DoubleX RMVXA Update Addon to YSA-CATB"]
+      all_battle_members.each { |a|
+        a.clear_actions if a.catb_value == 0
+        a.make_catb_update
+        a.make_catb_action
+        a.make_ct_catb_update
+        a.make_speed_catb_update if $imported["DoubleX RMVXA Speed Addon to YSA-CATB"]
+        a.update_state_catb_countdown if $imported["DoubleX RMVXA Countdown Addon to YSA-CATB"]
+        a.make_cd_catb_update if $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"]
+      }
+      BattleManager.action_list(:actor).each { |a| a.clear_catb unless a.index }
+      if $game_system.catb_turn_type == :tick
+        @tick_clock ||= 0
+        @tick_clock += 1
+        if @tick_clock >= $game_system.catb_tick_count
+          @tick_clock = 0
+          BattleManager.turn_end
+          all_battle_members.each { |member| member.run_lunatic_states(:begin) } if $imported["YEA-LunaticStates"]
+          if $imported["YEA-SkillRestrictions"]
+            $game_party.update_restrictions
+            $game_troop.update_restrictions
+          end
+          all_battle_members.each { |battler|
+            battler.on_turn_end
+            battler.perform_collapse_effect if battler.enemy? && battler.can_collapse?
+          }
+          @status_window.refresh
+          $game_troop.increase_turn
+        end
+      elsif $imported["DoubleX RMVXA Turn Addon to YSA-CATB"] && $game_system.catb_turn_type == :battler
+        @tick_battler ||= 0
+        @tick_battler += 1
+        if @tick_battler >= $game_system.catb_battler_count
+          @tick_battler = 0
+          BattleManager.turn_end
+          all_battle_members.each { |member| member.run_lunatic_states(:begin) } if $imported["YEA-LunaticStates"]
+          if $imported["YEA-SkillRestrictions"]
+            $game_party.update_restrictions
+            $game_troop.update_restrictions
+          end
+          all_battle_members.each { |battler|
+            battler.on_turn_end
+            battler.perform_collapse_effect if battler.enemy? && battler.can_collapse?
+          }
+          @status_window.refresh
+          $game_troop.increase_turn
+        end
+      end
+#    BattleManager.action_list(:actor).each { |battler|
+#      battler.make_actions if (battler.actor? && !battler.input)
+#    }
+      @status_window.refresh_catb
+      @f_actor_index = 0 if !@f_actor_index || @f_actor_index < 0 || @f_actor_index + 1 > BattleManager.action_list(:actor).size
+      f_actor = BattleManager.action_list(:actor)[@f_actor_index]
+      f_actor_count = 0
+      while f_actor_count < BattleManager.action_list(:actor).size && f_actor && (f_actor.input && f_actor.input.item && f_actor.input.confirm || f_actor.auto_battle? || f_actor.confusion? || !f_actor.max_catb_value? || f_actor.ct_catb_value > 0 || $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"] && f_actor.cd_catb_value > 0)
+        f_actor_count += 1
+        @f_actor_index + 1 < BattleManager.action_list(:actor).size ? @f_actor_index += 1 : @f_actor_index = 0
+        f_actor = BattleManager.action_list(:actor)[@f_actor_index]
+      end
+      if f_actor && f_actor.input && !f_actor.input.confirm && (!BattleManager.actor || @status_window.index != BattleManager.actor.index) && !@actor_command_window.active && !@party_command_window.active
+        BattleManager.set_actor(f_actor.index)
+        @status_window.select(BattleManager.actor.index)
+        @actor_command_window.show.setup(BattleManager.actor)
+        @hotkeys_bar_window.setup(BattleManager.actor) if $imported['RIFF_HOTKEYS']
+      end
+      BattleManager.action_list.each { |battler|
+        battler.make_actions if (battler.enemy? || battler.input.confirm) && battler.max_catb_value? && battler.ct_catb_value <= 0 && (!$imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"] || battler.cd_catb_value <= 0)
+        perform_catb_action(battler) unless @subject
+      }
+      eval(DoubleX_RMVXA::YSA_CATB_Update_Addon::POST_ATB_UPDATE) if $imported["DoubleX RMVXA Update Addon to YSA-CATB"]
+    end until catb_ctb_break?
+    if $imported["DoubleX RMVXA Countdown Addon to YSA-CATB"]
+      all_battle_members.each { |battler|
+        if battler.actor_countdown
+          @status_window.draw_item(battler.index)
+          battler.actor_countdown = false
+        end
+        battler.perform_collapse_effect if battler.enemy? && battler.can_collapse?
+      }
+    end
+    if $imported["DoubleX RMVXA Tick Addon to YSA-CATB"]
+      update_catb_tick_count(["tick", "clock"])
+      update_catb_tick_count(["battler", "battler"])
+    end
+    #
+  end # process_catb
+
+  #----------------------------------------------------------------------------|
+  #  New method: catb_ctb_break?                                               |
+  #----------------------------------------------------------------------------|
+  def catb_ctb_break?
+    return true if BattleManager.catb_escape == :false
+    BattleManager.action_list.each { |b|
+      return true if b.charge_skill_done? && (b.enemy? || b.input && b.input.item && b.input.confirm)
+      next unless b.actor? && b.inputable? && b.ct_catb_value <= 0
+      return true unless $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"] && b.cd_catb_value > 0
+    }
+    false
+  end # catb_ctb_break?
+
+end # Scene_Battle
+
+end # if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#==============================================================================|

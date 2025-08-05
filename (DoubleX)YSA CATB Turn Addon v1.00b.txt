@@ -1,0 +1,129 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Turn Addon v1.00b to YSA Battle System: Classical ATB      |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00b(GMT 0300 6-9-2014):                                                |
+#    - Compatible with Yanfly Engine Ace - Lunatic States                      |
+#    v1.00a(GMT 0900 4-9-2014):                                                |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of YSA Battle System: Classical ATB except that you must also|
+#    give Yami credit(you should do this anyway) if you give DoubleX or his    |
+#    alias credit                                                              |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB             |
+#    Knowledge:                                                                |
+#    - That of using the script YSA Battle System: Classical ATB               |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Adds more turn types to YSA Battle System: Classical ATB                |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script                                              |
+#    DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB and ¡¿ Main.   |
+#    Save to take effect.                                                      |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle System: Classical ATB                        |
+#==============================================================================|
+
+$imported = {} if $imported.nil?
+$imported["DoubleX RMVXA Turn Addon to YSA-CATB"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module YSA_CATB_Turn_Addon
+
+#------------------------------------------------------------------------------|
+#  * DEFAULT_TURN = :battler                                                   |
+#------------------------------------------------------------------------------|
+
+    # COUNT_DEAD, default = false
+    # Dead battlers will also be counted for DEFAULT TURN if COUNT_DEAD is true
+    COUNT_DEAD = false
+
+    # FRAME_MULTIPLIER, default = 60
+    # If DEFAULT_TURN is :battler, the length of each turn will be x frames, x
+    # being the number of battlers multiplied by FRAME_MULTIPLIER.
+    FRAME_MULTIPLIER = 60
+
+    # FRAME_MULTIPLIER_VARIABLE_ID, default = 0
+    # Use a variable with id FRAME_MULTIPLIER_VARIABLE_ID instead of
+    # FRAME_MULTIPLIER if FRAME_MULTIPLIER_VARIABLE_ID > 0
+    FRAME_MULTIPLIER_VARIABLE_ID = 0
+
+  end # YSA_CATB_Turn_Addon
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+class Game_System
+
+  include DoubleX_RMVXA::YSA_CATB_Turn_Addon
+  #----------------------------------------------------------------------------|
+  #  New method: catb_battler_count                                            |
+  #----------------------------------------------------------------------------|
+  def catb_battler_count
+    (COUNT_DEAD ? $game_party.members.size + $game_troop.members.size : $game_party.alive_members.size + $game_troop.alive_members.size) * ($game_variables[FRAME_MULTIPLIER_VARIABLE_ID] > 0 ? $game_variables[FRAME_MULTIPLIER_VARIABLE_ID] : FRAME_MULTIPLIER)
+  end # catb_battler_count
+
+end # Game_System
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: process_catb                                                |
+  #----------------------------------------------------------------------------|
+  alias process_catb_turn_addon process_catb
+  def process_catb
+    process_catb_turn_addon
+    # This part is added by this script to process :battler turn update
+    return if !SceneManager.scene_is?(Scene_Battle) || scene_changing? || !BattleManager.btype?(:catb) || catb_pause?
+    if $game_system.catb_turn_type == :battler
+      @tick_battler ||= 0
+      @tick_battler += 1
+      if @tick_battler >= $game_system.catb_battler_count
+        @tick_battler = 0
+        BattleManager.turn_end
+        all_battle_members.each { |member| member.run_lunatic_states(:begin) } if $imported["YEA-LunaticStates"]
+        if $imported["YEA-SkillRestrictions"]
+          $game_party.update_restrictions
+          $game_troop.update_restrictions
+        end
+        all_battle_members.each { |battler|
+          battler.on_turn_end
+          battler.perform_collapse_effect if battler.enemy? && battler.can_collapse?
+        }
+        @status_window.refresh
+        $game_troop.increase_turn
+      end
+    end
+    #
+  end # process_catb
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#==============================================================================|

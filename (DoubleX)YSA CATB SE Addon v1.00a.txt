@@ -1,0 +1,182 @@
+#==============================================================================|
+#  ** DoubleX RMVXA SE Addon v1.00a to YSA Battle System: Classical ATB        |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00a(GMT 0500 13-2-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of YSA Battle System: Classical ATB except that you must also|
+#    give Yami credit(you should do this anyway) if you give DoubleX or his    |
+#    alias credit                                                              |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB             |
+#    Knowledge:                                                                |
+#    - That of using the script YSA Battle System: Classical ATB               |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Plays se upon full atb bar for actors                                   |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script                                              |
+#    DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB and ¡¿ Main.   |
+#    Save to take effect.                                                      |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle System: Classical ATB                        |
+#==============================================================================|
+
+$imported = {} if $imported.nil?
+$imported["DoubleX RMVXA SE Addon to YSA-CATB"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#  * Actor Notetags:(actor notebox in the database)                            |
+#    - <custom catb se: File, Volume, Pitch>                                   |
+#      Sets the se to be played as File(ithout specifying its extension and    |
+#      with or without specifying its path) with volume Volume and pitch Pitch |
+#      when the actor's atb bar's full.                                        |
+#      Volume and Pitch range from 1 to 100 and 5 to 200 respectively.         |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module YSA_CATB_SE_Addon
+
+    # Sets the default se to be played as SE_FILE (without specifying its
+    # extension and with or without specifying its path) with volume SE_VOLUME
+    # and pitch SE_PITCH for all actors when their atb bar're full
+    # SE_VOLUME and SE_PITCH range from 1 to 100 and 5 to 200 respectively
+    # <custom catb se: File, Volume, Pitch> notetag overrides these settings
+    # default = "Audio/SE/SE file name without extension", 80, 100
+    SE_FILE = "Audio/SE/SE file name without extension"
+    SE_VOLUME = 80
+    SE_PITCH = 100
+
+    # Actors lacking se notetag will also play se when their atb bar're full
+    # Default = false
+    ALL_PLAY_SE = false
+
+  end # YSA_CATB_SE_Addon
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+module DoubleX_RMVXA
+  module REGEXP
+  module ACTOR
+
+    CUSTOM_CATB_SE = /<(?:CUSTOM_CATB_SE|custom catb se):[ ](\w+(?:\s*,\s*\w+)*)>/i
+
+  end # ACTOR
+  end # REGEXP
+end # DoubleX_RMVXA
+
+module DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: load_database                                               |
+  #----------------------------------------------------------------------------|
+  class <<self; alias load_database_catb_se_addon load_database; end
+  def self.load_database
+    load_database_catb_se_addon
+    # This part is added by this script to load se notetags
+    load_notetags_catb_se_addon
+    #
+  end # self.load_database
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_catb_se_addon                                   |
+  #----------------------------------------------------------------------------|
+  def self.load_notetags_catb_se_addon
+    for obj in $data_actors
+      next if obj.nil?
+      obj.load_notetags_catb_se_addon
+    end
+  end # self.load_notetags_catb_se_addon
+
+end # DataManager
+
+class RPG::Actor < RPG::BaseItem
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  attr_accessor :catb_se_file
+
+  #----------------------------------------------------------------------------|
+  #  New common cache: load_notetags_catb_se_addon                             |
+  #----------------------------------------------------------------------------|
+  def load_notetags_catb_se_addon
+    catb_se_file = []
+    if DoubleX_RMVXA::YSA_CATB_SE_Addon::ALL_PLAY_SE
+      catb_se_file[0] = DoubleX_RMVXA::YSA_CATB_SE_Addon::SE_FILE
+      catb_se_file[1] = DoubleX_RMVXA::YSA_CATB_SE_Addon::SE_VOLUME
+      catb_se_file[2] = DoubleX_RMVXA::YSA_CATB_SE_Addon::SE_PITCH
+    end
+    self.note.split(/[\r\n]+/).each { |line|
+      case line
+      when DoubleX_RMVXA::REGEXP::ACTOR::CUSTOM_CATB_SE
+        $1.scan(/\w+/).each_with_index { |input, index|
+          break if index > 2
+          catb_se_file[index] = index == 0 ? input.to_s : input.to_i
+        }
+      end
+    }
+    @catb_se_file = RPG::SE.new(catb_se_file[0], catb_se_file[1], catb_se_file[2]) if catb_se_file[0] && catb_se_file[1] && catb_se_file[2]
+  end # load_notetags_catb_se_addon
+
+end # RPG::Actor
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_catb_action                                            |
+  #----------------------------------------------------------------------------|
+  alias make_catb_action_se_addon make_catb_action
+  def make_catb_action
+    # This part is added by this script to check if actor's atb bar's full
+    @prior_catb_play_actor_se = self.actor? && self.catb_se_file ? BattleManager.action_list(:actor).find { |actor| actor == self } : false
+    #
+    make_catb_action_se_addon
+    # This part is added by this script to play se when actor's atb bar's full
+    @next_catb_play_actor_se = self.actor? && self.catb_se_file ? BattleManager.action_list(:actor).find { |actor| actor == self } : false
+    self.catb_se_file.play if @prior_catb_play_actor_se != @next_catb_play_actor_se
+    #
+  end # make_catb_action
+
+end # Game_Battler
+
+class Game_Actor < Game_Battler
+
+  #----------------------------------------------------------------------------|
+  #  New method: catb_se_file                                                  |
+  #----------------------------------------------------------------------------|
+  def catb_se_file
+    $data_actors[@actor_id].catb_se_file
+  end # catb_se_file
+
+end # Game_Actor
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#==============================================================================|

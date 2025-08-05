@@ -1,0 +1,313 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Percentage Addon v1.02c to YSA Battle System: Classical ATB|
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.02c(GMT 0900 14-4-2015):                                               |
+#    - In sync with the newest compatibility fix version                       |
+#    v1.02b(GMT 0900 29-3-2015):                                               |
+#    - Increased the efficiency of this script                                 |
+#    v1.02a(GMT 0300 4-9-2014):                                                |
+#    - Added hp texts x and y offsets relative to respective bars              |
+#    - Added TEXT_COLOR and FIX_LARGE_TEXT                                     |
+#    v1.01c(GMT 0700 29-8-2014):                                               |
+#    - Compatible with DoubleX RMVXA Enemy MP/TP Bars Addon to Yanfly Engine   |
+#      Ace - Ace Battle Engine                                                 |
+#    v1.01b(GMT 1200 29-7-2014):                                               |
+#    - Updated the compatibility with                                          |
+#      DoubleX RMVXA Color Addon to YSA Battle System: Classical ATB           |
+#    v1.01a(GMT 1400 21-7-2014):                                               |
+#    - Lets users shows actual atb numbers instead of percentages              |
+#    - Lets users sets the size of the text shown on enemy atb bars            |
+#    v1.00a(GMT 1200 30-6-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of YSA Battle System: Classical ATB except that you must also|
+#    give Yami credit(you should do this anyway) if you give DoubleX or his    |
+#    alias credit                                                              |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB             |
+#    Knowledge:                                                                |
+#    - That of using the script YSA Battle System: Classical ATB               |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Displays the current percentage of the atb, charge or cooldown bar      |
+#      filled and the number of actions currently available                    |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script                                              |
+#    DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB and ¡¿ Main.   |
+#    Save to take effect.                                                      |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle System: Classical ATB                        |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Percentage Addon to YSA-CATB"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module YSA_CATB_Percentage_Addon
+
+    # (v1.01a+)ACTUAL_NUMBER, default = false
+    # Shows the actual atb numbers instead of the percentages
+    ACTUAL_NUMBER = false
+
+    # (v1.01a+)TEXT_SIZE, default = YSA::CATB::ENEMY_GAUGE_HEIGHT
+    # Sets the size of the text shown on enemy atb bars as TEXT_SIZE
+    TEXT_SIZE = YSA::CATB::ENEMY_GAUGE_HEIGHT
+
+    # (v1.02a+)TEXT_COLOR, default = 16
+    # Sets the text color of the text shown on enemy atb bars as TEXT_COLOR
+    TEXT_COLOR = 16
+
+    # (v1.02a+)FIX_LARGE_TEXT, default = false
+    # Fixes issues when TEXT_SIZE is much larger than ENEMY_GAUGE_HEIGHT
+    FIX_LARGE_TEXT = false
+
+    # (v1.02a+)TEXT_X_OFFSET, TEXT_Y_OFFSET, default = 0, 0
+    # Sets the x and y offsets of the atb text relative to the enemy atb bar
+    TEXT_X_OFFSET = 0
+    TEXT_Y_OFFSET = 0
+
+  end # YSA_CATB_Percentage_Addon
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#------------------------------------------------------------------------------|
+
+class Window_BattleStatus < Window_Selectable
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: draw_actor_catb                                             |
+  #----------------------------------------------------------------------------|
+  alias draw_actor_catb_percentage_addon draw_actor_catb
+  def draw_actor_catb(actor, dx, dy, width = 124)
+    draw_actor_catb_percentage_addon(actor, dx, dy, width)
+    # Added to draw the percentage of the bar filled
+    draw_percentage(actor, dx, dy, width)
+    #
+  end # draw_actor_catb
+
+  #----------------------------------------------------------------------------|
+  #  New method: draw_percentage                                               |
+  #----------------------------------------------------------------------------|
+  def draw_percentage(actor, dx, dy, width = 124)
+    fill_rate = $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"] && actor.catb_cd_filled_rate > 0 ? actor.catb_cd_filled_rate : actor.catb_ct_filled_rate > 0 ? actor.catb_ct_filled_rate : actor.catb_filled_rate
+    percent = (DoubleX_RMVXA::YSA_CATB_Percentage_Addon::ACTUAL_NUMBER ? actor.catb_value.to_i.to_s : "#{(fill_rate * 100).to_i.to_s}%") + " #{actor.catb_action_times.to_s}"
+    dw = text_size(percent).width + 2
+    draw_text(dx + width - dw, dy + (Font.default_size - contents.font.size) / 2 + 1, dw, line_height, percent)
+  end # draw_percentage
+
+end # Window_BattleStatus
+
+class Sprite_Battler < Sprite_Base
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: create_enemy_gauges_catb                                    |
+  #----------------------------------------------------------------------------|
+  alias create_enemy_gauges_catb_percentage_addon create_enemy_gauges_catb
+  def create_enemy_gauges_catb
+    create_enemy_gauges_catb_percentage_addon
+    # Added to create percentage text
+    @catb_percent_gauge_viewport = Enemy_CATB_Gauge_Viewport.new(@battler, self, :percent) if @battler && !@battler.actor? && BattleManager.btype?(:catb)
+    #
+  end # create_enemy_gauges_catb
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: dispose_enemy_gauges_catb                                   |
+  #----------------------------------------------------------------------------|
+  alias dispose_enemy_gauges_catb_percentage_addon dispose_enemy_gauges_catb
+  def dispose_enemy_gauges_catb
+    dispose_enemy_gauges_catb_percentage_addon
+    # Added to dispose percentage text
+    @catb_percent_gauge_viewport.dispose if @catb_percent_gauge_viewport && BattleManager.btype?(:catb)
+    #
+  end # dispose_enemy_gauges_catb
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: update_enemy_gauges_catb                                    |
+  #----------------------------------------------------------------------------|
+  alias update_enemy_gauges_catb_percentage_addon update_enemy_gauges_catb
+  def update_enemy_gauges_catb
+    update_enemy_gauges_catb_percentage_addon
+    # Added to update percentage text
+    @catb_percent_gauge_viewport.update if @catb_percent_gauge_viewport && BattleManager.btype?(:catb)
+    #
+  end # update_enemy_gauges_catb
+
+end # Sprite_Battler
+
+class Enemy_CATB_Gauge_Viewport < Viewport
+
+  COLOR_ADDON = $imported["DoubleX RMVXA Color Addon to YSA-CATB"]
+  COOLDOWN_ADDON = $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"]
+  TP_MP_ADDON = $imported["DoubleX RMVXA Enemy MP/TP Bars Addon to YEA-BattleEngine"]
+  include DoubleX_RMVXA::YEA_BattleEngine_Enemy_MP_TP_Bars_Addon if TP_MP_ADDON
+  include DoubleX_RMVXA::YSA_CATB_Percentage_Addon
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: initialize                                                |
+  #----------------------------------------------------------------------------|
+  def initialize(battler, sprite, type)
+    @battler = battler
+    @base_sprite = sprite
+    @type = type
+    dw = YSA::CATB::ENEMY_GAUGE_WIDTH
+    # Rewritten to setup the percentage text
+    dh = @type == :percent && FIX_LARGE_TEXT ? [TEXT_SIZE, YSA::CATB::ENEMY_GAUGE_HEIGHT].max : YSA::CATB::ENEMY_GAUGE_HEIGHT
+    @outline = @type == :back || @type == :percent
+    if @outline
+      dw += 2 
+      dh += 2
+    end
+    #
+    @start_width = dw
+    rect = Rect.new(0, 0, dw, dh)
+    super(rect)
+    self.z = 0
+    create_gauge_sprites
+    self.visible = false
+    update_position
+  end # initialize
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: create_gauge_sprites                                      |
+  #----------------------------------------------------------------------------|
+  def create_gauge_sprites
+    @sprite = Plane.new(self)
+    @sprite.bitmap = Bitmap.new(rect.width * 2, rect.height)
+    case @type
+    when :back
+      back_rgba = COLOR_ADDON && DoubleX_RMVXA::YSA_CATB_Color_Addon::ENEMY_BACK_RGBA
+      colour = Colour.text_colour(YSA::CATB::ENEMY_BACKGAUGE_COLOUR)
+      colour1 = back_rgba ? DoubleX_RMVXA::YSA_CATB_Color_Addon::ENEMY_BACK_COLOR1 : colour
+      colour2 = back_rgba ? DoubleX_RMVXA::YSA_CATB_Color_Addon::ENEMY_BACK_COLOR2 : colour
+    when :catb
+      atb_rgba = COLOR_ADDON && DoubleX_RMVXA::YSA_CATB_Color_Addon::ATB_RGBA
+      colour1 = atb_rgba ? DoubleX_RMVXA::YSA_CATB_Color_Addon::ATB_COLOR1 : Colour.text_colour(YSA::CATB::ENEMY_ATB_GAUGE_COLOUR1)
+      colour2 = atb_rgba ? DoubleX_RMVXA::YSA_CATB_Color_Addon::ATB_COLOR2 : Colour.text_colour(YSA::CATB::ENEMY_ATB_GAUGE_COLOUR2)
+    when :catbct
+      charge_rgba = COLOR_ADDON && DoubleX_RMVXA::YSA_CATB_Color_Addon::CHARGE_RGBA
+      colour1 = charge_rgba ? DoubleX_RMVXA::YSA_CATB_Color_Addon::CHARGE_COLOR1 : Colour.text_colour(YSA::CATB::CHARGE_COLOR1)
+      colour2 = charge_rgba ? DoubleX_RMVXA::YSA_CATB_Color_Addon::CHARGE_COLOR2 : Colour.text_colour(YSA::CATB::CHARGE_COLOR2)
+    when :catbcd
+      if COOLDOWN_ADDON
+        colour1 = DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR1.is_a?(Numeric) ? Colour.text_colour(DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR1) : DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR1
+        colour2 = DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR2.is_a?(Numeric) ? Colour.text_colour(DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR2) : DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR2
+      end
+    # Added to setup the percentage text 
+    when :percent
+      colour1 = Color.new(0, 0, 0, 0)
+      colour2 = Color.new(0, 0, 0, 0)
+      set_percentage_font
+    end
+    #
+    dw = rect.width
+    dh = rect.height
+    # Added to setup the percentage text 
+    rect.width = target_gauge_width unless @outline
+    #
+    @gauge_width = target_gauge_width
+    @sprite.bitmap.gradient_fill_rect(0, 0, dw, dh, colour1, colour2)
+    @sprite.bitmap.gradient_fill_rect(dw, 0, dw, dh, colour2, colour1)
+  end # create_gauge_sprites
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: update_position                                           |
+  #----------------------------------------------------------------------------|
+  def update_position
+    dx = @battler.screen_x
+    dy = @battler.screen_y
+    return if @last_x == dx && @last_y == dy
+    @last_x = dx
+    @last_y = dy
+    dx -= @start_width / 2
+    # Added to set the x and y offset of percentage text
+    if @type == :percent
+      dx += TEXT_X_OFFSET
+      dy += TEXT_Y_OFFSET
+    end
+    #
+    rect.x = dx
+    dh = rect.height + 1
+    # Rewritten to ensure the percentage text won't overlap with the status
+    # window
+    dh += 2 unless @outline
+    dy = [dy, Graphics.height - dh - 120].min
+    dy += 1 unless @outline
+    dy -= ENEMY_MP_GAUGE_HEIGHT + ENEMY_TP_GAUGE_HEIGHT if TP_MP_ADDON
+    #
+    dy -= YEA::BATTLE::ENEMY_GAUGE_HEIGHT if $imported["YEA-EnemyHPBars"]
+    rect.y = dy
+  end # update_position
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: update_gauge                                                |
+  #----------------------------------------------------------------------------|
+  alias update_gauge_percentage_addon update_gauge
+  def update_gauge
+    # Rewritten to stop updating percentage gauge
+    update_gauge_percentage_addon unless @type == :percent
+    #
+  end # update_gauge
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: update                                                      |
+  #----------------------------------------------------------------------------|
+  alias update_percentage_addon update
+  def update
+    update_percentage_addon
+    # Added to draw the percentage text
+    update_percentage if @type == :percent
+    #
+  end # update
+
+  #----------------------------------------------------------------------------|
+  #  New method: set_percentage_font                                           |
+  #----------------------------------------------------------------------------|
+  def set_percentage_font
+    n = TEXT_COLOR
+    @sprite.bitmap.font.color = Cache.system("Window").get_pixel(64 + (n % 8) * 8, 96 + (n / 8) * 8)
+    @sprite.bitmap.font.size = TEXT_SIZE
+  end # set_percentage_font
+
+  #----------------------------------------------------------------------------|
+  #  New method: update_percentage                                             |
+  #----------------------------------------------------------------------------|
+  def update_percentage
+    fill_rate = COOLDOWN_ADDON && @battler.catb_cd_filled_rate > 0 ? @battler.catb_cd_filled_rate : @battler.catb_ct_filled_rate > 0 ? @battler.catb_ct_filled_rate : @battler.catb_filled_rate
+    percent = (DoubleX_RMVXA::YSA_CATB_Percentage_Addon::ACTUAL_NUMBER ? @battler.catb_value.to_i.to_s : "#{(fill_rate * 100).to_i.to_s}%") + " #{@battler.catb_action_times.to_s}"
+    return if @last_percent == percent
+    @last_percent = percent
+    dw = @sprite.bitmap.text_size(percent).width
+    @sprite.bitmap.clear
+    @sprite.bitmap.draw_text(YSA::CATB::ENEMY_GAUGE_WIDTH + 2 - dw, 0, dw, @sprite.bitmap.text_size(percent).height, percent)
+  end # update_percentage
+
+end # Enemy_CATB_Gauge_Viewport
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#==============================================================================|

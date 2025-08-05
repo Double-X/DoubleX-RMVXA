@@ -1,0 +1,287 @@
+#==============================================================================|
+#  ** DoubleX RMVXA CATB Clear Addon v1.01a to YSA Battle System: Classical ATB|
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.01a(GMT 0400 11-9-2014):                                               |
+#    - Added                                                                   |
+#      <custom catb minus atb: a, p>                                           |
+#      <custom catb minus charge: p>                                           |
+#      <custom catb reset charge: p>                                           |
+#      <custom catb minus cooldown: p> and                                     |
+#      <custom catb reset cooldown: p> notetags                                |
+#    - Changed <custom catb clear> to <custom catb reset atb: a, p>            |
+#    v1.00b (GMT 0000 1-7-2014):                                               |
+#    - Updated the way of clearing atb and actions                             |
+#    v1.00a (GMT 1600 9-1-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of YSA Battle System: Classical ATB except that you must also|
+#    give Yami credit(you should do this anyway) if you give DoubleX or his    |
+#    alias credit                                                              |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB             |
+#    Knowledge:                                                                |
+#    - That of using the script YSA Battle System: Classical ATB               |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Adds clear catb feature to YSA Battle System: Classical ATB             |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script                                              |
+#    DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB and ¡¿ Main.   |
+#    Save to take effect.                                                      |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle System: Classical ATB                        |
+#==============================================================================|
+
+#------------------------------------------------------------------------------|
+#  * State Notetags:(state notebox in the database)                            |
+#    - (v1.01a+)<custom catb minus atb: a, p>                                  |
+#    Minus battlers' action points by a or atb fill percent by p% when states  |
+#    with the above notetag are added to them                                  |
+#    - (v1.01a+)<custom catb reset atb: a, p>                                  |
+#    Reset battlers' action points to a or atb fill percent to p% when states  |
+#    with the above notetag are added to them                                  |
+#    It won't work if the action points or atb fill percent would be increased |
+#    - (v1.01a+)<custom catb minus charge: p>                                  |
+#    Minus battlers' charge fill percent by p% when states with the above      |
+#    notetag are added to them                                                 |
+#    The action will be cancelled if the charge fill percent would be negative |
+#    - (v1.01a+)<custom catb reset charge: p>                                  |
+#    Reset battlers' charge fill percent by p% when states with the above      |
+#    notetag are added to them                                                 |
+#    It won't work if the charge fill percent would be increased               |
+#------------------------------------------------------------------------------|
+#    * The below 2 notetags needs                                              |
+#    DoubleX RMVXA Cooldown Addon to YSA Battle System: Classical ATB          |
+#    - (v1.01a+)<custom catb minus cooldown: p>                                |
+#    Add battlers' cooldown fill percent by p% when states with the above      |
+#    notetag are added to them                                                 |
+#    - (v1.01a+)<custom catb reset cooldown: p>                                |
+#    Reset battlers' cooldown fill percent by p% when states with the above    |
+#    notetag are added to them                                                 |
+#    It won't work if the cooldown fill percent would be decreased             |
+#------------------------------------------------------------------------------|
+
+$imported = {} if $imported.nil?
+$imported["DoubleX RMVXA Clear CATB Addon to YSA-CATB"] = true
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+module DoubleX_RMVXA
+  module REGEXP
+  module STATE
+
+    CUSTOM_CATB_MINUS_ATB = /<(?:CUSTOM_CATB_MINUS_ATB|custom catb minus atb):[ ](\d+(?:\s*,\s*\d+)*)>/i
+    CUSTOM_CATB_RESET_ATB = /<(?:CUSTOM_CATB_RESET_ATB|custom catb reset atb):[ ](\d+(?:\s*,\s*\d+)*)>/i
+    CUSTOM_CATB_MINUS_CHARGE = /<(?:CUSTOM_CATB_MINUS_CHARGE|custom catb minus charge):[ ]*(\d+)>/i
+    CUSTOM_CATB_RESET_CHARGE = /<(?:CUSTOM_CATB_RESET_CHARGE|custom catb reset charge):[ ]*(\d+)>/i
+    CUSTOM_CATB_MINUS_COOLDOWN = /<(?:CUSTOM_CATB_MINUS_COOLDOWN|custom catb minus cooldown):[ ]*(\d+)>/i
+    CUSTOM_CATB_RESET_COOLDOWN = /<(?:CUSTOM_CATB_RESET_COOLDOWN|custom catb reset cooldown):[ ]*(\d+)>/i
+
+  end # STATE
+  end # REGEXP
+end # DoubleX_RMVXA
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: load_database                                               |
+  #----------------------------------------------------------------------------|
+  alias load_database_catb_clear_addon load_database
+  def load_database
+    load_database_catb_clear_addon
+    # This part is added yb this script to load clear addon notetags
+    load_notetags_catb_clear_addon
+    #
+  end # load_database
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_catb_clear_addon                                |
+  #----------------------------------------------------------------------------|
+  def load_notetags_catb_clear_addon
+    $data_states.each { |obj| obj.load_notetags_catb_clear_addon if obj }
+  end # load_notetags_catb_clear_addon
+
+end # DataManager
+
+class RPG::State < RPG::BaseItem
+
+  include DoubleX_RMVXA::REGEXP::STATE
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  attr_accessor :catb_minus_atb
+  attr_accessor :catb_reset_atb
+  attr_accessor :catb_minus_charge
+  attr_accessor :catb_reset_charge
+  attr_accessor :catb_minus_cooldown
+  attr_accessor :catb_reset_cooldown
+
+  #----------------------------------------------------------------------------|
+  #  New common cache: load_notetags_catb_clear_addon                          |
+  #----------------------------------------------------------------------------|
+  def load_notetags_catb_clear_addon
+    @catb_minus_atb, @catb_reset_atb = [], []
+    @catb_minus_charge, @catb_reset_charge = nil, nil
+    @catb_minus_cooldown, @catb_reset_cooldown = nil, nil
+    self.note.split(/[\r\n]+/).each { |line|
+      case line
+      when CUSTOM_CATB_MINUS_ATB
+        $1.scan(/\d+/).each_with_index { |num, index|
+          break if index > 1
+          @catb_minus_atb[index] = num.to_i if num.to_i >= 0
+        }
+      when CUSTOM_CATB_RESET_ATB
+        $1.scan(/\d+/).each_with_index { |num, index|
+          break if index > 1
+          @catb_reset_atb[index] = num.to_i if num.to_i >= 0
+        }
+      when CUSTOM_CATB_MINUS_CHARGE
+        @catb_minus_charge = $1.to_i if $1.to_i >= 0
+      when CUSTOM_CATB_RESET_CHARGE
+        @catb_reset_charge = $1.to_i if $1.to_i >= 0
+      when CUSTOM_CATB_MINUS_COOLDOWN
+        @catb_minus_cooldown = $1.to_i if $1.to_i >= 0
+      when CUSTOM_CATB_RESET_COOLDOWN
+        @catb_reset_cooldown = $1.to_i if $1.to_i >= 0
+      end
+    }
+  end # load_notetags_catb_clear_addon
+
+end # RPG::State
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: add_state                                                 |
+  #----------------------------------------------------------------------------|
+  def add_state(state_id)
+    return if !state_addable?(state_id)
+    # This part is rewritten by this script to clear catb if the state has clear catb notetags
+    if !state?(state_id)
+      add_new_state(state_id)        
+      state = $data_states[state_id]
+      catb_minus_atb(state)
+      catb_reset_atb(state)
+      catb_minus_charge(state)
+      catb_reset_charge(state)
+      if $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"]
+        catb_minus_cooldown(state)
+        catb_reset_cooldown(state)
+      end
+    end
+    #
+    reset_state_counts(state_id)
+    @result.added_states.push(state_id).uniq!
+  end
+
+  #----------------------------------------------------------------------------|
+  #  New method: catb_minus_atb                                                |
+  #----------------------------------------------------------------------------|
+  def catb_minus_atb(state)
+    return if state.catb_minus_atb.size != 2
+    @catb_action_times = [@catb_action_times - state.catb_minus_atb[0], 0].max
+    if current_action && current_action.item
+      item = current_action.item
+      if $imported["DoubleX RMVXA Action Addon to YSA-CATB"]
+        item_action = item.action
+      elsif $imported["YEA-InstantCast"]
+        item_action = item.instant ? 0 : 1
+      else
+        item_action = 1
+      end
+    else
+      item_action = 1
+    end
+    return if @catb_action_times >= item_action
+    current_action.clear if current_action
+    @ct_catb_value = 0
+    return if @catb_action_times > 0
+    @catb_value = [@catb_value - MAX_CATB_VALUE * state.catb_minus_atb[1] / 100.0, 0].max
+    BattleManager.clear_actor if self.actor? && BattleManager.actor == self
+    BattleManager.delete_catb_action(self)
+  end # catb_minus_atb
+
+  #----------------------------------------------------------------------------|
+  #  New method: catb_reset_atb                                                |
+  #----------------------------------------------------------------------------|
+  def catb_reset_atb(state)
+    return if state.catb_reset_atb.size != 2
+    @catb_action_times = [@catb_action_times, state.catb_reset_atb[0]].min
+    if current_action && current_action.item
+      item = current_action.item
+      if $imported["DoubleX RMVXA Action Addon to YSA-CATB"]
+        item_action = item.action
+      elsif $imported["YEA-InstantCast"]
+        item_action = item.instant ? 0 : 1
+      else
+        item_action = 1
+      end
+    else
+      item_action = 1
+    end
+    return if @catb_action_times >= item_action
+    current_action.clear if current_action
+    @ct_catb_value = 0
+    return if @catb_action_times > 0
+    @catb_value = [@catb_value, MAX_CATB_VALUE * state.catb_reset_atb[1] / 100.0].min
+    BattleManager.clear_actor if self.actor? && BattleManager.actor == self
+    BattleManager.delete_catb_action(self)
+  end # catb_reset_atb
+
+  #----------------------------------------------------------------------------|
+  #  New method: catb_minus_charge                                             |
+  #----------------------------------------------------------------------------|
+  def catb_minus_charge(state)
+    return if !state.catb_minus_charge || @ct_catb_value == 0 || charge_skill_done?
+    @ct_catb_value = @ct_catb_value - MAX_CATB_VALUE * state.catb_minus_charge / 100.0
+    return if @ct_catb_value >= 0
+    current_action.clear if current_action    
+    @ct_catb_value = 0
+  end # catb_minus_charge
+
+  #----------------------------------------------------------------------------|
+  #  New method: catb_reset_charge                                             |
+  #----------------------------------------------------------------------------|
+  def catb_reset_charge(state)
+    @ct_catb_value = MAX_CATB_VALUE * state.catb_reset_charge / 100.0 if state.catb_reset_charge && @ct_catb_value != 0 && !charge_skill_done? && @ct_catb_value > MAX_CATB_VALUE * state.catb_reset_charge / 100.0
+  end # catb_reset_charge
+
+  #----------------------------------------------------------------------------|
+  #  New method: catb_minus_cooldown                                           |
+  #----------------------------------------------------------------------------|
+  def catb_minus_cooldown(state)
+    @cd_catb_value = [@cd_catb_value + MAX_CATB_VALUE * state.catb_minus_cooldown / 100.0, MAX_CATB_VALUE].min if state.catb_minus_cooldown && @cd_catb_value != 0 && @cd_catb_value != MAX_CATB_VALUE
+  end # catb_minus_cooldown
+
+  #----------------------------------------------------------------------------|
+  #  New method: catb_reset_cooldown                                           |
+  #----------------------------------------------------------------------------|
+  def catb_reset_cooldown(state)
+    @cd_catb_value = MAX_CATB_VALUE * state.catb_reset_cooldown / 100.0 if state.catb_reset_cooldown && @cd_catb_value != 0 && @cd_catb_value < MAX_CATB_VALUE * state.catb_reset_cooldown / 100.0
+  end # catb_reset_cooldown
+
+end # Game_Battler
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#==============================================================================|

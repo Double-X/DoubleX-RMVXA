@@ -1,0 +1,91 @@
+#==============================================================================|
+#  ** DoubleX RMVXA ATB Addon v1.00b to YSA Battle System: Classical ATB       |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00b(GMT 0200 3-5-2014):                                                |
+#    - Increased the efficiency of this script                                 |
+#    v1.00a(GMT 0600 5-7-2014):                                                |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of YSA Battle System: Classical ATB except that you must also|
+#    give Yami credit(you should do this anyway) if you give DoubleX or his    |
+#    alias credit                                                              |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB             |
+#    Knowledge:                                                                |
+#    - That of using the script YSA Battle System: Classical ATB               |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Lets users to set the formula for battler's atb bar filling speed       |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script                                              |
+#    DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB and ¡¿ Main.   |
+#    Save to take effect.                                                      |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle System: Classical ATB                        |
+#==============================================================================|
+
+$imported = {} if $imported.nil?
+$imported["DoubleX RMVXA ATB Addon to YSA-CATB"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module YSA_CATB_ATB_Addon
+
+    # The atb increment per frame is:
+    # CATB_GAIN_MODIFIER * MAX_CATB_VALUE / $game_system.catb_fill_time
+    # MAX_CATB_VALUE is equal to 100000.0
+    # $game_system.catb_fill_time is DEFAULT_FILL_TIME or FILL_TIME_VARIABLE
+
+    # CATB_GAIN_MODIFIER default is "agi.to_f / BattleManager.average_agi"
+    # agi.to_f is battler's agi
+    # BattleManager.average_agi is the average agi of all battlers
+    #CATB_GAIN_MODIFIER = "agi.to_f / BattleManager.average_agi"
+
+    CATB_GAIN_MODIFIER = "agi * 1.0 / BattleManager.average_agi"
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+  REAL_GAIN_CATB = %Q(
+  def real_gain_catb
+    #{CATB_GAIN_MODIFIER} * base_gain_catb
+  end # real_gain_catb
+  )
+
+  end # YSA_CATB_ATB_Addon
+end # DoubleX_RMVXA
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#------------------------------------------------------------------------------|
+
+class Game_Battler < Game_BattlerBase
+
+  module_eval(DoubleX_RMVXA::YSA_CATB_ATB_Addon::REAL_GAIN_CATB)
+
+end # Game_Battler
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#==============================================================================|

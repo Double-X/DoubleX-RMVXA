@@ -1,0 +1,274 @@
+#==============================================================================|
+#  ** DoubleX RMVXA CATB Wait Addon v1.02a to YSA Battle System: Classical ATB |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.02a(GMT 1200 25-2-2015):                                               |
+#    - Added a window showing the atb force status                             |
+#    v1.01b(GMT 0900 4-9-2014):                                                |
+#    - Fixed atb running while game message is visible in :full_ani wait type  |
+#    v1.01a(GMT 1100 3-6-2014):                                                |
+#    - Added a new catb wait type :full_ani                                    |
+#    v1.00a(GMT 0600 2-6-2014):                                                |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of YSA Battle System: Classical ATB except that you must also|
+#    give Yami credit(you should do this anyway) if you give DoubleX or his    |
+#    alias credit                                                              |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB             |
+#    Knowledge:                                                                |
+#    - That of using the script YSA Battle System: Classical ATB               |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Allows atb to run with a button presed even if it's supposed to wait    |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script                                              |
+#    DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB and ¡¿ Main.   |
+#    Save to take effect.                                                      |
+#    Suggested Complete CATB Scripts Order(Excluding Dhoom Manipulate State):  |
+#    1.  Yanfly Engine Ace - Ace Core Engine                                   |
+#    2.  Yanfly Engine Ace - Ace Battle Engine                                 |
+#    3.  YSA Battle System: Classical ATB                                      |
+#    4.  YSA Battle Add-on: Lunatic CATB Rate                                  |
+#    5.  YSA Battle Add-on: Lunatic CATB Reset                                 |
+#    6.  YSA Battle Add-on: Lunatic CATB Start                                 |
+#    7.  DoubleX RMVXA Bug Fix to YSA Battle System: Classical ATB             |
+#    8.  DoubleX RMVXA Compatibility Fix to YSA Battle System: Classical ATB   |
+#    9.  DoubleX RMVXA Reset Addon to YSA Battle Add-on: Lunatic CATB Reset    |
+#    10. DoubleX RMVXA Action Addon to YSA Battle System: Classical ATB        |
+#    11. DoubleX RMVXA ATB Addon to YSA Battle System: Classical ATB           |
+#    12. DoubleX RMVXA Cancel Addon to YSA Battle System: Classical ATB        |
+#    13. DoubleX RMVXA Clear Addon to YSA Battle System: Classical ATB         |
+#    14. DoubleX RMVXA CATB Clear Addon Compatibility Fix                      |
+#    15. DoubleX RMVXA Cooldown Addon to YSA Battle System: Classical ATB      |
+#    16. DoubleX RMVXA Charge Addon to YSA Battle System: Classical ATB        |
+#    17. DoubleX RMVXA Countdown Addon to YSA Battle System: Classical ATB     |
+#    18. DoubleX RMVXA Countdown Addon Compatibility Fix                       |
+#    19. DoubleX RMVXA Escape Addon to YSA Battle System: Classical ATB        |
+#    20. DoubleX RMVXA Percentage Addon to YSA Battle System: Classical ATB    |
+#    21. DoubleX RMVXA Reset Addon to YSA Battle Add-on: Lunatic CATB Reset    |
+#    22. DoubleX RMVXA SE Addon to YSA Battle System: Classical ATB            |
+#    23. DoubleX RMVXA Tick Addon to YSA Battle System: Classical ATB          |
+#    24. DoubleX RMVXA Turn Addon to YSA Battle System: Classical ATB          |
+#    25. DoubleX RMVXA Unison Addon to YSA Battle System: Classical ATB        |
+#    26. DoubleX RMVXA Update Addon to YSA Battle System: Classical ATB        |
+#    27. DoubleX RMVXA Wait Addon to YSA Battle System: Classical ATB          |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle System: Classical ATB                        |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Wait Addon to YSA-CATB"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module YSA_CATB_Wait_Addon
+
+#------------------------------------------------------------------------------|
+#    New catb wait type - :full_ani, atb always run without exceptions         |
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#    (v1.02a+)ATB Force Status Window Settings                                 |
+#------------------------------------------------------------------------------|
+
+    # A window showing the atb force status will be shown if
+    # SHOW_FORCE_STATUS_WINDOW is true, default = true
+    SHOW_FORCE_STATUS_WINDOW = true
+
+    # Set the atb force status window width, default = 128
+    FORCE_STATUS_WINDOW_WIDTH = 128
+
+    # Set the atb force status window height, default = 40
+    FORCE_STATUS_WINDOW_HEIGHT = 40
+
+    # Set the atb force status window x position, default = 0
+    FORCE_STATUS_WINDOW_X = 0
+
+    # Set the atb force status window y position, default = 48
+    FORCE_STATUS_WINDOW_Y = 48
+
+    # Set the atb force status window z position, default = 0
+    FORCE_STATUS_WINDOW_Z = 0
+
+    # Set the atb force status text color, default = Colour.text_colour(0)
+    FORCE_STATUS_TEXT_COLOR = Colour.text_colour(0)
+
+    # Set the atb force status text size, default = 24
+    FORCE_STATUS_TEXT_SIZE = 16
+
+    # Set the atb force status text x position, default = 0
+    FORCE_STATUS_TEXT_X = 0
+
+    # Set the atb force status text y position, default = 0
+    FORCE_STATUS_TEXT_Y = 0
+
+    # Set the atb force run text, default = "ATB Force Run"
+    FORCE_RUN_TEXT = "ATB Force Run"
+
+    # Set the normal atb text, default = "No Force ATB"
+    NO_FORCE_RUN_TEXT = "No Force ATB"
+
+#------------------------------------------------------------------------------|
+#    A custom keymap binding script maybe helpful for setting the keys below   |
+#------------------------------------------------------------------------------|
+
+    # Select key which will force the atb to run, default = :CTRL
+    FORCE_RUN_ATB_KEY = :CTRL
+
+    # Select key which will stop forcing the atb to run, default = :ALT
+    STOP_FORCE_RUN_ATB_KEY = :ALT
+    # STOP_FORCE_RUN_ATB_KEY won't do anything if the atb is supposed to run
+
+#------------------------------------------------------------------------------|
+#    FORCE_RUN_ATB_KEY won't do anything if both of the below are false        |
+#------------------------------------------------------------------------------|
+
+    # FORCE_RUN_ATB_KEY will force the atb to run even while executing actions,
+    # default = true
+    FORCE_RUN_ANI = true
+
+    # FORCE_RUN_ATB_KEY will force the atb to run as if DEFAULT_WAIT was :full,
+    # default = true
+    FORCE_RUN_WAIT = true
+
+  end # YSA_CATB_Wait_Addon
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#------------------------------------------------------------------------------|
+#  * New class: CATB_Wait_Window                                               |
+#------------------------------------------------------------------------------|
+
+class CATB_Wait_Window < Window_Base
+
+  include DoubleX_RMVXA::YSA_CATB_Wait_Addon
+
+  #----------------------------------------------------------------------------|
+  #  New method: initialize                                                    |
+  #----------------------------------------------------------------------------|
+  def initialize(force)
+    super(0, 0, FORCE_STATUS_WINDOW_WIDTH, FORCE_STATUS_WINDOW_HEIGHT)
+    self.x = FORCE_STATUS_WINDOW_X
+    self.y = FORCE_STATUS_WINDOW_Y
+    self.z = FORCE_STATUS_WINDOW_Z
+    contents.font.color = FORCE_STATUS_TEXT_COLOR
+    contents.font.size = FORCE_STATUS_TEXT_SIZE
+    draw_text(force)
+  end # initialize
+
+  #----------------------------------------------------------------------------|
+  #  New method: draw_text                                                     |
+  #----------------------------------------------------------------------------|
+  def draw_text(force)
+    contents.clear
+	  contents.draw_text(FORCE_STATUS_TEXT_X, FORCE_STATUS_TEXT_Y, contents.width, contents.height, force ? FORCE_RUN_TEXT : NO_FORCE_RUN_TEXT, 0)
+  end # draw_text
+
+end # CATB_Wait_Window
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Scene_Battle                                                  |
+#------------------------------------------------------------------------------|
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02a+)Alias method: create_all_windows                                 |
+  #----------------------------------------------------------------------------|
+  alias create_all_windows_catb_wait_addon create_all_windows
+  def create_all_windows
+    create_all_windows_catb_wait_addon
+    # Added to create atb force status window
+    create_catb_wait_window if BattleManager.btype?(:catb) && DoubleX_RMVXA::YSA_CATB_Wait_Addon::SHOW_FORCE_STATUS_WINDOW
+    #
+  end # create_all_windows
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02a+)Alias method: catb_close_windows                                 |
+  #----------------------------------------------------------------------------|
+  alias catb_close_windows_catb_wait_addon catb_close_windows
+  def catb_close_windows
+    # Added to close the atb force status window upon battle end
+    catb_close_windows_catb_wait_addon
+    @catb_wait_window.hide.deactivate.close if @catb_wait_window
+    #
+  end # catb_close_windows
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02a+)New method: create_catb_wait_window                              |
+  #----------------------------------------------------------------------------|
+  def create_catb_wait_window
+    @catb_wait_window = CATB_Wait_Window.new(@force_run_catb)
+  end # create_catb_wait_window
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: catb_pause?                                                 |
+  #----------------------------------------------------------------------------|
+  alias catb_wait_addon_pause? catb_pause?
+  def catb_pause?
+    # Added to force the atb to run if FORCE_RUN_WAIT is true and WAIT_KEY is pressed
+    $game_system.catb_wait_type != :full_ani && (!DoubleX_RMVXA::YSA_CATB_Wait_Addon::FORCE_RUN_WAIT || !@force_run_catb) && catb_wait_addon_pause?
+    #
+  end # catb_pause?
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: update_basic                                                |
+  #----------------------------------------------------------------------------|
+  alias catb_wait_addon_update_basic update_basic
+  def update_basic
+    catb_wait_addon_update_basic
+    # Added to check if WAIT_KEY is pressed
+    set_force_run_catb if BattleManager.btype?(:catb)
+    #
+  end # update_basic
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: update_for_wait                                             |
+  #----------------------------------------------------------------------------|
+  alias update_for_wait_catb update_for_wait
+  def update_for_wait
+    update_for_wait_catb
+    # Added to force the atb to run if FORCE_RUN_ANI is true and WAIT_KEY is pressed
+    process_catb if !$game_message.visible && BattleManager.btype?(:catb) && ($game_system.catb_wait_type == :full_ani || DoubleX_RMVXA::YSA_CATB_Wait_Addon::FORCE_RUN_ANI && @force_run_catb)
+    #
+  end # update_for_wait
+
+  #----------------------------------------------------------------------------|
+  #  New method: set_force_run_catb                                            |
+  #----------------------------------------------------------------------------|
+  def set_force_run_catb
+    last_force_run_catb = @force_run_catb
+    @force_run_catb ||= Input.trigger?(DoubleX_RMVXA::YSA_CATB_Wait_Addon::FORCE_RUN_ATB_KEY)
+    @force_run_catb &&= !Input.trigger?(DoubleX_RMVXA::YSA_CATB_Wait_Addon::STOP_FORCE_RUN_ATB_KEY)
+    @catb_wait_window.draw_text(@force_run_catb) if @catb_wait_window && last_force_run_catb != @force_run_catb
+  end # set_force_run_catb
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+end # $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#==============================================================================|

@@ -1,0 +1,852 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Unison Addon v1.02f to YSA Battle System: Classical ATB    |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.02f(GMT 1400 1-4-2016):                                                |
+#    - Fixed not confirming skills/items not for opponents only or allies only |
+#    v1.02e(GMT 1200 27-2-2015):                                               |
+#    - Fixed interrupted unison skill/item upon confirming targets bug         |
+#    - Fixed unison skill/item cooldown bug                                    |
+#    v1.02d(GMT 1200 26-2-2015):                                               |
+#    - Fixed unison guard not working bug                                      |
+#    v1.02c(GMT 1200 25-2-2015):                                               |
+#    - Compatible with                                                         |
+#      DoubleX RMVXA CATB Charge Addon to YSA Battle System: Classical ATB     |
+#    - Increased the efficiency of this script                                 |
+#    v1.02b(GMT 0200 1-7-2014):                                                |
+#    - Compatible with                                                         |
+#      DoubleX RMVXA Action Addon to YSA Battle System: Classical ATB          |
+#    - Fixed unison item not invoking common event bug                         |
+#    - Fixed nil BattleManager.actor while picking target bug                  |
+#    v1.02a(GMT 0900 7-2-2014):                                                |
+#    - Added <custom catb unison param: x> notetag                             |
+#    v1.01a(GMT 1500 26-1-2014):                                               |
+#    - Compatible with Actor Personal Hotkeys and fixed charge and nil item bug|
+#    v1.00a(GMT 0000 23-1-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of YSA Battle System: Classical ATB except that you must also|
+#    give Yami credit(you should do this anyway) if you give DoubleX or his    |
+#    alias credit                                                              |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB             |
+#    Knowledge:                                                                |
+#    - That of using the script YSA Battle System: Classical ATB               |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Adds unison skills and items to YSA Battle System: Classical ATB        |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script                                              |
+#    DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB and ¡¿ Main.   |
+#    Save to take effect.                                                      |
+#    Suggested Complete CATB Scripts Order(Excluding Dhoom Manipulate State):  |
+#    1.  Yanfly Engine Ace - Ace Core Engine                                   |
+#    2.  Yanfly Engine Ace - Ace Battle Engine                                 |
+#    3.  YSA Battle System: Classical ATB                                      |
+#    4.  YSA Battle Add-on: Lunatic CATB Rate                                  |
+#    5.  YSA Battle Add-on: Lunatic CATB Reset                                 |
+#    6.  YSA Battle Add-on: Lunatic CATB Start                                 |
+#    7.  DoubleX RMVXA Bug Fix to YSA Battle System: Classical ATB             |
+#    8.  DoubleX RMVXA Compatibility Fix to YSA Battle System: Classical ATB   |
+#    9. DoubleX RMVXA Action Addon to YSA Battle System: Classical ATB         |
+#    10. DoubleX RMVXA ATB Addon to YSA Battle System: Classical ATB           |
+#    11. DoubleX RMVXA Cancel Addon to YSA Battle System: Classical ATB        |
+#    12. DoubleX RMVXA Clear Addon to YSA Battle System: Classical ATB         |
+#    13. DoubleX RMVXA CATB Clear Addon Compatibility Fix                      |
+#    14. DoubleX RMVXA Cooldown Addon to YSA Battle System: Classical ATB      |
+#    15. DoubleX RMVXA Charge Addon to YSA Battle System: Classical ATB        |
+#    16. DoubleX RMVXA Countdown Addon to YSA Battle System: Classical ATB     |
+#    17. DoubleX RMVXA Countdown Addon Compatibility Fix                       |
+#    18. DoubleX RMVXA Escape Addon to YSA Battle System: Classical ATB        |
+#    19. DoubleX RMVXA Percentage Addon to YSA Battle System: Classical ATB    |
+#    20. DoubleX RMVXA Reset Addon to YSA Battle Add-on: Lunatic CATB Reset    |
+#    21. DoubleX RMVXA SE Addon to YSA Battle System: Classical ATB            |
+#    22. DoubleX RMVXA Tick Addon to YSA Battle System: Classical ATB          |
+#    23. DoubleX RMVXA Turn Addon to YSA Battle System: Classical ATB          |
+#    24. DoubleX RMVXA Unison Addon to YSA Battle System: Classical ATB        |
+#    25. DoubleX RMVXA Update Addon to YSA Battle System: Classical ATB        |
+#    26. DoubleX RMVXA Wait Addon to YSA Battle System: Classical ATB          |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle System: Classical ATB                        |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Unison Addon to YSA-CATB"] = true
+
+#------------------------------------------------------------------------------|
+#  * Notetag <custom catb unison item: x> for skills and items:                |
+#    x is the list of id of actors needed for the skill or item. For instance: |
+#    - <custom catb unison item: 1> means actor with id 1 is required to use it|
+#    - <custom catb unison item: 4, 2> means actors with id 4 and 2 are needed |
+#      to use it                                                               |
+#    All actors in list x needs to have full atb bar, able to use it and pay   |
+#    its cost. They'll all charge it and pay the cost including cooldown after |
+#    using it. Only actors in list x can select it.                            |
+#------------------------------------------------------------------------------|
+#  * Notetag <custom catb unison rule: x> for skills and items:                |
+#    x is the rule of setting parameters used in the charge and cooldown rate  |
+#    and damage formula of the skill or item. Notetag setting overrides the    |
+#    universal UNISON_PARAM_RULE. This notetag doesn't work if                 |
+#    <custom catb unison item: x> is absent or x is nil.                       |
+#------------------------------------------------------------------------------|
+#  * Notetag <custom catb unison param: x> for skills and items:               |
+#    x is the list of id of actors needed for the skill or item and stat is    |
+#    parameters used in its damage formula. For instance:                      |
+#    - <custom catb unison atk: 1> means atk in its damage formula uses atk of |
+#      actor with id 1                                                         |
+#    - <custom catb unison agi: 4, 2> means agi in its damage formula uses agi |
+#      of actors with id 4 and 2 under unison rule specified in                |
+#      <custom catb unison rule: x> notetag                                    |
+#    Charge and cooldown rate won't be altered by this notetag                 |
+#    param can be hp, mp, tp, level, mhp, mmp, atk, def, mat, mdf, agi or luk. |
+#------------------------------------------------------------------------------|
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module YSA_CATB_Unison_Addon
+
+#------------------------------------------------------------------------------|
+#  * SHOW_UNISON_ACTOR, default = YEA::BATTLE::MSG_CURRENT_ACTION              |
+#    The battlelog will show all actors involved in the unison skill or item   |
+#    instead of only the one invoking it if SHOW_UNISON_ACTOR is true.         |
+#------------------------------------------------------------------------------|
+  SHOW_UNISON_ACTOR = YEA::BATTLE::MSG_CURRENT_ACTION
+
+#------------------------------------------------------------------------------|
+#  * UNISON_PARAM_RULE, default = 2                                            |
+#    AGI in the charge and cooldown rate and each parameter in the damage      |
+#    formula of the unison skill or item used will be altered by one of the    |
+#    rules below if it's no working <custom catb unison item: x> notetag:      |
+#    0 - No changes will take place                                            |
+#    1 - Its minimum among all actors involved in the unison skill or item used|
+#        will be used in its charge and cooldown rate and damage formulae      |
+#    2 - Its average among all actors involved in the unison skill or item used|
+#        will be used in its charge and cooldown rate and damage formulae      |
+#    3 - Its maximum among all actors involved in the unison skill or item used|
+#        will be used in its charge and cooldown rate and damage formulae      |
+#------------------------------------------------------------------------------|
+  UNISON_PARAM_RULE = 2
+
+  end # YSA_CATB_Unison_Addon
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+module DoubleX_RMVXA
+  module REGEXP
+    module USABLEITEM
+
+      CATB_UNISON_PARAM_LIST = [0, 1, 2, 3, 4, 5, 6, 7, "hp", "mp", "tp", "level"]
+
+      CUSTOM_CATB_UNISON_PARAM_0 = /<(?:CUSTOM_CATB_UNISON_PARAM_0|custom catb unison mhp):[ ](\d+(?:\s*,\s*\d+)*)>/i
+      CUSTOM_CATB_UNISON_PARAM_1 = /<(?:CUSTOM_CATB_UNISON_PARAM_1|custom catb unison mmp):[ ](\d+(?:\s*,\s*\d+)*)>/i
+      CUSTOM_CATB_UNISON_PARAM_2 = /<(?:CUSTOM_CATB_UNISON_PARAM_2|custom catb unison atk):[ ](\d+(?:\s*,\s*\d+)*)>/i
+      CUSTOM_CATB_UNISON_PARAM_3 = /<(?:CUSTOM_CATB_UNISON_PARAM_3|custom catb unison def):[ ](\d+(?:\s*,\s*\d+)*)>/i
+      CUSTOM_CATB_UNISON_PARAM_4 = /<(?:CUSTOM_CATB_UNISON_PARAM_4|custom catb unison mat):[ ](\d+(?:\s*,\s*\d+)*)>/i
+      CUSTOM_CATB_UNISON_PARAM_5 = /<(?:CUSTOM_CATB_UNISON_PARAM_5|custom catb unison mdf):[ ](\d+(?:\s*,\s*\d+)*)>/i
+      CUSTOM_CATB_UNISON_PARAM_6 = /<(?:CUSTOM_CATB_UNISON_PARAM_6|custom catb unison agi):[ ](\d+(?:\s*,\s*\d+)*)>/i
+      CUSTOM_CATB_UNISON_PARAM_7 = /<(?:CUSTOM_CATB_UNISON_PARAM_7|custom catb unison luk):[ ](\d+(?:\s*,\s*\d+)*)>/i
+      CUSTOM_CATB_UNISON_PARAM_hp = /<(?:CUSTOM_CATB_UNISON_PARAM_hp|custom catb unison hp):[ ](\d+(?:\s*,\s*\d+)*)>/i
+      CUSTOM_CATB_UNISON_PARAM_mp = /<(?:CUSTOM_CATB_UNISON_PARAM_mp|custom catb unison mp):[ ](\d+(?:\s*,\s*\d+)*)>/i
+      CUSTOM_CATB_UNISON_PARAM_tp = /<(?:CUSTOM_CATB_UNISON_PARAM_tp|custom catb unison tp):[ ](\d+(?:\s*,\s*\d+)*)>/i
+      CUSTOM_CATB_UNISON_PARAM_level = /<(?:CUSTOM_CATB_UNISON_PARAM_level|custom catb unison level):[ ](\d+(?:\s*,\s*\d+)*)>/i
+
+    end # USABLEITEM
+  end # REGEXP
+end # DoubleX_RMVXA
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: load_database                                               |
+  #----------------------------------------------------------------------------|
+  alias load_database_catb_unison_addon load_database
+  def load_database
+    load_database_catb_unison_addon
+    # Added to load unison notetags
+    load_notetags_catb_unison_addon
+    #
+  end # load_database
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_catb_unison_addon                               |
+  #----------------------------------------------------------------------------|
+  def load_notetags_catb_unison_addon
+    $data_skills.each {|obj| obj.load_notetags_catb_unison_addon if obj}
+    $data_items.each {|obj| obj.load_notetags_catb_unison_addon if obj}
+  end # load_notetags_catb_unison_addon
+
+end # DataManager
+
+#------------------------------------------------------------------------------|
+#  * Edit class: RPG::UsableItem                                               |
+#------------------------------------------------------------------------------|
+
+class RPG::UsableItem < RPG::BaseItem
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  attr_accessor :catb_unison_actor_id
+  attr_accessor :catb_unison_rule
+  DoubleX_RMVXA::REGEXP::USABLEITEM::CATB_UNISON_PARAM_LIST.each { |param|
+    eval("attr_accessor :catb_unison_param_#{param.to_s}")
+    eval("attr_accessor :catb_unison_param_#{param.to_s}_id")
+  }
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_catb_unison_addon                               |
+  #----------------------------------------------------------------------------|
+  def load_notetags_catb_unison_addon
+    @catb_unison_actor_id = []
+    @catb_unison_rule = DoubleX_RMVXA::YSA_CATB_Unison_Addon::UNISON_PARAM_RULE
+    DoubleX_RMVXA::REGEXP::USABLEITEM::CATB_UNISON_PARAM_LIST.each { |param|
+      param = param.to_s
+      eval("@catb_unison_param_#{param} = false")
+      eval("@catb_unison_param_#{param}_id = []")
+    }
+    @note.split(/[\r\n]+/).each { |line|
+      case line
+      when /<(?:CUSTOM_CATB_UNISON_ITEM|custom catb unison item):[ ](\d+(?:\s*,\s*\d+)*)>/i
+        $1.scan(/\d+/).each { |num|
+        @catb_unison_actor_id.push(num.to_i) if num.to_i > 0 }
+      when /<(?:CUSTOM_CATB_UNISON_RULE|custom catb unison rule):[ ]*(\d+)>/i
+        @catb_unison_rule = $1.to_i unless @catb_unison_actor_id.empty?
+      else
+        DoubleX_RMVXA::REGEXP::USABLEITEM::CATB_UNISON_PARAM_LIST.each { |param|
+          param = param.to_s
+          next unless line =~ eval("DoubleX_RMVXA::REGEXP::USABLEITEM::CUSTOM_CATB_UNISON_PARAM_#{param}")
+          $1.scan(/\d+/).each { |num| eval("@catb_unison_param_#{param}_id.push(num.to_i) if num.to_i > 0 ") }
+          eval("@catb_unison_param_#{param} ||= @catb_unison_param_#{param}_id.size > 0")
+        }
+      end
+    }
+  end # load_notetags_catb_unison_addon
+
+end # RPG::UsableItem
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_BattlerBase                                              |
+#------------------------------------------------------------------------------|
+
+class Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: param                                                       |
+  #----------------------------------------------------------------------------|
+  alias catb_unison_item_param param
+  def param(param_id)
+    # Rewritten to return unison param when it's set
+    @catb_unison_param_set ? @catb_unison_param[param_id] : catb_unison_item_param(param_id)
+    #
+  end # param
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: usable?                                                     |
+  #----------------------------------------------------------------------------|
+  alias catb_unison_item_usable? usable?
+  def usable?(item)
+    # Added to check if unison skills or items are usable
+    return catb_unison_item_usable?(item) unless actor? && item && item.is_a?(RPG::UsableItem) && !item.catb_unison_actor_id.empty?
+    return false if SceneManager.scene_is?(Scene_Battle) && (!BattleManager.btype?(:catb) || !BattleManager.action_list(:actor) || BattleManager.action_list(:actor).size < item.catb_unison_actor_id.size) || !item.catb_unison_actor_id.any? { |actor_id| actor_id == id }
+    charge_unison_item = select_unison_item = true
+    if item.is_a?(RPG::Skill)
+      item.catb_unison_actor_id.each { |actor_id|
+        actor = $game_actors[actor_id]
+        if SceneManager.scene_is?(Scene_Battle)
+          return false unless BattleManager.action_list(:actor).any? { |a| a.id == actor_id  && a.catb_skill_exist?(item.id) && a.skill_conditions_met?(item) && !a.auto_battle? && !a.confusion? && (!$imported["DoubleX RMVXA Action Addon to YSA-CATB"] || a.catb_action_times >= item.action || $imported["DoubleX RMVXA Charge Addon to YSA-CATB"] && a.action_cost_paid) }
+          select_unison_item &&= (!actor.current_action || !actor.current_action.item) && actor.ct_catb_value <= 0
+          charge_unison_item &&= actor.current_action && actor.current_action.item == item
+          return false if !select_unison_item && !charge_unison_item
+        else
+          return false unless actor.catb_skill_exist?(item.id) && actor.skill_conditions_met?(item)
+        end
+      }
+      return true
+    elsif item.is_a?(RPG::Item) && item_conditions_met?(item)
+      item.catb_unison_actor_id.each { |actor_id|
+        if SceneManager.scene_is?(Scene_Battle)
+          return false unless BattleManager.action_list(:actor).any? { |a| a.id == actor_id && !a.auto_battle? && !a.confusion? && (!$imported["DoubleX RMVXA Action Addon to YSA-CATB"] || a.catb_action_times >= item.action || $imported["DoubleX RMVXA Charge Addon to YSA-CATB"] && a.action_cost_paid) }
+          actor = $game_actors[actor_id]
+          select_unison_item &&= (!actor.current_action || !actor.current_action.item) && actor.ct_catb_value <= 0
+          charge_unison_item &&= actor.current_action && actor.current_action.item == item
+          return false unless select_unison_item || charge_unison_item
+        else
+          return false unless $game_party.members.any? { |a| a.id == actor_id }
+        end
+      }
+      return true
+    end
+    false
+    #
+  end # usable?
+
+  #----------------------------------------------------------------------------|
+  #  New method: catb_unison_param_set                                         |
+  #----------------------------------------------------------------------------|
+  def catb_unison_param_set(item)
+    @catb_unison_param = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    catb_unison_param_actor = []
+    DoubleX_RMVXA::REGEXP::USABLEITEM::CATB_UNISON_PARAM_LIST.each { |param_id|
+      eval("catb_unison_param_actor = item.catb_unison_param_#{param_id.to_s} ? item.catb_unison_param_#{param_id.to_s}_id : item.catb_unison_actor_id")
+      if param_id == "hp"
+        catb_unison_param = 8
+      elsif param_id == "mp"
+        catb_unison_param = 9
+      elsif param_id == "tp"
+        catb_unison_param = 10
+      elsif param_id == "level"
+        catb_unison_param = 11
+      else
+        catb_unison_param = param_id
+      end
+      if item.catb_unison_rule == 1
+        if param_id.is_a?(Numeric)
+          @catb_unison_param[param_id] = param_max(param_id)
+        elsif param_id == "hp"
+          @catb_unison_param[8] = param_max(0)
+        elsif param_id == "mp"
+          @catb_unison_param[9] = param_max(1)
+        elsif param_id == "tp"
+          @catb_unison_param[10] = max_tp
+        else
+          @catb_unison_param[11] = max_level
+        end
+        catb_unison_param_actor.each { |actor_id|
+          if param_id.is_a?(Numeric)
+            @catb_unison_param[param_id] = [@catb_unison_param[param_id], $game_actors[actor_id].param(param_id)].min
+          else
+            @catb_unison_param[catb_unison_param] = [@catb_unison_param[catb_unison_param], eval("$game_actors[actor_id].#{param_id.to_s}")].min
+          end
+        }
+      elsif item.catb_unison_rule == 2
+        catb_unison_param_actor.each { |actor_id|
+          if param_id.is_a?(Numeric)
+            @catb_unison_param[param_id] += $game_actors[actor_id].param(param_id)
+          else
+            @catb_unison_param[catb_unison_param] += eval("$game_actors[actor_id].#{param_id.to_s}")
+          end
+        }
+        if param_id.is_a?(Numeric)
+          @catb_unison_param[param_id] /= catb_unison_param_actor.size
+        else
+          @catb_unison_param[catb_unison_param] /= catb_unison_param_actor.size
+        end
+      elsif item.catb_unison_rule == 3
+        catb_unison_param_actor.each { |actor_id|
+          if param_id.is_a?(Numeric)
+            @catb_unison_param[param_id] = [@catb_unison_param[param_id], $game_actors[actor_id].param(param_id)].max
+          else
+            @catb_unison_param[catb_unison_param] = [@catb_unison_param[catb_unison_param], eval("$game_actors[actor_id].#{param_id.to_s}")].max
+          end
+        }
+      else
+        return catb_unison_param_clear
+      end
+    }
+    @catb_unison_level = @catb_unison_param[11]
+    @catb_unison_param_set = true
+  end # catb_unison_param_set
+
+  #----------------------------------------------------------------------------|
+  #  New method: catb_unison_param_clear                                       |
+  #----------------------------------------------------------------------------|
+  def catb_unison_param_clear
+    @catb_unison_level = nil
+    @catb_unison_param_set = false
+  end # catb_unison_param_clear
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02a+)New method: hp                                                   |
+  #----------------------------------------------------------------------------|
+  def hp
+    @catb_unison_param_set ? @catb_unison_param[8] : @hp
+  end # hp
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02a+)New method: mp                                                   |
+  #----------------------------------------------------------------------------|
+  def mp
+    @catb_unison_param_set ? @catb_unison_param[9] : @mp
+  end # mp
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02a+)New method: tp                                                   |
+  #----------------------------------------------------------------------------|
+  def tp
+    @catb_unison_param_set ? @catb_unison_param[10] : @tp
+  end # tp
+
+end # Game_BattlerBase
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_Battler                                                  |
+#------------------------------------------------------------------------------|
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02c+)New public instance variables                                    |
+  #----------------------------------------------------------------------------|
+  attr_reader :action_cost_paid
+  attr_writer :unison_cooldown_actor_id
+  attr_writer :unison_cooldown_rule
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_damage_value                                           |
+  #----------------------------------------------------------------------------|
+  alias catb_unison_item_make_damage_value make_damage_value
+  def make_damage_value(user, item)
+    # Added to set the params of the user as the unison version
+    unison_param = user.actor? && !item.catb_unison_actor_id.empty? && item.catb_unison_rule > 0 && item.catb_unison_rule < 4
+    user.catb_unison_param_set(item) if unison_param
+    #
+    catb_unison_item_make_damage_value(user, item)
+    # Added to reset the params of the user to the default
+    user.catb_unison_param_clear if unison_param
+    #
+  end # make_damage_value
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: use_item                                                    |
+  #----------------------------------------------------------------------------|
+  alias catb_unison_item_use_item use_item
+  def use_item(item)
+    # Rewritten to pay unison skill cost
+    return catb_unison_item_use_item(item) if !item.is_a?(RPG::Skill) || item.catb_unison_actor_id.empty?
+    item.catb_unison_actor_id.each { |actor_id| $game_actors[actor_id].pay_skill_cost(item) unless $imported["DoubleX RMVXA Charge Addon to YSA-CATB"] && !item.charge_prior_item_cost }
+    item.effects.each { |effect| item_global_effect_apply(effect) }
+    #
+  end # use_item
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_ct_catb_update                                         |
+  #----------------------------------------------------------------------------|
+  alias make_ct_catb_update_unison make_ct_catb_update
+  def make_ct_catb_update
+    make_ct_catb_update_unison
+    # Added to apply unison rule to charge rate
+    return unless @catb_value >= MAX_CATB_VALUE && @ct_catb_value < MAX_CATB_VALUE && current_action && current_action.item && current_action.confirm && actor? && current_action.item.catb_unison_actor_id.any? { |actor_id| actor_id == id }
+    return @ct_catb_value = MAX_CATB_VALUE unless current_action.valid?
+    value = $imported["YSA-LunaticCATBRate"] ? lunatic_catb_rate_formula : real_gain_catb
+    @ct_catb_value -= value * current_action.item.charge_rate / 100
+    @ct_catb_value += [make_update_unison_rule * value * current_action.item.charge_rate / 100, MAX_CATB_VALUE - @ct_catb_value].min
+    #
+  end # make_ct_catb_update
+
+  if $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"]
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_cd_catb_update                                         |
+  #----------------------------------------------------------------------------|
+  alias make_cd_catb_update_unison make_cd_catb_update
+  def make_cd_catb_update
+    make_cd_catb_update_unison
+    # Added to apply unison rule to cooldown rate
+    return unless @cd_catb_value > 0 && movable? && actor? && @unison_cooldown_actor_id.any? { |actor_id| actor_id == id }
+    value = $imported["YSA-LunaticCATBRate"] ? lunatic_catb_rate_formula : real_gain_catb
+      @cd_catb_value += value * @item_cooldown / 100
+      @cd_catb_value -= [make_update_unison_rule * value * @item_cooldown / 100, @cd_catb_value].min
+    #
+  end # make_cd_catb_update
+  end # if $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"]
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)Alias method: make_first_catb_value                              |
+  #----------------------------------------------------------------------------|
+  alias make_first_catb_value_unison_addon make_first_catb_value
+  def make_first_catb_value(pre = 0)
+    make_first_catb_value_unison_addon(pre)
+    # Added to make first @ct_catb_value
+    @ct_catb_value = 0
+    #
+  end # make_first_catb_value
+
+  #----------------------------------------------------------------------------|
+  #  New method: make_update_unison_rule                                       |
+  #----------------------------------------------------------------------------|
+  def make_update_unison_rule
+    catb_unison_agi = 0
+    if @unison_cooldown_rule == 1
+      catb_unison_agi = param_max(6)
+      @unison_cooldown_actor_id.each { |actor_id|
+        catb_unison_agi = [catb_unison_agi, $game_actors[actor_id].agi].min
+      }
+    elsif @unison_cooldown_rule == 2
+      @unison_cooldown_actor_id.each { |actor_id|
+        catb_unison_agi += $game_actors[actor_id].agi
+      }
+      catb_unison_agi /= @unison_cooldown_actor_id.size
+    elsif @unison_cooldown_rule == 3
+      @unison_cooldown_actor_id.each { |actor_id|
+        catb_unison_agi = [catb_unison_agi, $game_actors[actor_id].agi].max
+      }
+    else
+      catb_unison_agi = agi
+    end
+    catb_unison_agi * 1.0 / agi
+  end # make_update_unison_rule
+
+end # Game_Battler
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_Actor                                                    |
+#------------------------------------------------------------------------------|
+
+class Game_Actor < Game_Battler
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02c+)New public instance variable                                     |
+  #----------------------------------------------------------------------------|
+  attr_writer :catb_unison_level
+
+  #----------------------------------------------------------------------------|
+  #  New method: catb_skill_exist?                                             |
+  #----------------------------------------------------------------------------|
+  def catb_skill_exist?(skill_id)
+    skills.any? { |skill| skill == $data_skills[skill_id] }
+  end # catb_skill_exist?
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02a+)New method: level                                                |
+  #----------------------------------------------------------------------------|
+  def level
+    @catb_unison_level || @level
+  end # level
+
+end # Game_Actor
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Window_ItemList                                               |
+#------------------------------------------------------------------------------|
+
+class Window_ItemList < Window_Selectable
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: enable?                                                     |
+  #----------------------------------------------------------------------------|
+  alias catb_unison_item_enable? enable?
+  def enable?(item)
+    # Rewritten to set disable unison items when unison conditions aren't met
+    SceneManager.scene_is?(Scene_Battle) && item && item.is_a?(RPG::Item) && !item.catb_unison_actor_id.empty? ? BattleManager.actor.usable?(item) : catb_unison_item_enable?(item)
+    #
+  end # enable?
+
+end # Window_ItemList
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Window_BattleLog                                              |
+#------------------------------------------------------------------------------|
+
+class Window_BattleLog < Window_Selectable
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: display_use_item                                            |
+  #----------------------------------------------------------------------------|
+  alias catb_unison_item_display_use_item display_use_item
+  def display_use_item(subject, item)
+    # Rewritten to display unison actors while using unison skills or items
+    return catb_unison_item_display_use_item(subject, item) if !DoubleX_RMVXA::YSA_CATB_Unison_Addon::SHOW_UNISON_ACTOR || item.catb_unison_actor_id.empty?
+      catb_unison_actor_list = ""
+      catb_unison_actor_counter = 0
+      item.catb_unison_actor_id.each { |actor_id|
+        catb_unison_actor_counter += 1
+        catb_unison_actor_list += ", " if catb_unison_actor_counter > 1 && catb_unison_actor_counter < item.catb_unison_actor_id.size
+        catb_unison_actor_list += " and " if item.catb_unison_actor_id.size > 1 && catb_unison_actor_counter == item.catb_unison_actor_id.size
+        catb_unison_actor_list += $game_actors[actor_id].name
+      }
+      return add_text(sprintf(Vocab::UseItem, catb_unison_actor_list, item.name)) unless item.is_a?(RPG::Skill)
+      add_text(catb_unison_actor_list + item.message1)
+      return if item.message2.empty?
+      wait
+      add_text(item.message2)
+    #
+  end # display_use_item
+
+end # Window_BattleLog
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Scene_Battle                                                  |
+#------------------------------------------------------------------------------|
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: command_guard                                               |
+  #----------------------------------------------------------------------------|
+  alias catb_unison_command_guard command_guard
+  def command_guard
+    # Rewritten to handle command guard for unison skills
+    return catb_unison_command_guard if $data_skills[BattleManager.actor.guard_skill_id].catb_unison_actor_id.empty?
+    if ($data_skills[BattleManager.actor.guard_skill_id].catb_unison_actor_id - BattleManager.action_list(:actor).select { |a| !a.auto_battle? && !a.confusion? }.collect { |a| a.id }).empty?
+      $data_skills[BattleManager.actor.guard_skill_id].catb_unison_actor_id.each { |actor_id|
+        actor = $game_actors[actor_id]
+        actor.input.confirm = true
+        actor.input.set_guard
+        if $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"]
+          actor.item_cooldown = actor.input.item.cooldown_rate
+          actor.unison_cooldown_actor_id = actor.input.item.catb_unison_actor_id
+          actor.unison_cooldown_rule = actor.input.item.catb_unison_rule
+        end
+        actor.item_action = actor.input.item.action if $imported["DoubleX RMVXA Action Addon to YSA-CATB"]
+        actor.item_instant = actor.input.item.instant if $imported["YEA-InstantCast"]
+        actor.pay_prior_catb_charge if $imported["DoubleX RMVXA Charge Addon to YSA-CATB"]
+        @status_window.draw_item(actor.index)
+      }
+    end
+    next_command
+    #
+  end # command_guard
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: command_attack                                              |
+  #----------------------------------------------------------------------------|
+  alias catb_unison_command_attack command_attack
+  def command_attack
+    # Rewritten to handle command attack for unison skills
+    return catb_unison_command_attack if $data_skills[BattleManager.actor.attack_skill_id].catb_unison_actor_id.empty?
+    $game_temp.battle_aid = $data_skills[BattleManager.actor.attack_skill_id]
+    if ($data_skills[BattleManager.actor.attack_skill_id].catb_unison_actor_id - BattleManager.action_list(:actor).select { |a| !a.auto_battle? && !a.confusion? }.collect { |a| a.id }).empty?
+      $data_skills[BattleManager.actor.attack_skill_id].catb_unison_actor_id.each { |actor_id|
+        $game_actors[actor_id].input.set_attack
+        @status_window.draw_item($game_actors[actor_id].index)
+      }
+    end
+    select_enemy_selection
+    #
+  end # command_attack
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: on_enemy_ok                                                 |
+  #----------------------------------------------------------------------------|
+  alias catb_unison_on_enemy_ok on_enemy_ok
+  def on_enemy_ok
+    # Rewritten to handle on enemy ok for unison skills
+    actor = BattleManager.actor
+    return catb_unison_on_enemy_ok unless actor && actor.input && actor.input.item && !actor.input.item.catb_unison_actor_id.empty?
+    $game_temp.battle_aid = nil
+    if (actor.input.item.catb_unison_actor_id - BattleManager.action_list(:actor).select { |a| !a.auto_battle? && !a.confusion? }.collect { |a| a.id }).empty?
+      actor.input.item.catb_unison_actor_id.each { |actor_id|
+        a = $game_actors[actor_id]
+        a.input.confirm = true
+        a.input.target_index = @enemy_window.enemy.index
+        if $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"]
+          a.item_cooldown = a.input.item.cooldown_rate
+          a.unison_cooldown_actor_id = a.input.item.catb_unison_actor_id
+          a.unison_cooldown_rule = a.input.item.catb_unison_rule
+        end
+        a.item_action = a.input.item.action if $imported["DoubleX RMVXA Action Addon to YSA-CATB"]
+        a.item_instant = a.input.item.instant if $imported["YEA-InstantCast"]
+        next unless $imported["DoubleX RMVXA Charge Addon to YSA-CATB"]
+        a.pay_prior_catb_charge
+        @status_window.draw_item(a.index)
+      }
+    end
+    @enemy_window.hide
+    @skill_window.hide
+    @item_window.hide
+    next_command
+    #
+  end # on_enemy_ok
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: on_enemy_cancel                                             |
+  #----------------------------------------------------------------------------|
+  alias catb_unison_on_enemy_cancel on_enemy_cancel
+  def on_enemy_cancel
+    # Rewritten to handle on enemy cancel for unison skills
+    actor = BattleManager.actor
+    return catb_unison_on_enemy_cancel unless actor && actor.input && actor.input.item && !actor.input.item.catb_unison_actor_id.empty?
+    if (actor.input.item.catb_unison_actor_id - BattleManager.action_list(:actor).select { |a| !a.auto_battle? && !a.confusion? }.collect { |a| a.id }).empty?
+      actor.input.item.catb_unison_actor_id.each { |actor_id|
+        a = $game_actors[actor_id]
+        a.input.confirm = false
+        a.input.clear
+        @status_window.draw_item(a.index)
+      }
+    end
+    @status_aid_window.refresh
+    $game_temp.battle_aid = nil
+    @enemy_window.hide
+    if !@hotkey_action && @actor_command_window.current_symbol == :skill
+      @skill_window.activate
+    elsif !@hotkey_action && @actor_command_window.current_symbol == :item
+      @item_window.activate
+    else
+      @actor_command_window.activate
+    end
+    @hotkey_action &&= !$imported['RIFF_HOTKEYS']
+    @skill_window.visible || @item_window.visible ? @help_window.show : @help_window.hide
+    #
+  end # on_enemy_cancel
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: on_actor_ok                                                 |
+  #----------------------------------------------------------------------------|
+  alias catb_unison_on_actor_ok on_actor_ok
+  def on_actor_ok
+    # Rewritten to handle on actor ok for unison skills
+    actor = BattleManager.actor
+    return catb_unison_on_actor_ok unless actor && actor.input && actor.input.item && !actor.input.item.catb_unison_actor_id.empty?
+    $game_temp.battle_aid = nil
+    if (actor.input.item.catb_unison_actor_id - BattleManager.action_list(:actor).select { |a| !a.auto_battle? && !a.confusion? }.collect { |a| a.id }).empty?
+      actor.input.item.catb_unison_actor_id.each { |actor_id|
+        a = $game_actors[actor_id]
+        a.input.confirm = true
+        a.input.target_index = @actor_window.index
+        if $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"]
+          a.item_cooldown = a.input.item.cooldown_rate
+          a.unison_cooldown_actor_id = a.input.item.catb_unison_actor_id
+          a.unison_cooldown_rule = a.input.item.catb_unison_rule
+        end
+        a.item_action = a.input.item.action if $imported["DoubleX RMVXA Action Addon to YSA-CATB"]
+        a.item_instant = a.input.item.instant if $imported["YEA-InstantCast"]
+        next unless $imported["DoubleX RMVXA Charge Addon to YSA-CATB"]
+        a.pay_prior_catb_charge
+        @status_window.draw_item(a.index)
+      }
+    end
+    @actor_window.hide
+    @skill_window.hide
+    @item_window.hide
+    next_command
+    @status_window.show
+    $imported["YEA-BattleCommandList"] && @confirm_command_window ? @actor_command_window.visible = !@confirm_command_window.visible : @actor_command_window.show
+    @status_aid_window.hide
+    #
+  end # on_actor_ok
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: on_actor_cancel                                             |
+  #----------------------------------------------------------------------------|
+  alias catb_unison_on_actor_cancel on_actor_cancel
+  def on_actor_cancel
+    # Rewritten to handle on actor cancel for unison skills
+    actor = BattleManager.actor
+    return catb_unison_on_actor_cancel unless actor && actor.input && actor.input.item && !actor.input.item.catb_unison_actor_id.empty?
+    if (actor.input.item.catb_unison_actor_id - BattleManager.action_list(:actor).select { |a| !a.auto_battle? && !a.confusion? }.collect { |a| a.id }).empty?
+      actor.input.item.catb_unison_actor_id.each { |actor_id|
+        a = $game_actors[actor_id]
+        a.input.confirm = false
+        a.input.clear
+        @status_window.draw_item(a.index)
+      }
+    end
+    @status_aid_window.refresh
+    $game_temp.battle_aid = nil
+    @actor_window.hide
+    if !@hotkey_action && @actor_command_window.current_symbol == :skill
+      @skill_window.activate.show
+    elsif !@hotkey_action && @actor_command_window.current_symbol == :item
+      @item_window.activate.show
+    else
+      @actor_command_window.activate.show
+    end
+    @hotkey_action &&= !$imported['RIFF_HOTKEYS']
+    #
+  end # on_actor_cancel
+
+  #----------------------------------------------------------------------------|
+  #  Alias method method: on_skill_ok                                          |
+  #----------------------------------------------------------------------------|
+  alias catb_unison_on_skill_ok on_skill_ok
+  def on_skill_ok
+    # Rewritten to handle on skill ok for unison skills
+    return catb_unison_on_skill_ok if @skill_window.item.catb_unison_actor_id.empty?
+    $game_temp.battle_aid = @skill = @skill_window.item
+    if (@skill.catb_unison_actor_id - BattleManager.action_list(:actor).select { |a| !a.auto_battle? && !a.confusion? }.collect { |a| a.id }).empty?
+      @skill.catb_unison_actor_id.each { |actor_id|
+        actor = $game_actors[actor_id]
+        actor.input.set_skill(@skill.id)
+        actor.last_skill.object = @skill
+        @status_window.draw_item(actor.index)
+      }
+    end
+    return select_enemy_selection if @skill.for_opponent?
+    return select_actor_selection if @skill.for_friend?
+    if ($imported["YEA-TargetManager"] && @skill.catb_unison_actor_id - BattleManager.action_list(:actor).select { |a| !a.auto_battle? && !a.confusion? }.collect { |a| a.id }).empty?
+      @skill.catb_unison_actor_id.each { |actor_id|
+        a = $game_actors[actor_id]
+        a.input.confirm = true
+        if $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"]
+          a.item_cooldown = a.input.item.cooldown_rate
+          a.unison_cooldown_actor_id = a.input.item.catb_unison_actor_id
+          a.unison_cooldown_rule = a.input.item.catb_unison_rule
+        end
+        a.item_action = a.input.item.action if $imported["DoubleX RMVXA Action Addon to YSA-CATB"]
+        a.item_instant = a.input.item.instant if $imported["YEA-InstantCast"]
+        next unless $imported["DoubleX RMVXA Charge Addon to YSA-CATB"]
+        a.pay_prior_catb_charge
+        @status_window.draw_item(a.index)
+      }
+    end
+    @skill_window.hide
+    next_command
+    $game_temp.battle_aid = nil
+    #
+  end # on_skill_ok
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: on_item_ok                                                  |
+  #----------------------------------------------------------------------------|
+  alias catb_unison_on_item_ok on_item_ok
+  def on_item_ok
+    # Rewritten to handle on item ok for unison skills
+    return catb_unison_on_item_ok if @item_window.item.catb_unison_actor_id.empty?
+    $game_party.last_item.object = $game_temp.battle_aid = @item = @item_window.item
+    if (@item.catb_unison_actor_id - BattleManager.action_list(:actor).select { |a| !a.auto_battle? && !a.confusion? }.collect { |a| a.id }).empty?
+      @item.catb_unison_actor_id.each { |actor_id|
+        $game_actors[actor_id].input.set_item(@item.id)
+        @status_window.draw_item($game_actors[actor_id].index)
+      }
+    end
+    return select_enemy_selection if @item.for_opponent?
+    return select_actor_selection if @item.for_friend?
+    if ($imported["YEA-TargetManager"] && @item.catb_unison_actor_id - BattleManager.action_list(:actor).select { |a| !a.auto_battle? && !a.confusion? }.collect { |a| a.id }).empty?
+      @item.catb_unison_actor_id.each { |actor_id|
+        a = $game_actors[actor_id]
+        a.input.confirm = true
+        if $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"]
+          a.item_cooldown = a.input.item.cooldown_rate
+          a.unison_cooldown_actor_id = a.input.item.catb_unison_actor_id
+          a.unison_cooldown_rule = a.input.item.catb_unison_rule
+        end
+        a.item_action = a.input.item.action if $imported["DoubleX RMVXA Action Addon to YSA-CATB"]
+        a.item_instant = a.input.item.instant if $imported["YEA-InstantCast"]
+        next unless $imported["DoubleX RMVXA Charge Addon to YSA-CATB"]
+        a.pay_prior_catb_charge
+        @status_window.draw_item(a.index)
+      }
+    end
+    @item_window.hide
+    next_command
+    $game_temp.battle_aid = nil
+    #
+  end # on_item_ok
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#==============================================================================|

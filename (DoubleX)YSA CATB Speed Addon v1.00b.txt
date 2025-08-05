@@ -1,0 +1,438 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Speed Addon v1.00b to YSA Battle System: Classical ATB     |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00b(GMT 1400 28-5-2015):                                               |
+#    - Used direct eval instead of lambda with instance exec for CATBSRX       |
+#    v1.00a(GMT 1500 9-5-2015):                                                |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of YSA Battle System: Classical ATB except that you must also|
+#    give Yami credit(you should do this anyway) if you give DoubleX or his    |
+#    alias credit                                                              |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB             |
+#    Knowledge:                                                                |
+#    - That of using the script YSA Battle System: Classical ATB               |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Lets users set action input speed for battlers that auto input actions  |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script                                              |
+#    DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB and ¡¿ Main.   |
+#    Save to take effect.                                                      |
+#    Suggested Complete CATB Scripts Order(Excluding Dhoom Manipulate State):  |
+#    1.  Yanfly Engine Ace - Ace Core Engine                                   |
+#    2.  Yanfly Engine Ace - Ace Battle Engine                                 |
+#    3.  YSA Battle System: Classical ATB                                      |
+#    4.  YSA Battle Add-on: Lunatic CATB Rate                                  |
+#    5.  YSA Battle Add-on: Lunatic CATB Reset                                 |
+#    6.  YSA Battle Add-on: Lunatic CATB Start                                 |
+#    7.  DoubleX RMVXA Bug Fix to YSA Battle System: Classical ATB             |
+#    8.  DoubleX RMVXA Compatibility Fix to YSA Battle System: Classical ATB   |
+#    9.  DoubleX RMVXA Action Addon to YSA Battle System: Classical ATB        |
+#    10. DoubleX RMVXA ATB Addon to YSA Battle System: Classical ATB           |
+#    11. DoubleX RMVXA Cancel Addon to YSA Battle System: Classical ATB        |
+#    12. DoubleX RMVXA Clear Addon to YSA Battle System: Classical ATB         |
+#    13. DoubleX RMVXA CATB Clear Addon Compatibility Fix                      |
+#    14. DoubleX RMVXA Color Addon to YSA Battle System: Classical ATB         |
+#    15. DoubleX RMVXA Cooldown Addon to YSA Battle System: Classical ATB      |
+#    16. DoubleX RMVXA Charge Addon to YSA Battle System: Classical ATB        |
+#    17. DoubleX RMVXA Speed Addon to YSA Battle System: Classical ATB         |
+#    18. DoubleX RMVXA Countdown Addon to YSA Battle System: Classical ATB     |
+#    19. DoubleX RMVXA Countdown Addon Compatibility Fix                       |
+#    20. DoubleX RMVXA Escape Addon to YSA Battle System: Classical ATB        |
+#    21. DoubleX RMVXA Hotkey Addon to YSA Battle System: Classical ATB        |
+#    22. DoubleX RMVXA CATB Input Addon to YSA Battle System: Classical ATB    |
+#    23. DoubleX RMVXA Percentage Addon to YSA Battle System: Classical ATB    |
+#    24. DoubleX RMVXA Reset Addon to YSA Battle Add-on: Lunatic CATB Reset    |
+#    25. DoubleX RMVXA SE Addon to YSA Battle System: Classical ATB            |
+#    26. DoubleX RMVXA Tick Addon to YSA Battle System: Classical ATB          |
+#    27. DoubleX RMVXA Turn Addon to YSA Battle System: Classical ATB          |
+#    28. DoubleX RMVXA Unison Addon to YSA Battle System: Classical ATB        |
+#    29. DoubleX RMVXA Update Addon to YSA Battle System: Classical ATB        |
+#    30. DoubleX RMVXA Wait Addon to YSA Battle System: Classical ATB          |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle System: Classical ATB                        |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Speed Addon to YSA-CATB"] = true
+
+#------------------------------------------------------------------------------|
+#  * Actor/Class/Weapon/Armor/Enemy/State Notetags:                            |
+#    - <custom catb speed reduce: CATBSRX>                                     |
+#       Sets the number of frames an enemy or actor with autobattle and/or     |
+#       confusion needs when inputting actions as CATBSRX, which can be set in |
+#       Custom CATB Speed Reduce Notetag Values                                |
+#------------------------------------------------------------------------------|
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module YSA_CATB_Speed_Addon
+
+    #--------------------------------------------------------------------------|
+    #  Custom CATB Speed Reduce Notetag Values                                 |
+    #  - Setups CATBSRX used by <custom catb speed reduce: CATBSRX> notetags   |
+    #--------------------------------------------------------------------------|
+    # (Needs decent scripting knowledge)CATBSRX are used at:
+    # 1. Game_Battler
+    #    - speed_reduce.each { |sr| @last_catb_speed_reduce = eval(sr) } in
+    #      set_catb_speed_reduce
+    # CATBSRX are strings of RGSS3 codes
+    # CATBSRX must return a non-negative integer
+    # The naming of CATBSRX can only use alphanumeric characters
+    # The below CATBSRX are examples to help you set your CATBSRX
+    # You can freely use, rewrite and/or delete these examples
+
+    # Sets the action input speed reduction as x frames
+    CATBSR1 = %Q(x)
+
+    # Sets the action input speed reduction as the number of frames being the
+    # value of variable with id x
+    CATBSR2 = %Q($game_variables[x])
+
+    # Adds the action input speed reduction by x frames
+    CATBSR3 = %Q(@last_catb_speed_reduce + x)
+
+    # Adds new CATBSRX here
+    
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+    # Stores the notetag regular expression
+    REGEX = /<custom catb speed reduce:\s*(\w+)\s*>/
+
+    # Stores the notetag instance variable and reading method
+    CUSTOM_CATB_SPEED_REDUCE = %Q(
+  attr_reader :custom_catb_speed_reduce
+
+  def load_notetags_catb_speed_addon
+    @custom_catb_speed_reduce = []
+    @note.split(/[\r\n]+/).each { |line|
+      case line
+      when DoubleX_RMVXA::YSA_CATB_Speed_Addon::REGEX
+        @custom_catb_speed_reduce << eval("DoubleX_RMVXA::YSA_CATB_Speed_Addon::" + $1)
+      end
+    }
+  end
+    )
+
+  end # YSA_CATB_Speed_Addon
+end # DoubleX_RMVXA
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#  * Edit module: DataManager                                                  |
+#------------------------------------------------------------------------------|
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: load_database                                               |
+  #----------------------------------------------------------------------------|
+  alias load_database_catb_speed_addon load_database
+  def load_database
+    load_database_catb_speed_addon
+    # Added to load this script's notetags
+    load_notetags_catb_speed_addon
+    #
+  end # load_database
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_catb_speed_addon                                |
+  #  - Loads this script's notetags                                            |
+  #----------------------------------------------------------------------------|
+  def load_notetags_catb_speed_addon
+    # Loads actor, class, skill, item, weapon, armor, enemy and state notetags
+    [$data_actors, $data_classes, $data_weapons, $data_armors, $data_enemies, $data_states].each { |data|
+      data.each { |obj| obj.load_notetags_catb_speed_addon if obj }
+    }
+    #
+  end # load_notetags_catb_speed_addon
+
+end # DataManager
+
+#------------------------------------------------------------------------------|
+#  * Edit class: RPG::Actor                                                    |
+#------------------------------------------------------------------------------|
+
+class RPG::Actor < RPG::BaseItem
+
+  # Loads actor notetags
+  module_eval(DoubleX_RMVXA::YSA_CATB_Speed_Addon::CUSTOM_CATB_SPEED_REDUCE)
+
+end # RPG::Actor
+
+#------------------------------------------------------------------------------|
+#  * Edit class: RPG::Class                                                    |
+#------------------------------------------------------------------------------|
+
+class RPG::Class < RPG::BaseItem
+
+  # Loads class notetags
+  module_eval(DoubleX_RMVXA::YSA_CATB_Speed_Addon::CUSTOM_CATB_SPEED_REDUCE)
+
+end # RPG::Class
+
+#------------------------------------------------------------------------------|
+#  * Edit class: RPG::Enemy                                                    |
+#------------------------------------------------------------------------------|
+
+class RPG::Enemy < RPG::BaseItem
+
+  # Loads enemy notetags
+  module_eval(DoubleX_RMVXA::YSA_CATB_Speed_Addon::CUSTOM_CATB_SPEED_REDUCE)
+
+end # RPG::Enemy
+
+#------------------------------------------------------------------------------|
+#  * Edit class: RPG::EquipItem                                                |
+#------------------------------------------------------------------------------|
+
+class RPG::EquipItem < RPG::BaseItem
+
+  # Loads equip notetags
+  module_eval(DoubleX_RMVXA::YSA_CATB_Speed_Addon::CUSTOM_CATB_SPEED_REDUCE)
+
+end # RPG::EquipItem
+
+#------------------------------------------------------------------------------|
+#  * Edit class: RPG::State                                                    |
+#------------------------------------------------------------------------------|
+
+class RPG::State < RPG::BaseItem
+
+  # Loads state notetags
+  module_eval(DoubleX_RMVXA::YSA_CATB_Speed_Addon::CUSTOM_CATB_SPEED_REDUCE)
+
+end # RPG::State
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_Battler                                                  |
+#------------------------------------------------------------------------------|
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  New private instance variables                                            |
+  #----------------------------------------------------------------------------|
+  # @catb_speed_reduce: Stores the action input speed frame number
+  # @last_catb_speed_reduce: Stores the last action input speed frame number
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: initialize                                                  |
+  #----------------------------------------------------------------------------|
+  alias initialize_catb_speed_addon initialize
+  def initialize
+    initialize_catb_speed_addon
+    # Added to initialize the speed reduce instance variables
+    @catb_speed_reduce = @last_catb_speed_reduce = 0
+    #
+  end # initialize
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_ct_catb_update                                         |
+  #----------------------------------------------------------------------------|
+  alias make_ct_catb_update_speed_addon make_ct_catb_update
+  def make_ct_catb_update
+    # Rewritten to start charging actions only if the action input time's passed
+    make_ct_catb_update_speed_addon if @catb_speed_reduce <= 0
+    #
+  end # make_ct_catb_update
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: clear_catb                                                  |
+  #----------------------------------------------------------------------------|
+  alias clear_catb_speed_addon clear_catb
+  def clear_catb(value = 0)
+    # Added to reset the action input speed
+    @catb_speed_reduce = 0
+    #
+    clear_catb_speed_addon(value)
+  end # clear_catb
+
+  #----------------------------------------------------------------------------|
+  #  New method: make_speed_catb_update                                        |
+  #  - Updates the action input speed                                          |
+  #----------------------------------------------------------------------------|
+  def make_speed_catb_update
+    # Resets the action input frame number if its initial value changed
+    last_catb_speed_reduce = @last_catb_speed_reduce
+    set_catb_speed_reduce
+    last_catb_speed_reduce == @last_catb_speed_reduce ? @catb_speed_reduce -= 1 : @catb_speed_reduce += @last_catb_speed_reduce - last_catb_speed_reduce
+    @catb_speed_reduce = 0 if @catb_speed_reduce < 0
+    #
+  end # make_speed_catb_update
+
+  #----------------------------------------------------------------------------|
+  #  New method: set_catb_speed_reduce                                         |
+  #  - Sets the initial action input frame number                              |
+  #----------------------------------------------------------------------------|
+  def set_catb_speed_reduce
+    # Resets the action input frame number if its initial value changed
+    speed_reduce = actor? ? actor.custom_catb_speed_reduce + self.class.custom_catb_speed_reduce : enemy.custom_catb_speed_reduce
+    equips.each { |equip| speed_reduce += equip.custom_catb_speed_reduce if equip } if actor?
+    states.each { |state| speed_reduce += state.custom_catb_speed_reduce }
+    speed_reduce.each { |sr| @last_catb_speed_reduce = eval(sr) }
+    #
+  end # set_catb_speed_reduce
+
+end # Game_Battler
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_Actor                                                    |
+#------------------------------------------------------------------------------|
+
+class Game_Actor < Game_Battler
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_auto_battle_actions                                    |
+  #----------------------------------------------------------------------------|
+  alias make_auto_battle_actions_catb_speed_addon make_auto_battle_actions
+  def make_auto_battle_actions
+    make_auto_battle_actions_catb_speed_addon
+    # Added to trigger the action input speed reduce
+    set_catb_speed_reduce if BattleManager.btype?(:catb)
+    #
+  end # make_auto_battle_actions
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_confusion_actions                                      |
+  #----------------------------------------------------------------------------|
+  alias make_confusion_actions_catb_speed_addon make_confusion_actions
+  def make_confusion_actions
+    make_confusion_actions_catb_speed_addon
+    # Added to trigger the action input speed reduce
+    set_catb_speed_reduce if BattleManager.btype?(:catb)
+    #
+  end # make_confusion_actions
+
+end # Game_Actor
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_Enemy                                                    |
+#------------------------------------------------------------------------------|
+
+class Game_Enemy < Game_Battler
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_actions                                                |
+  #----------------------------------------------------------------------------|
+  alias make_actions_catb_speed_addon make_actions
+  def make_actions
+    make_actions_catb_speed_addon
+    # Added to trigger the action input speed reduce
+    set_catb_speed_reduce if BattleManager.btype?(:catb) && current_action && current_action.item   
+    #
+  end # make_actions
+
+end # Game_Enemy
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Scene_Battle                                                  |
+#------------------------------------------------------------------------------|
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: process_catb                                              |
+  #----------------------------------------------------------------------------|
+  def process_catb
+    if @status_window.index >= 0 && (!$game_party.members[@status_window.index] || $game_party.members[@status_window.index].dead? || !BattleManager.action_list(:actor).include?($game_party.members[@status_window.index]))
+      $game_party.members[@status_window.index].clear_catb if $game_party.members[@status_window.index]
+      if @skill_window.visible || @item_window.visible || @actor_window.visible || @enemy_window.visible
+        @status_window.open.show
+        @status_aid_window.hide
+      end
+      @actor_window.hide.deactivate
+      @enemy_window.hide.deactivate
+      @actor_command_window.deactivate.close
+      @skill_window.hide.deactivate
+      @item_window.hide.deactivate
+      @status_window.unselect
+    end
+    @party_command_window.deactivate.close if BattleManager.action_list(:actor).empty?
+    return if !SceneManager.scene_is?(Scene_Battle) || scene_changing? || !BattleManager.btype?(:catb) || catb_pause?
+    all_battle_members.each { |a|
+      a.clear_actions if a.catb_value == 0
+      a.make_catb_update
+      a.make_catb_action
+      a.make_ct_catb_update
+      # Added to update the action input speed
+      a.make_speed_catb_update
+      #
+      a.make_cd_catb_update if $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"]
+    }
+    BattleManager.action_list(:actor).each { |a| a.clear_catb unless a.index }
+    if $game_system.catb_turn_type == :tick
+      @tick_clock ||= 0
+      @tick_clock += 1
+      if @tick_clock >= $game_system.catb_tick_count
+        @tick_clock = 0
+        BattleManager.turn_end
+        all_battle_members.each { |member| member.run_lunatic_states(:begin) } if $imported["YEA-LunaticStates"]
+        if $imported["YEA-SkillRestrictions"]
+          $game_party.update_restrictions
+          $game_troop.update_restrictions
+        end
+        all_battle_members.each { |battler|
+          battler.on_turn_end
+          battler.perform_collapse_effect if battler.enemy? && battler.can_collapse?
+        }
+        @status_window.refresh
+        $game_troop.increase_turn
+      end
+    end
+#    BattleManager.action_list(:actor).each { |battler|
+#      battler.make_actions if (battler.actor? && !battler.input)
+#    }
+    @status_window.refresh_catb
+    @f_actor_index = 0 if !@f_actor_index || @f_actor_index < 0 || @f_actor_index + 1 > BattleManager.action_list(:actor).size
+    f_actor = BattleManager.action_list(:actor)[@f_actor_index]
+    f_actor_count = 0
+    while f_actor_count < BattleManager.action_list(:actor).size && f_actor && (f_actor.input && f_actor.input.item && f_actor.input.confirm || f_actor.auto_battle? || f_actor.confusion? || !f_actor.max_catb_value? || f_actor.ct_catb_value > 0 || $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"] && f_actor.cd_catb_value > 0)
+      f_actor_count += 1
+      @f_actor_index + 1 < BattleManager.action_list(:actor).size ? @f_actor_index += 1 : @f_actor_index = 0
+      f_actor = BattleManager.action_list(:actor)[@f_actor_index]
+    end
+    if f_actor && f_actor.input && !f_actor.input.confirm && (!BattleManager.actor || @status_window.index != BattleManager.actor.index) && !@actor_command_window.active && !@party_command_window.active
+      BattleManager.set_actor(f_actor.index)
+      @status_window.select(BattleManager.actor.index)
+      @actor_command_window.show.setup(BattleManager.actor)
+      @hotkeys_bar_window.setup(BattleManager.actor) if $imported['RIFF_HOTKEYS']
+    end
+    BattleManager.action_list.each { |battler|
+      battler.make_actions if (battler.enemy? || battler.input.confirm) && battler.max_catb_value? && battler.ct_catb_value <= 0 && (!$imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"] || battler.cd_catb_value <= 0)
+      perform_catb_action(battler) unless @subject
+    }
+  end # process_catb
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#==============================================================================|

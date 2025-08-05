@@ -1,0 +1,913 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Bug Fix v1.05b to YSA Battle System: Classical ATB         |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.05b(GMT 1200 26-2-2015):                                               |
+#    - Improved the efficiency of the Party member change bug fix              |
+#    v1.05a(GMT 0800 21-1-2015):                                               |
+#    - Tried to fix buffs/debuffs not removing when reaching 0 remaining turns |
+#    v1.04c(GMT 0500 24-11-2014):                                              |
+#    - Tried to fix more issues on dying enemy selection bug                   |
+#    v1.04b(GMT 0900 14-11-2014):                                              |
+#    - Tried to fix more issues on dying enemy selection bug                   |
+#    v1.04a(GMT 0800 12-11-2014):                                              |
+#    - Tried to fix windows not closing upon victory nor defeat bug            |
+#    v1.03a(GMT 0200 20-8-2014):                                               |
+#    - Tried to fix battler escape bug                                         |
+#    v1.02d(GMT 1000 30-6-2014):                                               |
+#    - Tried to improve the action times+ bug fix                              |
+#    v1.02c(GMT 0500 22-3-2014):                                               |
+#    - Tried to fix more bugs caused by the fixes on collapse check bug        |
+#    v1.02b(GMT 2330 7-3-2014):                                                |
+#    - Tried to fix bugs caused by the fixes on collapse check bug             |
+#    v1.02a(GMT 0600 7-3-2014):                                                |
+#    - Tried to fix collapse check bug                                         |
+#    v1.01g(GMT 0500 13-2-2014):                                               |
+#    - Tried to fix more issues of command window bug                          |
+#    v1.01f(GMT 0000 27-1-2014):                                               |
+#    - Tried to fix bugs caused by the fixes on on turn end bug                |
+#    v1.01e(GMT 1500 26-1-2014):                                               |
+#    - Tried to fix bugs caused by the fixes on action times+ bug              |
+#    v1.01d(GMT 0600 22-1-2014):                                               |
+#    - Tried to fix more issues of command window bug                          |
+#    v1.01c(GMT 0300 22-1-2014):                                               |
+#    - Tried to fix bugs caused by the fixes on autobattle flag and confusion  |
+#      bug and left arrow output bug                                           |
+#    v1.01b(GMT 1200 21-1-2014):                                               |
+#    - Tried to fix bugs caused by the fixes on on turn end bug                |
+#    v1.01a(GMT 0000 13-1-2014):                                               |
+#    - Tried to fix on turn end bug                                            |
+#    v1.00a(GMT 1200 9-1-2014):                                                |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Authors                                                                   |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of YSA Battle System: Classical ATB except that you must also|
+#    give Yami credit(you should do this anyway) if you give DoubleX or his    |
+#    alias credit                                                              |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - YSA Battle System: Classical ATB                                        |
+#    Knowledge:                                                                |
+#    - That of using the script YSA Battle System: Classical ATB               |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Tries to fix bugs I've found in YSA Battle System: Classical ATB        |
+#    - Fixing compatibility issues isn't this script's aim                     |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script YSA Battle System: Classical ATB and ¡¿ Main. |
+#    Save to take effect.                                                      |
+#    Suggested Complete CATB Scripts Order(Excluding Dhoom Manipulate State):  |
+#    1.  Yanfly Engine Ace - Ace Core Engine                                   |
+#    2.  Yanfly Engine Ace - Ace Battle Engine                                 |
+#    3.  YSA Battle System: Classical ATB                                      |
+#    4.  YSA Battle Add-on: Lunatic CATB Rate                                  |
+#    5.  YSA Battle Add-on: Lunatic CATB Reset                                 |
+#    6.  YSA Battle Add-on: Lunatic CATB Start                                 |
+#    7.  DoubleX RMVXA Bug Fix to YSA Battle System: Classical ATB             |
+#    8.  DoubleX RMVXA Compatibility Fix to YSA Battle System: Classical ATB   |
+#    9. DoubleX RMVXA Action Addon to YSA Battle System: Classical ATB         |
+#    10. DoubleX RMVXA ATB Addon to YSA Battle System: Classical ATB           |
+#    11. DoubleX RMVXA Cancel Addon to YSA Battle System: Classical ATB        |
+#    12. DoubleX RMVXA Clear Addon to YSA Battle System: Classical ATB         |
+#    13. DoubleX RMVXA CATB Clear Addon Compatibility Fix                      |
+#    14. DoubleX RMVXA Cooldown Addon to YSA Battle System: Classical ATB      |
+#    15. DoubleX RMVXA Charge Addon to YSA Battle System: Classical ATB        |
+#    16. DoubleX RMVXA Countdown Addon to YSA Battle System: Classical ATB     |
+#    17. DoubleX RMVXA Countdown Addon Compatibility Fix                       |
+#    18. DoubleX RMVXA Escape Addon to YSA Battle System: Classical ATB        |
+#    19. DoubleX RMVXA Percentage Addon to YSA Battle System: Classical ATB    |
+#    20. DoubleX RMVXA Reset Addon to YSA Battle Add-on: Lunatic CATB Reset    |
+#    21. DoubleX RMVXA SE Addon to YSA Battle System: Classical ATB            |
+#    22. DoubleX RMVXA Tick Addon to YSA Battle System: Classical ATB          |
+#    23. DoubleX RMVXA Turn Addon to YSA Battle System: Classical ATB          |
+#    24. DoubleX RMVXA Unison Addon to YSA Battle System: Classical ATB        |
+#    25. DoubleX RMVXA Update Addon to YSA Battle System: Classical ATB        |
+#    26. DoubleX RMVXA Wait Addon to YSA Battle System: Classical ATB          |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle System: Classical ATB                        |
+#==============================================================================|
+
+#==============================================================================|
+#  ** Advices                                                                  |
+#------------------------------------------------------------------------------|
+#  * Fix some issues by following the ordering of YEA scripts:                 |
+#    Check http://yanflychannel.wordpress.com/rmvxa/ and follow the ordering   |
+#------------------------------------------------------------------------------|
+#  * Fix bugs when preemptives or susprises occur in the catb battle system:   |
+#    Give numbers to PREEMTIVE_ATB_ACTOR, PREEMTIVE_ATB_ENEMY,                 |
+#    SURPRISE_ATB_ACTOR and SURPRISE_ATB_ENEMY                                 |
+#------------------------------------------------------------------------------|
+#  * Fix some compatibility issues with other scripts:                         |
+#    Put this script below YSA Battle System: Classical ATB, which should be   |
+#    put below Yanfly Engine Ace - Ace Battle Engine                           |
+#    They should be placed as nearby each other as possible                    |
+#==============================================================================|
+
+#==============================================================================|
+#  ** Fixes                                                                    |
+#------------------------------------------------------------------------------|
+#  * (v1.05a+)Buff/Debuff removal bug(Fix_Buff/Debuff_Removal_Bug):            |
+#    - Aliased method on_turn_end under class Game_Battler                     |
+#  * (v1.04a+)Victory defeat bug(Fix_Victory_Defeat_Bug):                      |
+#    - Aliased method process_victory and process_defeat under module          |
+#      BattleManager                                                           |
+#    - Added method catb_close_windows under class Scene_Battle                |
+#------------------------------------------------------------------------------|
+#  * (v1.03a+)Battler escape bug(Fix_Battler_Escape_Bug):                      |
+#    - Aliased method process_escape under module BattleManager                |
+#    - Added attr_accessor :catb_escape under module BattleManager             |
+#    - Rewritten method                                                        |
+#      draw_item under class Window_BattleStatus                               |
+#      process_catb and perform_catb_action under class Scene_Battle           |
+#------------------------------------------------------------------------------|
+#  * (v1.02a+)Collapse check bug(Fix_Collapse_Check_Bug):                      |
+#    - Rewritten method process_catb and perform_catb_action under class       |
+#      Scene_Battle                                                            |
+#------------------------------------------------------------------------------|
+#  * (v1.01a+)On turn end bug(Fix_On_Turn_End_Bug):                            |
+#    - (v1.03a+)Added attr_reader :phase under module BattleManager            |
+#    - (v1.01b+)Aliased method self.input_start under module BattleManager     |
+#    - Rewritten method process_catb and perform_catb_action under class       |
+#      Scene_Battle                                                            |
+#------------------------------------------------------------------------------|
+#  * Action Times+ bug(Fix_Action_Time_Bug):                                   |
+#    - Rewritten method                                                        |
+#      (v1.02d+)make_catb_action under class Game_Battler                      |
+#      clear_catb and make_first_catb_value under class Game_Battler           |
+#      update_gauge under class Enemy_CATB_Gauge_Viewport                      |
+#------------------------------------------------------------------------------|
+#  * Autobattle flag and confusion bug(Fix_Autobattle_Confusion_Bug):          |
+#    - (v1.02d+)Aliased method initialize under class Game_Battler             |
+#    - (v1.02d+)Added attr_reader ct_catb_value under class Game_Battler       |
+#    - Rewritten method                                                        |
+#      confirm under class Game_Action                                         |
+#      make_first_catb_value under class Game_Battler                          |
+#      process_catb under class Scene_Battle                                   |
+#    - Added method max_catb_value? under class Game_Battler                   |
+#------------------------------------------------------------------------------|
+#  * Command window bug(Fix_Command_Window_Bug):                               |
+#    - (v1.01g+)Aliased method self.input_start under module BattleManager     |
+#    - Rewritten method process_catb, command_attack, command_skill,           |
+#      command_guard and update_message_open under class Scene_Battle          |
+#------------------------------------------------------------------------------|
+#  * Confirm or cancel input bug(Fix_Input_Confirm_Cancel_Bug):                |
+#    - Aliased method on_enemy_ok, on_enemy_cancel, on_actor_ok,               |
+#      on_actor_cancel, on_skill_ok and on_item_ok under class Scene_Battle    |
+#------------------------------------------------------------------------------|
+#  * Dying enemy selection bug(Fix_Die_Enemy_Select_Bug):                      |
+#    - Rewritten method update under class Window_BattleEnemy                  |
+#    - (v1.04c+)Aliased method on_enemy_ok under class Scene_Battle            |
+#------------------------------------------------------------------------------|
+#  * Enemy action picking bug(Fix_Enemy_Charge_Bug):                           |
+#    - (v1.02d+)Added attr_reader ct_catb_value under class Game_Battler       |
+#    - Rewritten method process_catb under class Scene_Battle                  |
+#    - Added method max_catb_value? under class Game_Battler                   |
+#------------------------------------------------------------------------------|
+#  * Guard command bug(Fix_Guard_Bug):                                         |
+#    - Rewritten method command_guard under class Scene_Battle                 |
+#------------------------------------------------------------------------------|
+#  * Left arrow output bug(Fix_Dir4_Bug):                                      |
+#    - Rewritten method                                                        |
+#      process_dir4 under class Window_ActorCommand                            |
+#      process_catb, prior_f_actor and next_f_actor under class Scene_Battle   |
+#------------------------------------------------------------------------------|
+#  * Party member change bug(Fix_Party_List_Bug):                              |
+#    - (v1.02d+)Added attr_reader :catb_value under class Game_Battler         |
+#    - Rewritten method                                                        |
+#      make_ct_catb_update under class Game_Battler                            |
+#      process_catb, prior_f_actor and next_f_actor under class Scene_Battle   |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Bug Fixes to YSA-CATB"] = true
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"]
+
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#  * Fixes:                                                                    |
+#    - (v1.03a+)Battler escape bug                                             |
+#    - (v1.01g+)Command window bug                                             |
+#    - (v1.01b+)On turn end bug                                                |
+#------------------------------------------------------------------------------|
+class << BattleManager
+
+  # Fixes:
+  # (v1.04a+)Victory defeat bug
+  #----------------------------------------------------------------------------|
+  #  Alias method: process_victory                                             |
+  #----------------------------------------------------------------------------|
+  alias fix_catb_process_victory process_victory
+  def process_victory
+    # Added to close all windows before showing those for victory
+    SceneManager.scene.catb_close_windows if SceneManager.scene_is?(Scene_Battle)
+    # Fix_Victory_Defeat_Bug
+    fix_catb_process_victory
+  end # process_victory_ecatb
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: process_defeat                                              |
+  #----------------------------------------------------------------------------|
+  alias fix_catb_process_defeat process_defeat
+  def process_defeat
+    # Added to close all windows before showing those for defeat
+    SceneManager.scene.catb_close_windows if SceneManager.scene_is?(Scene_Battle)
+    # Fix_Victory_Defeat_Bug
+    fix_catb_process_defeat
+  end # process_defeat
+
+  # Fixes:
+  # (v1.03a+)Battler escape bug
+  #----------------------------------------------------------------------------|
+  #  Alias method: process_escape                                              |
+  #----------------------------------------------------------------------------|
+  alias fix_catb_process_escape process_escape
+  def process_escape
+    # Rewritten to disable escape if @catb_escape isn't :true
+    @catb_escape ||= :true
+    @catb_escape == :true && fix_catb_process_escape
+    # Fix_Battler_Escape_Bug
+  end # process_escape
+
+  # Fixes:
+  # (v1.03a+)Battler escape bug
+  # (v1.01b+)On turn end bug
+  #----------------------------------------------------------------------------|
+  #  (v1.03a+)New public instance variables                                    |
+  #----------------------------------------------------------------------------|
+  attr_accessor :catb_escape
+  attr_reader :phase
+
+  # Fixes:
+  # (v1.01g+)Command window bug
+  # (v1.01b+)On turn end bug  
+  #----------------------------------------------------------------------------|
+  #  Alias method: input_start                                                 |
+  #----------------------------------------------------------------------------|
+  alias fix_catb_input_start input_start
+  def input_start
+    # Added to set @phase as input and @surprise as false in catb battle system
+    if btype?(:catb)
+      @phase = :input
+      @surprise = false
+    end
+    # Fix_Command_Window_Bug && Fix_On_Turn_End_Bug
+    fix_catb_input_start
+  end # input_start
+
+end # BattleManager
+
+#------------------------------------------------------------------------------|
+#  * Fixes:                                                                    |
+#    - Autobattle flag and confusion bug                                       |
+#------------------------------------------------------------------------------|
+class Game_Action
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: confirm                                                   |
+  #----------------------------------------------------------------------------|
+  def confirm
+    # Rewritten to set @confirm as true if @subject.auto_battle? or @subject.confusion? is true
+    @confirm ||= @subject.auto_battle? || @subject.confusion?
+    # Fix_Autobattle_Confusion_Bug
+  end # confirm
+
+end # Game_Action
+
+#------------------------------------------------------------------------------|
+#  * Fixes:                                                                    |
+#    - (v1.05a+)Buff/Debuff removal bug                                        |
+#    - Action Times+ bug                                                       |
+#    - Autobattle flag and confusion bug                                       |
+#    - Enemy action picking bug                                                |
+#    - Left arrow output bug                                                   |
+#    - Party member change bug                                                 |
+#------------------------------------------------------------------------------|
+class Game_Battler < Game_BattlerBase
+
+  # Fixes:
+  # Buff/Debuff removal bug
+  #----------------------------------------------------------------------------|
+  #  (v1.05a+)Alias method: on_turn_end                                        |
+  #----------------------------------------------------------------------------|
+  alias fix_catb_on_turn_end on_turn_end
+  def on_turn_end
+    fix_catb_on_turn_end
+    # Added to remove buffs having 0 remaining turns upon turn end
+    remove_buffs_auto if BattleManager.btype?(:catb)
+    # Fix_Buff/Debuff_Removal_Bug
+  end # on_turn_end
+
+  # Fixes:
+  # Action Times+ bug
+  #----------------------------------------------------------------------------|
+  #  (v1.02d+)Rewrite method: make_catb_action                                 |
+  #----------------------------------------------------------------------------|
+  def make_catb_action
+    return unless max_catb_value?
+    # Added to set the action times
+    @catb_action_times = catb_make_action_times if @catb_action_times <= 0
+    # Fix_Action_Time_Bug
+    return clear_catb unless movable?
+    BattleManager.make_catb_action(self)
+  end # make_catb_action
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02d+)Alias method: initialize                                         |
+  #----------------------------------------------------------------------------|
+  alias fix_catb_initialize initialize
+  def initialize
+    fix_catb_initialize
+    # Added to initialize @cd_catb_value
+    @catb_action_times = 0
+    #
+  end # initialize
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: clear_catb                                                |
+  #----------------------------------------------------------------------------|
+  def clear_catb(value = 0)
+    # Rewritten to not clear actor's catb if @catb_action_times > 0 && movable? is true
+    @catb_action_times -= 1 if @ct_catb_value > 0
+    @catb_value = value unless @catb_action_times > 0 && movable?
+    @catb_action_times = 0 unless @catb_action_times <= 0 || movable?
+    # Fix_Action_Time_Bug
+    @ct_catb_value = 0
+    BattleManager.clear_actor if actor? && BattleManager.actor == self
+    BattleManager.delete_catb_action(self)
+  end # clear_catb
+
+  # Fixes:
+  # Action Times+ bug
+  # Autobattle flag and confusion bug
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: make_first_catb_value                                     |
+  #----------------------------------------------------------------------------|
+  def make_first_catb_value(pre = 0)
+    # Rewritten to fix autobattle flag bug
+    auto_battle? ? clear_actions : make_actions
+    # Fix_Autobattle_Confusion_Bug
+    @catb_value = 0
+    @catb_value = YSA::CATB::PREEMTIVE_ATB_ACTOR if actor? && pre == 1
+    @catb_value = YSA::CATB::PREEMTIVE_ATB_ENEMY if enemy? && pre == 1
+    @catb_value = YSA::CATB::SURPRISE_ATB_ACTOR if actor? && pre == 2
+    @catb_value = YSA::CATB::SURPRISE_ATB_ENEMY if enemy? && pre == 2
+    lunatic_catb_start_formula(pre) if $imported["YSA-LunaticCATBStart"]
+    # Added to set the action times
+    @catb_action_times = max_catb_value? ? catb_make_action_times : 0
+    # Fix_Action_Time_Bug
+  end # make_first_catb_value
+
+  # Fixes:
+  # Action Times+ bug
+  # Autobattle flag and confusion bug
+  # Enemy action picking bug
+  # Party member change bug
+  #----------------------------------------------------------------------------|
+  #  (v1.02d+)New public instance variables                                    |
+  #----------------------------------------------------------------------------|
+  attr_reader :catb_action_times
+  attr_reader :catb_value
+  attr_reader :ct_catb_value
+
+  # Fixes:
+  # Autobattle flag and confusion bug
+  # Enemy action picking bug
+  # Left arrow output bug
+  #----------------------------------------------------------------------------|
+  #  New method: max_catb_value?                                               |
+  #----------------------------------------------------------------------------|
+  def max_catb_value?
+    @catb_value >= MAX_CATB_VALUE
+  end # max_catb_value?
+
+  # Fixes:
+  # Party member change bug
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: make_ct_catb_update                                       |
+  #----------------------------------------------------------------------------|
+  def make_ct_catb_update
+    return unless max_catb_value? && @ct_catb_value < MAX_CATB_VALUE && current_action
+    # Rewritten to fix party member change bug
+    return @ct_catb_value = 0 unless current_action.item
+    # Fix_Party_List_Bug
+    return if actor? && !current_action.confirm
+    clear_catb unless movable?
+    @ct_catb_value = MAX_CATB_VALUE unless current_action.item.charge_on
+    value = $imported["YSA-LunaticCATBRate"] ? lunatic_catb_rate_formula : real_gain_catb
+    @ct_catb_value += [value * current_action.item.charge_rate / 100, MAX_CATB_VALUE - @ct_catb_value].min
+  end # make_ct_catb_update
+
+end # Game_Battler
+
+#------------------------------------------------------------------------------|
+#  * Fixes:                                                                    |
+#    - Left arrow output bug                                                   |
+#------------------------------------------------------------------------------|
+class Window_ActorCommand < Window_Command
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: process_dir4                                              |
+  #----------------------------------------------------------------------------|
+  def process_dir4
+    Sound.play_cursor
+    Input.update
+    deactivate
+    # Rewritten to set the left arrow output as switching to the prior actor
+    call_handler(:dir4)
+    # Fix_Dir4_Bug
+  end # process_dir4
+
+end # Window_ActorCommand
+
+#------------------------------------------------------------------------------|
+#  * Fixes:                                                                    |
+#    - (v1.03a+)Battler escape bug                                             |
+#------------------------------------------------------------------------------|
+class Window_BattleStatus < Window_Selectable
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: draw_item                                                 |
+  #----------------------------------------------------------------------------|
+  def draw_item(index)
+    # Added to stop drawing if the actor's not exist
+    return unless index
+    # Fix_Battler_Escape_Bug
+    catb_draw_item(index)
+    actor = battle_members[index]
+    rect = item_rect(index)
+    # Added to stop drawing if the actor's not exist
+    return unless actor
+    # Fix_Battler_Escape_Bug
+    gx = YEA::BATTLE::BATTLESTATUS_HPGAUGE_Y_PLUS + YSA::CATB::ATB_GAUGE_Y_PLUS
+    draw_actor_catb(actor, rect.x + 2, line_height + gx, rect.width - 4) if BattleManager.btype?(:catb)
+  end # draw_item
+
+end # Window_BattleStatus
+
+#------------------------------------------------------------------------------|
+#  * Fixes:                                                                    |
+#    - Action Times+ bug                                                       |
+#------------------------------------------------------------------------------|
+class Enemy_CATB_Gauge_Viewport < Viewport
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: update_gauge                                              |
+  #----------------------------------------------------------------------------|
+  def update_gauge
+    # Rewritten to keep charge guage up to date
+    @gauge_width = target_gauge_width if @type == :catb && @gauge_width != target_gauge_width
+    @gauge_width = target_gauge_width_ct if @type == :catbct && @gauge_width != target_gauge_width_ct
+    # Fix_Action_Time_Bug
+    rect.width = @gauge_width if @type != :back
+  end # update_gauge
+
+end # Enemy_CATB_Gauge_Viewport
+
+#------------------------------------------------------------------------------|
+#  * Fixes:                                                                    |
+#    - Dying enemy selection bug                                               |
+#------------------------------------------------------------------------------|
+class Window_BattleEnemy < Window_Selectable
+
+  #----------------------------------------------------------------------------|
+  #  (v1.04c+)New public instance variable                                     |
+  #----------------------------------------------------------------------------|
+  attr_reader :data
+
+  #----------------------------------------------------------------------------|
+  #  (v1.04c+)Rewrite method: enemy                                            |
+  #----------------------------------------------------------------------------|
+  def enemy
+    # Rewritten to use @index instead of index
+    @data[@index]
+    #
+  end # enemy
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: update                                                    |
+  #----------------------------------------------------------------------------|
+  def update
+    super
+    # Rewritten to return upon victory and always keep enemy up to date
+    return if !active || $game_troop.all_dead?
+    if @data.size != $game_troop.alive_members.size
+      make_item_list
+      @index = [@index, @data.size - 1].min
+    end
+    # Fix_Die_Enemy_Select_Bug
+    select_all? ? $game_troop.alive_members.each { |enemy| enemy.sprite_effect_type = :whiten } : enemy.sprite_effect_type = :whiten
+  end # update
+
+end # Window_BattleEnemy
+
+#------------------------------------------------------------------------------|
+#  * Fixes:                                                                    |
+#    - (v1.04c+)Dying enemy selection bug                                      |
+#    - (v1.04a+)Victory defeat bug                                             |
+#    - (v1.03a+)Battler escape bug                                             |
+#    - (v1.02a+)Collapse check bug                                             |
+#    - (v1.01a+)On turn end bug                                                |
+#    - Autobattle flag and confusion bug                                       |
+#    - Command window bug                                                      |
+#    - Enemy action picking bug                                                |
+#    - Confirm or cancel input bug                                             |
+#    - Guard command bug                                                       |
+#    - Left arrow output bug                                                   |
+#    - Party member change bug                                                 |
+#------------------------------------------------------------------------------|
+class Scene_Battle < Scene_Base
+
+  # Fixes:
+  # (v1.04a+)Victory defeat bug
+  #----------------------------------------------------------------------------|
+  #  New method: catb_close_windows                                            |
+  #----------------------------------------------------------------------------|
+  def catb_close_windows
+    # Closes all windows before showing those for victory or defeat
+    [@actor_window, @enemy_window, @skill_window, @item_window, @status_aid_window, @actor_command_window, @party_command_window].each { |window|
+      window.hide.deactivate.close
+    }
+    # Fix_Victory_Defeat_Bug
+  end # catb_close_windows
+
+  # Fixes:
+  # (v1.03a+)Battler escape bug
+  # (v1.02a+)Collapse check bug
+  # (v1.01d+)Command window bug
+  # (v1.01a+)On turn end bug
+  # Autobattle flag and confusion bug
+  # Enemy action picking bug
+  # Left arrow output bug
+  # Party member change bug
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: process_catb                                              |
+  #----------------------------------------------------------------------------|
+  def process_catb
+    # Rewritten to fix nil actor selection and status window not opening bug
+    if @status_window.index >= 0 && (!$game_party.members[@status_window.index] || $game_party.members[@status_window.index].dead? || !BattleManager.action_list(:actor).include?($game_party.members[@status_window.index]))
+      $game_party.members[@status_window.index].clear_catb if $game_party.members[@status_window.index]
+      if @skill_window.visible || @item_window.visible || @actor_window.visible || @enemy_window.visible
+        @status_window.open.show
+        @status_aid_window.hide
+      end
+      @actor_window.hide.deactivate
+      @enemy_window.hide.deactivate
+      @actor_command_window.deactivate.close
+      @skill_window.hide.deactivate
+      @item_window.hide.deactivate
+      @status_window.unselect
+    end
+    # Fix_Battler_Escape_Bug && Fix_Command_Window_Bug
+    # Rewritten to fix party command window not closing bug
+    @party_command_window.deactivate.close if BattleManager.action_list(:actor).size <= 0
+    # Fix_Command_Window_Bug
+    return if !SceneManager.scene_is?(Scene_Battle) || scene_changing? || !BattleManager.btype?(:catb) || catb_pause?
+    all_battle_members.each { |a|
+      # Added to fix party member change bug
+      a.clear_actions if a.catb_value == 0
+      # Fix_Party_List_Bug
+      a.make_catb_update
+      a.make_catb_action
+      a.make_ct_catb_update
+    }
+    # Added to update the action list
+    BattleManager.action_list(:actor).each { |a| a.clear_catb unless a.index }
+    # Fix_Party_List_Bug
+    if $game_system.catb_turn_type == :tick
+      @tick_clock ||= 0
+      @tick_clock += 1
+      if @tick_clock >= $game_system.catb_tick_count
+        @tick_clock = 0
+        # Added to set @phase as turn_end on turn end
+        BattleManager.turn_end
+        # Fix_On_Turn_End_Bug
+        all_battle_members.each { |battler|
+          battler.on_turn_end
+          # Added to perform collapse effect if the enemy can collapse
+          battler.perform_collapse_effect if battler.enemy? && battler.can_collapse?
+          # Fix_Collapse_Check_Bug
+        }
+        @status_window.refresh
+        $game_troop.increase_turn
+      end
+    end
+    # Disabled to remove redundant parts
+#    BattleManager.action_list(:actor).each { |battler|
+#      battler.make_actions if (battler.actor? && !battler.input)
+#    }
+    #
+    @status_window.refresh_catb
+    @f_actor_index = 0 if !@f_actor_index || @f_actor_index < 0 || @f_actor_index + 1 > BattleManager.action_list(:actor).size
+    f_actor = BattleManager.action_list(:actor)[@f_actor_index]
+    # Added to fix left arrow output bug
+    f_actor_count = 0
+    while f_actor_count < BattleManager.action_list(:actor).size && f_actor && (f_actor.input && f_actor.input.item && f_actor.input.confirm || f_actor.auto_battle? || f_actor.confusion? || !f_actor.max_catb_value? || f_actor.ct_catb_value > 0)
+      f_actor_count += 1
+      @f_actor_index + 1 < BattleManager.action_list(:actor).size ? @f_actor_index += 1 : @f_actor_index = 0
+      f_actor = BattleManager.action_list(:actor)[@f_actor_index]
+    end
+    # Fix_Dir4_Bug
+    f_actor = BattleManager.action_list(:actor)[@f_actor_index]
+    if f_actor && f_actor.input && !f_actor.input.confirm && (!BattleManager.actor || @status_window.index != BattleManager.actor.index) && !@actor_command_window.active && !@party_command_window.active
+      BattleManager.set_actor(f_actor.index)
+      @status_window.select(BattleManager.actor.index)
+      @actor_command_window.show.setup(BattleManager.actor)
+    end
+    BattleManager.action_list.each { |battler|
+      # Rewritten to disable redundant action making and force actors to make actions if auto_battle? or confusion? is true
+      battler.make_actions if (battler.enemy? || battler.input.confirm) && battler.max_catb_value? && battler.ct_catb_value <= 0
+      # Fix_Autobattle_Confusion_Bug && Fix_Enemy_Charge_Bug
+      perform_catb_action(battler) unless @subject
+    }
+  end # process_catb
+
+  # Fixes:
+  # (v1.03a+)Battler escape bug
+  # (v1.02a+)Collapse check bug
+  # (v1.01a+)On turn end bug
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: perform_catb_action                                       |
+  #----------------------------------------------------------------------------|
+  def perform_catb_action(subject, forced = false)
+    return if subject && (!subject.charge_skill_done? && !forced || subject.actor? && !forced && (!subject.input || !subject.input.item || !subject.input.confirm))
+    subject ? @subject = subject : return
+    # Added to disable escaping while executing action
+    BattleManager.catb_escape = :false
+    # Fix_Battler_Escape_Bug
+    if @subject.current_action
+      @subject.current_action.prepare
+      execute_action if @subject.current_action.valid?
+      reset_value = $imported["YSA-LunaticCATBReset"] ? @subject.lunatic_catb_reset_formula : 0
+      process_event
+      while true
+        @subject.remove_current_action
+        break if forced || !@subject.current_action || !@subject.current_action.valid?
+        @subject.current_action.prepare
+        execute_action
+      end
+      if $game_system.catb_turn_type == :action
+        @tick_action ||= 0
+        @tick_action += 1 if !forced || YSA::CATB::FORCE_ACTION_COUNT
+        if @tick_action >= $game_system.catb_after_action
+          @tick_action = 0
+          # Added to set @phase as turn_end on turn end but not battle end
+          BattleManager.turn_end if BattleManager.phase
+          # Fix_On_Turn_End_Bug
+          all_battle_members.each { |battler|
+            battler.on_turn_end
+            # Added to perform collapse effect if the enemy can collapse
+            battler.perform_collapse_effect if BattleManager.phase && battler.enemy? && battler.can_collapse?
+            # Fix_Collapse_Check_Bug
+          }
+          @status_window.refresh
+          $game_troop.increase_turn
+        end
+      end
+      @status_aid_window.refresh if @status_aid_window.visible
+      process_action_end
+    end
+    # Added to disable escaping while executing action
+    BattleManager.catb_escape = :true
+    # Fix_Battler_Escape_Bug
+    return if BattleManager.judge_win_loss || !@subject
+    @subject.clear_catb(reset_value) if !forced || YSA::CATB::FORCE_ACTION_CLEAR_ATB 
+    @status_window.draw_item(@subject.index) if @subject.actor?
+    @subject = nil
+  end # perform_catb_action
+
+  # Fixes:
+  # Left arrow output bug
+  # Party member change bug
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: prior_f_actor                                             |
+  #----------------------------------------------------------------------------|
+  def prior_f_actor
+    return if !@f_actor_index || BattleManager.action_list(:actor).empty?
+    # Rewritten to point @f_actor_index to the prior actor
+    actor_list = {}
+    BattleManager.action_list(:actor).each_with_index { |actor, index| actor_list[index] = actor.index unless actor.auto_battle? || actor.confusion? || actor.ct_catb_value > 0.0 }
+    while true
+      @f_actor_index -= 1
+      @f_actor_index %= $game_party.members.size
+      f_actor_index = actor_list.index(@f_actor_index)
+      break if f_actor_index
+    end
+    f_actor = BattleManager.action_list(:actor)[f_actor_index]
+    # Fix_Dir4_Bug && Fix_Party_List_Bug
+    return unless f_actor
+    BattleManager.set_actor(f_actor.index)
+    @status_window.select(BattleManager.actor.index)
+    @actor_command_window.setup(BattleManager.actor)
+  end # prior_f_actor
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: next_f_actor                                              |
+  #----------------------------------------------------------------------------|
+  def next_f_actor
+    return if !@f_actor_index || BattleManager.action_list(:actor).empty?
+    # Rewritten to point @f_actor_index to the next actor
+    actor_list = {}
+    BattleManager.action_list(:actor).each_with_index { |actor, index| actor_list[index] = actor.index unless actor.auto_battle? || actor.confusion? || actor.ct_catb_value > 0.0 }
+    while true
+      @f_actor_index += 1
+      @f_actor_index %= $game_party.members.size
+      f_actor_index = actor_list.index(@f_actor_index)
+      break if f_actor_index
+    end
+    f_actor = BattleManager.action_list(:actor)[f_actor_index]
+    # Fix_Dir4_Bug && Fix_Party_List_Bug
+    return unless f_actor
+    BattleManager.set_actor(f_actor.index)
+    @status_window.select(BattleManager.actor.index)
+    @actor_command_window.setup(BattleManager.actor)
+  end # next_f_actor
+
+  # Fixes:
+  # (v1.01d+)Command window bug
+  #----------------------------------------------------------------------------|
+  #  Alias method: command_attack                                              |
+  #----------------------------------------------------------------------------|
+  alias fix_catb_command_attack command_attack
+  def command_attack
+    # Rewritten to fix the bug when BattleManager.actor is nil
+    fix_catb_command_attack if BattleManager.actor
+    # Fix_Command_Window_Bug
+  end # command_attack
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: command_skill                                               |
+  #----------------------------------------------------------------------------|
+  alias fix_catb_command_skill command_skill
+  def command_skill
+    # Rewritten to fix the bug when BattleManager.actor is nil
+    fix_catb_command_skill if BattleManager.actor
+    # Fix_Command_Window_Bug
+  end # command_skill
+
+  # Fixes:
+  # (v1.01d+)Command window bug
+  # Guard command bug
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: command_guard                                             |
+  #----------------------------------------------------------------------------|
+  def command_guard
+    # Rewritten to fix the bug when BattleManager.actor is nil
+    return if !BattleManager.actor
+    # Fix_Command_Window_Bug
+    BattleManager.actor.input.confirm = true
+    catb_command_guard
+    # Rewritten to fix the bug when BattleManager.actor is nil
+    @status_window.draw_item(BattleManager.actor.index) if BattleManager.actor
+    # Fix_Guard_Bug
+  end # command_guard
+
+  # Fixes:
+  # (v1.04c+)Dying enemy selection bug
+  # Confirm or cancel input bug
+  #----------------------------------------------------------------------------|
+  #  Alias method: on_enemy_ok                                                 |
+  #----------------------------------------------------------------------------|
+  alias fix_catb_on_enemy_ok on_enemy_ok
+  def on_enemy_ok
+    # Added to return upon victory and always keep enemy up to date
+    return if $game_troop.all_dead?
+    if @enemy_window.data.size != $game_troop.alive_members.size
+      @enemy_window.make_item_list
+      @enemy_window.index = [@enemy_window.index, @enemy_window.data.size - 1].min
+    end
+    # Fix_Die_Enemy_Select_Bug
+    # Rewritten to fix the bug when BattleManager.actor is nil
+    return fix_catb_on_enemy_ok if BattleManager.actor
+    $game_temp.battle_aid = nil
+    @enemy_window.hide
+    @skill_window.hide
+    @item_window.hide
+    next_command
+    # Fix_Input_Confirm_Cancel_Bug
+  end # on_enemy_ok
+
+  # Fixes:
+  # Confirm or cancel input bug
+  #----------------------------------------------------------------------------|
+  #  Alias method: on_enemy_cancel                                             |
+  #----------------------------------------------------------------------------|
+  alias fix_catb_on_enemy_cancel on_enemy_cancel
+  def on_enemy_cancel
+    # Rewritten to fix the bug when BattleManager.actor is nil
+    return fix_catb_on_enemy_cancel if BattleManager.actor
+    @status_aid_window.refresh
+    $game_temp.battle_aid = nil
+    scene_battle_on_enemy_cancel_abe
+    @skill_window.visible || @item_window.visible ? @help_window.show : @help_window.hide
+    # Fix_Input_Confirm_Cancel_Bug
+  end # on_enemy_cancel
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: on_actor_ok                                                 |
+  #----------------------------------------------------------------------------|
+  alias fix_catb_on_actor_ok on_actor_ok
+  def on_actor_ok
+    # Rewritten to fix the bug when BattleManager.actor is nil
+    return fix_catb_on_actor_ok if BattleManager.actor
+    $game_temp.battle_aid = nil
+    @actor_window.hide
+    @skill_window.hide
+    @item_window.hide
+    next_command
+    @status_window.show
+    $imported["YEA-BattleCommandList"] && @confirm_command_window ? @actor_command_window.visible = !@confirm_command_window.visible : @actor_command_window.show
+    @status_aid_window.hide
+    # Fix_Input_Confirm_Cancel_Bug
+  end # on_actor_ok
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: on_actor_cancel                                             |
+  #----------------------------------------------------------------------------|
+  alias fix_catb_on_actor_cancel on_actor_cancel
+  def on_actor_cancel
+    # Rewritten to fix the bug when BattleManager.actor is nil
+    return fix_catb_on_actor_cancel if BattleManager.actor
+    @status_aid_window.refresh
+    $game_temp.battle_aid = nil
+    scene_battle_on_actor_cancel_abe
+    return @skill_window.show if @actor_command_window.current_symbol == :skill
+    @item_window.show if @actor_command_window.current_symbol == :item
+    # Fix_Input_Confirm_Cancel_Bug
+  end # on_actor_cancel
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: on_skill_ok                                                 |
+  #----------------------------------------------------------------------------|
+  alias fix_catb_on_skill_ok on_skill_ok
+  def on_skill_ok
+    # Rewritten to fix the bug when BattleManager.actor is nil
+    return fix_catb_on_skill_ok if BattleManager.actor
+    $game_temp.battle_aid = @skill = @skill_window.item
+    return select_enemy_selection if @skill.for_opponent?
+    return select_actor_selection if @skill.for_friend?
+    @skill_window.hide
+    next_command
+    $game_temp.battle_aid = nil
+    # Fix_Input_Confirm_Cancel_Bug
+  end # on_skill_ok
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: on_item_ok                                                  |
+  #----------------------------------------------------------------------------|
+  alias fix_catb_on_item_ok on_item_ok
+  def on_item_ok
+    # Rewritten to fix the bug when BattleManager.actor is nil
+    return fix_catb_on_item_ok if BattleManager.actor
+    $game_party.last_item.object = $game_temp.battle_aid = @item = @item_window.item
+    return select_enemy_selection if @item.for_opponent?
+    return select_actor_selection if @item.for_friend?
+    @item_window.hide
+    next_command
+    $game_temp.battle_aid = nil
+    # Fix_Input_Confirm_Cancel_Bug
+  end # on_item_ok
+
+  # Fixes:
+  # Command window bug
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: update_message_open                                       |
+  #----------------------------------------------------------------------------|
+  def update_message_open
+    catb_update_message_open
+    return if $game_message.busy? || !@status_window.close? || $game_troop.all_dead? || $game_party.all_dead?
+    @status_window.open
+    # Added to open actor and party command windows when appropriate
+    @actor_command_window.open if @actor_command_window.active || @skill_window.active || @item_window.active || @actor_window.active || @enemy_window.active
+    @party_command_window.open if @party_command_window.active || $imported["YEA-CombatLogDisplay"] && @combatlog_window && @combatlog_window.visible
+    # Fix_Command_Window_Bug
+  end # update_message_open
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+else
+  msgbox("To use DoubleX RMVXA Bug Fix to YSA Battle System: Classical ATB, " +
+         "put it below:\nYanfly Engine Ace - Ace Battle Engine\n" +
+         "but above Main") unless $imported["YEA-BattleEngine"]
+  msgbox("To use DoubleX RMVXA Bug Fix to YSA Battle System: Classical ATB, " +
+         "put it below:\nYSA Battle System: Classical ATB\n " +
+         "but above Main") unless $imported["YSA-CATB"]
+end # if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"]
+
+#==============================================================================|

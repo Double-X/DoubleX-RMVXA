@@ -1,0 +1,215 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Tag Addon v1.00a to Yami Engine Symphony - Battle Symphony |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00a(GMT 0200 7-3-2014):                                                |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - Yami Engine Symphony - Battle Symphony                                  |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of                                                           |
+#    - Yami Engine Symphony - Battle Symphony                                  |
+#    except that you must also give Yami credit(you should do this anyway) if  |
+#    you give DoubleX or his alias credit                                      |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - Yami Engine Symphony - Battle Symphony                                  |
+#    Knowledge:                                                                |
+#    Decent symphony tag and scripting knowledge                               |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Allows users to add their own symphony tags for battler selections      |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot below the script Yami Engine Symphony - Battle Symphony but     |
+#    above ¡¿ Main. Save to take effect.                                        |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Same as that of Yami Engine Symphony - Battle Symphony                    |
+#==============================================================================|
+
+$imported = {} if $imported.nil?
+$imported["DoubleX RMVXA Tag Addon To YES-BattleSymphony"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module YES_BattleSymphony_Tag_Addon
+
+    # This method will only be called by methods get_action_mains and
+    # get_action_targets under class Scene_Battle
+    def self.symphony_tag(action, result)
+      case action
+      # Example new symphony tag: id x, game actor with id x
+      when /ID[ ](\d+)/i
+        result.push($game_actors[$1.to_i])
+      #
+      #-------------------------------------------------------------------------
+      # Add your own symphony tags here
+      
+      #
+      #-------------------------------------------------------------------------
+      end
+      return result
+    end # self.symphony_tag
+
+  end # YES_BattleSymphony_Tag_Addon
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YES-BattleSymphony"]
+
+#------------------------------------------------------------------------------|
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: get_action_mains                                          |
+  #----------------------------------------------------------------------------|
+  def get_action_mains
+    result = []
+    case @action.upcase
+    when /(?:USER)/i
+      result.push(@subject) if @subject
+    when /(?:TARGET|TARGETS)/i
+      result = @action_targets
+    when /(?:COUNTER SUBJECT)/i
+      result = [@counter_subject]
+    when /(?:REFLECT SUBJECT)/i
+      result = [@reflect_subject]
+    when /(?:ACTORS|PARTY|ACTORS LIVING)/i
+      result = $game_party.alive_members
+    when /(?:ALL ACTORS|ACTORS ALL)/i
+      result = $game_party.battle_members
+    when /(?:ACTORS NOT USER|PARTY NOT USER)/i
+      result = $game_party.alive_members
+      result.delete(@subject) if @subject
+    when /(?:ENEMIES|TROOP|ENEMIES LIVING)/i
+      result = $game_troop.alive_members
+    when /(?:ALL ENEMIES|ENEMIES ALL)/i
+      result = $game_troop.battle_members
+    when /(?:ENEMIES NOT USER|ENEMIES NOT USER)/i
+      result = $game_troop.alive_members
+      result.delete(@subject) if @subject
+    when /ACTOR[ ](\d+)/i
+      result.push($game_party.battle_members[$1.to_i])
+    when /ENEMY[ ](\d+)/i
+      result.push($game_troop.battle_members[$1.to_i])
+    when /(?:EVERYTHING|EVERYBODY)/i
+      result = $game_party.alive_members + $game_troop.alive_members
+    when /(?:EVERYTHING NOT USER|EVERYBODY NOT USER)/i
+      result = $game_party.alive_members + $game_troop.alive_members
+      result.delete(@subject) if @subject
+    when /(?:ALLIES|FRIENDS)/i
+      result = @subject.friends_unit.alive_members if @subject
+    when /(?:OPPONENTS|RIVALS)/i
+      result = @subject.opponents_unit.alive_members if @subject
+    when /(?:FRIENDS NOT USER)/i
+      if @subject
+        result = @subject.friends_unit.alive_members 
+        result.delete(@subject)
+      end
+    when /(?:FOCUS)/i
+      result = @action_targets
+      result.push(@subject) if @subject
+    when /(?:NOT FOCUS|NON FOCUS)/i
+      result = $game_party.alive_members + $game_troop.alive_members
+      result -= @action_targets
+      result.delete(@subject) if @subject
+    else
+      # This part is added by this script to use custom symphony tags
+      result = DoubleX_RMVXA::YES_BattleSymphony_Tag_Addon.symphony_tag(@action.upcase, result)
+      #
+    end
+    return result.compact
+  end # get_action_mains
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)Rewrite method: get_action_targets                               |
+  #----------------------------------------------------------------------------|
+  def get_action_targets
+    result = []
+    @action_values.reverse.each { |value|
+      next if value.nil?
+      case value.upcase
+      # This part is added by this script to get action mains for $game_actors[]
+      when /UNISON[ ](\d+)/i
+        result.push($game_actors[$1.to_i])
+      #
+      when /(?:USER)/i
+        result.push(@subject) if @subject
+      when /(?:TARGET|TARGETS)/i
+        result = @action_targets
+      when /(?:COUNTER SUBJECT)/i
+        result = [@counter_subject]
+      when /(?:REFLECT SUBJECT)/i
+        result = [@reflect_subject]
+      when /(?:ACTORS|PARTY|ACTORS LIVING)/i
+        result = $game_party.alive_members
+      when /(?:ALL ACTORS|ACTORS ALL)/i
+        result = $game_party.battle_members
+      when /(?:ACTORS NOT USER|PARTY NOT USER)/i
+        result = $game_party.alive_members
+        result.delete(@subject) if @subject
+      when /(?:ENEMIES|TROOP|ENEMIES LIVING)/i
+        result = $game_troop.alive_members
+      when /(?:ALL ENEMIES|ENEMIES ALL)/i
+        result = $game_troop.battle_members
+      when /(?:ENEMIES NOT USER|ENEMIES NOT USER)/i
+        result = $game_troop.alive_members
+        result.delete(@subject) if @subject
+      when /ACTOR[ ](\d+)/i
+        result.push($game_party.battle_members[$1.to_i])
+      when /ENEMY[ ](\d+)/i
+        result.push($game_troop.battle_members[$1.to_i])
+      when /(?:EVERYTHING|EVERYBODY)/i
+        result = $game_party.alive_members + $game_troop.alive_members
+      when /(?:EVERYTHING NOT USER|EVERYBODY NOT USER)/i
+        result = $game_party.alive_members + $game_troop.alive_members
+        result.delete(@subject) if @subject
+      when /(?:ALLIES|FRIENDS)/i
+        result = @subject.friends_unit.alive_members if @subject
+      when /(?:OPPONENTS|RIVALS)/i
+        result = @subject.opponents_unit.alive_members if @subject
+      when /(?:FRIENDS NOT USER)/i
+        if @subject
+          result = @subject.friends_unit.alive_members 
+          result.delete(@subject)
+        end
+      when /(?:NOT FOCUS|NON FOCUS)/i
+        result = $game_party.alive_members + $game_troop.alive_members
+        result -= @action_targets
+        result.delete(@subject)
+      when /(?:FOCUS)/i
+        result = @action_targets
+        result.push(@subject) if @subject
+      else
+        # This part is added by this script to use custom symphony tags
+        result = DoubleX_RMVXA::YES_BattleSymphony_Tag_Addon.symphony_tag(value.upcase, result)
+        #
+      end
+    }
+    return result.compact
+  end # get_action_targets
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["YES-BattleSymphony"]
+
+#==============================================================================|

@@ -1,0 +1,710 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Cooldown Addon v1.04m to YSA Battle System: Classical ATB  |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.04m(GMT 1300 1-4-2016):                                                |
+#    - Fixed the command guard cooldown rate bug again                         |
+#    v1.04l(GMT 1400 15-12-2015):                                              |
+#    - Fixed setting the wrong actor's item_cooldown upon action input confirm |
+#    v1.04k(GMT 1200 16-11-2015):                                              |
+#    - Fixed nil @item_cooldown bug for confused and/or atuobattle actors      |
+#    v1.04j(GMT 1200 26-2-2015):                                               |
+#    - Fixed the default and command guard cooldown rate bug                   |
+#    - Increased the efficiency of this script                                 |
+#    v1.04i(GMT 1200 25-2-2015):                                               |
+#    - Fixed the Actor Personal Hotkeys bug in picking the prior and next actor|
+#    - Increased the efficiency of this script                                 |
+#    v1.04h(GMT 1300 2-2-2015):                                                |
+#    - Fixed the cooldown actors being able to be selected bug                 |
+#    v1.04g(GMT 0700 3-12-2014):                                               |
+#    - Updated compatibility with DoubleX RMVXA Color Addon to YSA Battle System: Classical ATB|
+#    v1.04f(GMT 0300 6-9-2014):                                                |
+#    - Compatible with Yanfly Engine Ace - Lunatic States                      |
+#    v1.04e(GMT 0200 20-8-2014):                                               |
+#    - Included the battlers escape bug fix                                    |
+#    v1.04d(GMT 0100 11-8-2014):                                               |
+#    - Compatible with Yanfly Engine Ace - Skill Restrictions                  |
+#    v1.04c(GMT 1200 29-7-2014):                                               |
+#    - Updated the compatibility with DoubleX RMVXA Color Addon to YSA Battle System: Classical ATB|
+#    v1.04b(GMT 1200 30-6-2014):                                               |
+#    - Compatible with                                                         |
+#      DoubleX RMVXA Action Addon to YSA Battle System: Classical ATB          |
+#      DoubleX RMVXA Percentage Addon to YSA Battle System: Classical ATB      |
+#    v1.04a(GMT 0100 9-4-2014):                                                |
+#    - Compatible with Yanfly Engine Ace - Instant Cast                        |
+#    v1.03a(GMT 0500 10-3-2014):                                               |
+#    - COOLDOWN_COLOR can use rgba values also                                 |
+#    v1.02b(GMT 1100 5-2-2014):                                                |
+#    - Compatible with DoubleX RMVXA Color Addon to YSA Battle System: Classical ATB|
+#    v1.01b(GMT 1500 26-1-2014):                                               |
+#    - Compatible with Actor Personal Hotkeys and fixed cooldown bug           |
+#    v1.00b(GMT 0300 22-1-2014):                                               |
+#    - Fixed bugs in cooldown and selection of actors in the status window     |
+#    v1.00a(GMT 1600 9-1-2014):                                                |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of YSA Battle System: Classical ATB except that you must also|
+#    give Yami credit(you should do this anyway) if you give DoubleX or his    |
+#    alias credit                                                              |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB             |
+#    Knowledge:                                                                |
+#    - That of using the script YSA Battle System: Classical ATB               |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Adds cooldown features to YSA Battle System: Classical ATB              |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script                                              |
+#    DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB and ¡¿ Main.   |
+#    Save to take effect.                                                      |
+#    Suggested Complete CATB Scripts Order(Excluding Dhoom Manipulate State):  |
+#    1.  Yanfly Engine Ace - Ace Core Engine                                   |
+#    2.  Yanfly Engine Ace - Ace Battle Engine                                 |
+#    3.  YSA Battle System: Classical ATB                                      |
+#    4.  YSA Battle Add-on: Lunatic CATB Rate                                  |
+#    5.  YSA Battle Add-on: Lunatic CATB Reset                                 |
+#    6.  YSA Battle Add-on: Lunatic CATB Start                                 |
+#    7.  DoubleX RMVXA Bug Fix to YSA Battle System: Classical ATB             |
+#    8.  DoubleX RMVXA Compatibility Fix to YSA Battle System: Classical ATB   |
+#    9.  DoubleX RMVXA Action Addon to YSA Battle System: Classical ATB        |
+#    10. DoubleX RMVXA ATB Addon to YSA Battle System: Classical ATB           |
+#    11. DoubleX RMVXA Cancel Addon to YSA Battle System: Classical ATB        |
+#    12. DoubleX RMVXA Clear Addon to YSA Battle System: Classical ATB         |
+#    13. DoubleX RMVXA CATB Clear Addon Compatibility Fix                      |
+#    14. DoubleX RMVXA Color Addon to YSA Battle System: Classical ATB         |
+#    15. DoubleX RMVXA Cooldown Addon to YSA Battle System: Classical ATB      |
+#    16. DoubleX RMVXA Charge Addon to YSA Battle System: Classical ATB        |
+#    17. DoubleX RMVXA Speed Addon to YSA Battle System: Classical ATB         |
+#    18. DoubleX RMVXA Countdown Addon to YSA Battle System: Classical ATB     |
+#    19. DoubleX RMVXA Countdown Addon Compatibility Fix                       |
+#    20. DoubleX RMVXA Escape Addon to YSA Battle System: Classical ATB        |
+#    21. DoubleX RMVXA Hotkey Addon to YSA Battle System: Classical ATB        |
+#    22. DoubleX RMVXA CATB Input Addon to YSA Battle System: Classical ATB    |
+#    23. DoubleX RMVXA Percentage Addon to YSA Battle System: Classical ATB    |
+#    24. DoubleX RMVXA Reset Addon to YSA Battle Add-on: Lunatic CATB Reset    |
+#    25. DoubleX RMVXA SE Addon to YSA Battle System: Classical ATB            |
+#    26. DoubleX RMVXA Tick Addon to YSA Battle System: Classical ATB          |
+#    27. DoubleX RMVXA Turn Addon to YSA Battle System: Classical ATB          |
+#    28. DoubleX RMVXA Unison Addon to YSA Battle System: Classical ATB        |
+#    29. DoubleX RMVXA Update Addon to YSA Battle System: Classical ATB        |
+#    30. DoubleX RMVXA Wait Addon to YSA Battle System: Classical ATB          |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle System: Classical ATB                        |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Cooldown Addon to YSA-CATB"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#  * Skill/Item Notetags:(skill/item notebox in the database)                  |
+#    - <cooldown rate: x%>                                                     |
+#    Sets cooldown time for the whole battler after using skills or items with |
+#    this notetag. He/she/it'll be cooled down at normal ATB filled speed * x%,|
+#    meaning he/she/it'll be cooled down at x% rate.                           |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module YSA_CATB_Cooldown_Addon
+
+    # Sets the cooldown gauge color, default = 26, 27
+    COOLDOWN_COLOR1 = 26
+    COOLDOWN_COLOR2 = 27
+    # (v1.03a+) Use rgba values instead of text colors, default = unused
+    #COOLDOWN_COLOR1 = Color.new(0, 0, 0, 0)
+    #COOLDOWN_COLOR2 = Color.new(0, 0, 0, 0)
+    #
+
+  end # YSA_CATB_Cooldown_Addon
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#  * Edit module: DataManager                                                  |
+#------------------------------------------------------------------------------|
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: load_database                                               |
+  #----------------------------------------------------------------------------|
+  alias load_database_catb_cooldown_addon load_database
+  def load_database
+    load_database_catb_cooldown_addon
+    # Added to load cooldown notetags
+    load_notetags_catb_cooldown_addon
+    #
+  end # load_database
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_catb_cooldown_addon                             |
+  #----------------------------------------------------------------------------|
+  def load_notetags_catb_cooldown_addon
+    $data_skills.each { |obj| obj.load_notetags_catb_cooldown_addon if obj }
+    $data_items.each { |obj| obj.load_notetags_catb_cooldown_addon if obj }
+  end # load_notetags_catb_cooldown_addon
+
+end # DataManager
+
+#------------------------------------------------------------------------------|
+#  * Edit class: RPG::UsableItem                                               |
+#------------------------------------------------------------------------------|
+
+class RPG::UsableItem < RPG::BaseItem
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_accessor :cooldown_rate
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_catb_cooldown_addon                             |
+  #----------------------------------------------------------------------------|
+  def load_notetags_catb_cooldown_addon
+    @cooldown_rate = 0
+    @note.split(/[\r\n]+/).each { |line|
+      next unless line =~ /<cooldown rate:[ ](\d+)?([%¢H])>/i && $1.to_i > 0
+      return @cooldown_rate = $1.to_i
+    }
+  end # load_notetags_catb_cooldown_addon
+
+end # RPG::UsableItem
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_Battler                                                  |
+#------------------------------------------------------------------------------|
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  (v1.04h+)New public instance variables                                    |
+  #----------------------------------------------------------------------------|
+  attr_reader :cd_catb_value
+  attr_writer :item_cooldown
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01b+)Alias method: make_first_catb_value                              |
+  #----------------------------------------------------------------------------|
+  alias make_first_catb_value_cooldown_addon make_first_catb_value
+  def make_first_catb_value(pre = 0)
+    make_first_catb_value_cooldown_addon(pre)
+    # Added to make first @cd_catb_value
+    @cd_catb_value = 0
+    #
+  end # make_first_catb_value
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: initialize                                                  |
+  #----------------------------------------------------------------------------|
+  alias catb_initialize_cooldown_addon initialize
+  def initialize
+    catb_initialize_cooldown_addon
+    # Added to initialize @cd_catb_value
+    @cd_catb_value = 0
+    #
+  end # initialize
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: make_catb_update                                          |
+  #----------------------------------------------------------------------------|
+  def make_catb_update
+    # Rewritten to disable make_catb_update while under cooldown
+    return if max_catb_value? || @cd_catb_value > 0 || !movable?
+    #
+    value = $imported["YSA-LunaticCATBRate"] ? lunatic_catb_rate_formula : real_gain_catb
+    @catb_value += [value, MAX_CATB_VALUE - @catb_value].min
+  end # make_catb_update
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: make_catb_action                                          |
+  #----------------------------------------------------------------------------|
+  def make_catb_action
+    # Rewritten to disable make_catb_action before finishing cooldown
+    return unless max_catb_value? && @cd_catb_value <= 0
+    #
+    @catb_action_times = catb_make_action_times if @catb_action_times <= 0 && !@action_cost_paid
+    return clear_catb unless movable?
+    BattleManager.make_catb_action(self)
+  end # make_catb_action
+
+  #----------------------------------------------------------------------------|
+  #  New method: make_cd_catb_update                                           |
+  #----------------------------------------------------------------------------|
+  def make_cd_catb_update
+    return unless @cd_catb_value > 0 && movable?
+    return @cd_catb_value = 0 unless @item_cooldown > 0
+    value = $imported["YSA-LunaticCATBRate"] ? lunatic_catb_rate_formula : real_gain_catb
+    @cd_catb_value -= [value * @item_cooldown / 100, @cd_catb_value].min
+  end # make_cd_catb_update
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: clear_catb                                                |
+  #----------------------------------------------------------------------------|
+  def clear_catb(value = 0)
+    action = @item_action ? @item_action : @item_instant ? 0 : 1
+    @catb_action_times -= action if @ct_catb_value > 0
+    @catb_value = value unless @catb_action_times > 0 && movable?
+    @catb_action_times = 0 unless @catb_action_times <= 0 || movable?
+    # Added to trigger cooldown
+    @cd_catb_value = MAX_CATB_VALUE if movable? && @ct_catb_value >= MAX_CATB_VALUE
+    #
+    @ct_catb_value = 0
+    BattleManager.clear_actor if actor? && BattleManager.actor == self
+    BattleManager.delete_catb_action(self)
+  end # clear_catb
+
+  #----------------------------------------------------------------------------|
+  #  New method: catb_cd_filled_rate                                           |
+  #----------------------------------------------------------------------------|
+  def catb_cd_filled_rate
+    @ct_catb_value > 0 ? 0 : @cd_catb_value / MAX_CATB_VALUE
+  end # catb_cd_filled_rate
+
+end # Game_Battler
+
+#------------------------------------------------------------------------------|
+#  * (v1.04k+)Edit class: Game_Actor                                           |
+#------------------------------------------------------------------------------|
+
+class Game_Actor < Game_Battler
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_auto_battle_actions                                    |
+  #----------------------------------------------------------------------------|
+  alias make_auto_battle_actions_catb_cooldown_addon make_auto_battle_actions
+  def make_auto_battle_actions
+    make_auto_battle_actions_catb_cooldown_addon
+    # Added to store the skill/item's cooldown rate
+    @item_cooldown = current_action.item.cooldown_rate if BattleManager.btype?(:catb) && current_action && current_action.item
+    #
+  end # make_auto_battle_actions
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_confusion_actions                                      |
+  #----------------------------------------------------------------------------|
+  alias make_confusion_actions_catb_cooldown_addon make_confusion_actions
+  def make_confusion_actions
+    make_confusion_actions_catb_cooldown_addon
+    # Added to store the skill/item's cooldown rate
+    @item_cooldown = current_action.item.cooldown_rate if BattleManager.btype?(:catb) && current_action && current_action.item
+    #
+  end # make_confusion_actions
+
+end # Game_Actor
+
+#------------------------------------------------------------------------------|
+#  * (v1.04i+)Edit class: Game_Enemy                                           |
+#------------------------------------------------------------------------------|
+
+class Game_Enemy < Game_Battler
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_actions                                                |
+  #----------------------------------------------------------------------------|
+  alias make_actions_catb_cooldown_addon make_actions
+  def make_actions
+    make_actions_catb_cooldown_addon
+    # Added to store the skill/item's cooldown rate
+    @item_cooldown = current_action.item.cooldown_rate if BattleManager.btype?(:catb) && current_action && current_action.item
+    #
+  end # make_actions
+
+end # Game_Enemy
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Window_Base                                                   |
+#------------------------------------------------------------------------------|
+
+class Window_Base < Window
+
+  #----------------------------------------------------------------------------|
+  #  New method: cooldown_color1                                               |
+  #----------------------------------------------------------------------------|
+  def cooldown_color1
+    DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR1.is_a?(Numeric) ? text_color(DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR1) : DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR1    
+  end # cooldown_color1
+
+  #----------------------------------------------------------------------------|
+  #  New method: cooldown_color2                                               |
+  #----------------------------------------------------------------------------|
+  def cooldown_color2
+    DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR2.is_a?(Numeric) ? text_color(DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR2) : DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR2
+  end # cooldown_color2
+
+end # Window_Base
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Window_BattleStatus                                           |
+#------------------------------------------------------------------------------|
+
+class Window_BattleStatus < Window_Selectable
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: draw_actor_catb                                           |
+  #----------------------------------------------------------------------------|
+  def draw_actor_catb(actor, dx, dy, width = 124)
+    # Rewritten to be compatible with DoubleX RMVXA Color Addon to YSA Battle System: Classical ATB
+    if $imported["DoubleX RMVXA Color Addon to YSA-CATB"]
+      actor.custom_catb_colors 
+      if actor.custom_catb_state_color
+        color1 = actor.custom_catb_state_color1.is_a?(Numeric) ? text_color(actor.custom_catb_state_color1) : Color.new(actor.custom_catb_state_color1[0], actor.custom_catb_state_color1[1], actor.custom_catb_state_color1[2], actor.custom_catb_state_color1[3])
+        color2 = actor.custom_catb_state_color2.is_a?(Numeric) ? text_color(actor.custom_catb_state_color2) : Color.new(actor.custom_catb_state_color2[0], actor.custom_catb_state_color2[1], actor.custom_catb_state_color2[2], actor.custom_catb_state_color2[3]) 
+      else
+        color1 = catb_color1
+        color2 = catb_color2
+      end
+    else
+      color1 = catb_color1
+      color2 = catb_color2
+    end
+    draw_gauge(dx, dy, width, actor.catb_filled_rate, color1, color2)
+    if actor.catb_ct_filled_rate > 0
+      if $imported["DoubleX RMVXA Color Addon to YSA-CATB"] && actor.custom_catb_item_color
+        color1 = actor.custom_catb_item_color1.is_a?(Numeric) ? text_color(actor.custom_catb_item_color1) : Color.new(actor.custom_catb_item_color1[0], actor.custom_catb_item_color1[1], actor.custom_catb_item_color1[2], actor.custom_catb_item_color1[3])
+        color2 = actor.custom_catb_item_color2.is_a?(Numeric) ? text_color(actor.custom_catb_item_color2) : Color.new(actor.custom_catb_item_color2[0], actor.custom_catb_item_color2[1], actor.custom_catb_item_color2[2], actor.custom_catb_item_color2[3])
+      else
+        color1 = charge_color1
+        color2 = charge_color2
+      end
+      draw_gauge(dx, dy, width, actor.catb_ct_filled_rate, color1, color2)
+    end
+    #
+    # Added to draw cooldown gauge
+    draw_gauge(dx, dy, width, actor.catb_cd_filled_rate, cooldown_color1, cooldown_color2) if actor.catb_cd_filled_rate > 0
+    #
+    change_color(system_color)
+    cy = (Font.default_size - contents.font.size) / 2 + 1
+    draw_text(dx + 2, dy + cy, 30, line_height, YSA::CATB::ATB_PHRASE)
+  end # draw_actor_catb
+
+end # Window_BattleStatus
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Sprite_Battler                                                |
+#------------------------------------------------------------------------------|
+
+class Sprite_Battler < Sprite_Base
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: create_enemy_gauges_catb                                    |
+  #----------------------------------------------------------------------------|
+  alias create_enemy_gauges_catb_cooldown_addon create_enemy_gauges_catb
+  def create_enemy_gauges_catb
+    create_enemy_gauges_catb_cooldown_addon
+    # Added to create cooldown gauge
+    @catb_cd_gauge_viewport = Enemy_CATB_Gauge_Viewport.new(@battler, self, :catbcd) if @battler && !@battler.actor? && BattleManager.btype?(:catb)
+    #
+  end # create_enemy_gauges_catb
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: dispose_enemy_gauges_catb                                   |
+  #----------------------------------------------------------------------------|
+  alias dispose_enemy_gauges_catb_cooldown_addon dispose_enemy_gauges_catb
+  def dispose_enemy_gauges_catb
+    dispose_enemy_gauges_catb_cooldown_addon
+    # Added to dispose cooldown gauge
+    @catb_cd_gauge_viewport.dispose if @catb_cd_gauge_viewport && BattleManager.btype?(:catb)
+    #
+  end # dispose_enemy_gauges_catb
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: update_enemy_gauges_catb                                    |
+  #----------------------------------------------------------------------------|
+  alias update_enemy_gauges_catb_cooldown_addon update_enemy_gauges_catb
+  def update_enemy_gauges_catb
+    update_enemy_gauges_catb_cooldown_addon
+    # Added to update cooldown gauge
+    @catb_cd_gauge_viewport.update if @catb_cd_gauge_viewport && BattleManager.btype?(:catb)
+    #
+  end # update_enemy_gauges_catb
+
+end # Sprite_Battler
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Enemy_CATB_Gauge_Viewport                                     |
+#------------------------------------------------------------------------------|
+
+class Enemy_CATB_Gauge_Viewport < Viewport
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: create_gauge_sprites                                      |
+  #----------------------------------------------------------------------------|
+  def create_gauge_sprites
+    @sprite = Plane.new(self)
+    dw = rect.width * 2
+    @sprite.bitmap = Bitmap.new(dw, rect.height)
+    if @type == :back
+      back_rgba = $imported["DoubleX RMVXA Color Addon to YSA-CATB"] && DoubleX_RMVXA::YSA_CATB_Color_Addon::ENEMY_BACK_RGBA
+      colour1 = back_rgba ? DoubleX_RMVXA::YSA_CATB_Color_Addon::ENEMY_BACK_COLOR1 : Colour.text_colour(YSA::CATB::ENEMY_BACKGAUGE_COLOUR)
+      colour2 = back_rgba ? DoubleX_RMVXA::YSA_CATB_Color_Addon::ENEMY_BACK_COLOR2 : Colour.text_colour(YSA::CATB::ENEMY_BACKGAUGE_COLOUR)
+    elsif @type == :catb
+      atb_rgba = $imported["DoubleX RMVXA Color Addon to YSA-CATB"] && DoubleX_RMVXA::YSA_CATB_Color_Addon::ATB_RGBA
+      colour1 = atb_rgba ? DoubleX_RMVXA::YSA_CATB_Color_Addon::ATB_COLOR1 : Colour.text_colour(YSA::CATB::ENEMY_ATB_GAUGE_COLOUR1)
+      colour2 = atb_rgba ? DoubleX_RMVXA::YSA_CATB_Color_Addon::ATB_COLOR2 : Colour.text_colour(YSA::CATB::ENEMY_ATB_GAUGE_COLOUR2)
+    elsif @type == :catbct
+      charge_rgba = $imported["DoubleX RMVXA Color Addon to YSA-CATB"] && DoubleX_RMVXA::YSA_CATB_Color_Addon::CHARGE_RGBA
+      colour1 = charge_rgba ? DoubleX_RMVXA::YSA_CATB_Color_Addon::CHARGE_COLOR1 : Colour.text_colour(YSA::CATB::CHARGE_COLOR1)
+      colour2 = charge_rgba ? DoubleX_RMVXA::YSA_CATB_Color_Addon::CHARGE_COLOR2 : Colour.text_colour(YSA::CATB::CHARGE_COLOR2)
+    # Added to create cooldown gauge sprites
+    elsif @type == :catbcd
+      colour1 = DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR1.is_a?(Numeric) ? Colour.text_colour(DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR1) : DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR1
+      colour2 = DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR2.is_a?(Numeric) ? Colour.text_colour(DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR2) : DoubleX_RMVXA::YSA_CATB_Cooldown_Addon::COOLDOWN_COLOR2
+    #
+    elsif @type == :percent
+      colour1 = colour2 = Color.new(0, 0, 0, 0) if $imported["DoubleX RMVXA Percentage Addon to YSA-CATB"]
+    end
+    dw = rect.width
+    dh = rect.height
+    rect.width = target_gauge_width if @type != :back && @type != :percent
+    set_percentage_font if @type == :percent && $imported["DoubleX RMVXA Percentage Addon to YSA-CATB"]
+    @gauge_width = target_gauge_width
+    @sprite.bitmap.gradient_fill_rect(0, 0, dw, dh, colour1, colour2)
+    @sprite.bitmap.gradient_fill_rect(dw, 0, dw, dh, colour2, colour1)
+  end # create_gauge_sprites
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: update_gauge                                                |
+  #----------------------------------------------------------------------------|
+  alias update_gauge_cooldown_addon update_gauge
+  def update_gauge
+    # Added to update cooldown gauge
+    @gauge_width = target_gauge_width_cd if @type == :catbcd && @gauge_width != target_gauge_width_cd
+    #
+    update_gauge_cooldown_addon
+  end # update_gauge
+
+  #----------------------------------------------------------------------------|
+  #  New method: target_gauge_width_cd                                         |
+  #----------------------------------------------------------------------------|
+  def target_gauge_width_cd
+    @battler.catb_cd_filled_rate * @start_width
+  end # target_gauge_width_cd
+
+end # Enemy_CATB_Gauge_Viewport
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Scene_Battle                                                  |
+#------------------------------------------------------------------------------|
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  (v1.04j+)Alias method: command_guard                                      |
+  #----------------------------------------------------------------------------|
+  alias command_guard_catb_cooldown_addon command_guard
+  def command_guard
+    # Added to store the skill/item's cooldown rate
+    return unless actor = BattleManager.actor
+    #
+    command_guard_catb_cooldown_addon
+    # Added to store the skill/item's cooldown rate
+    actor.item_cooldown = actor.input.item.cooldown_rate if BattleManager.btype?(:catb)
+    #
+  end # command_guard
+
+  #----------------------------------------------------------------------------|
+  #  (v1.04i+)Alias method: on_actor_ok                                        |
+  #----------------------------------------------------------------------------|
+  alias on_actor_ok_catb_cooldown_addon on_actor_ok
+  def on_actor_ok
+    # Added to store the skill/item's cooldown rate
+    return unless actor = BattleManager.actor
+    actor.item_cooldown = actor.input.item.cooldown_rate if BattleManager.btype?(:catb)
+    #
+    on_actor_ok_catb_cooldown_addon
+  end # on_actor_ok
+
+  #----------------------------------------------------------------------------|
+  #  (v1.04i+)Alias method: on_enemy_ok                                        |
+  #----------------------------------------------------------------------------|
+  alias on_enemy_ok_catb_cooldown_addon on_enemy_ok
+  def on_enemy_ok
+    # Added to store the skill/item's cooldown rate
+    return unless actor = BattleManager.actor
+    actor.item_cooldown = actor.input.item.cooldown_rate if BattleManager.btype?(:catb)
+    #
+    on_enemy_ok_catb_cooldown_addon
+  end # on_enemy_ok
+
+  if $imported["YEA-TargetManager"]
+
+  #----------------------------------------------------------------------------|
+  #  (v1.04m+)Alias method: on_skill_ok                                        |
+  #----------------------------------------------------------------------------|
+  alias on_skill_ok_cooldown_addon on_skill_ok
+  def on_skill_ok
+    # Added to cache cooldown if skill doesn't show the target selection window
+    if BattleManager.btype?(:catb) && !(skill = @skill_window.item).for_opponent? && !skill.for_friend?
+      BattleManager.actor.item_cooldown = skill.cooldown_rate
+    end
+    #
+    on_skill_ok_cooldown_addon
+  end # on_skill_ok
+
+  #----------------------------------------------------------------------------|
+  #  (v1.04m+)Alias method: on_item_ok                                         |
+  #----------------------------------------------------------------------------|
+  alias on_item_ok_cooldown_addon on_item_ok
+  def on_item_ok
+    # Added to cache cooldown if item doesn't show the target selection window
+    if BattleManager.btype?(:catb) && !(item = @skill_window.item).for_opponent? && !item.for_friend?
+      BattleManager.actor.item_cooldown = item.cooldown_rate
+    end
+    #
+    on_item_ok_cooldown_addon
+  end # on_item_ok
+
+  end # if $imported["YEA-TargetManager"]
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: process_catb                                              |
+  #----------------------------------------------------------------------------|
+  def process_catb
+    if @status_window.index >= 0 && (!$game_party.members[@status_window.index] || $game_party.members[@status_window.index].dead? || !BattleManager.action_list(:actor).include?($game_party.members[@status_window.index]))
+      $game_party.members[@status_window.index].clear_catb if $game_party.members[@status_window.index]
+      if @skill_window.visible || @item_window.visible || @actor_window.visible || @enemy_window.visible
+        @status_window.open.show
+        @status_aid_window.hide
+      end
+      @actor_window.hide.deactivate
+      @enemy_window.hide.deactivate
+      @actor_command_window.deactivate.close
+      @skill_window.hide.deactivate
+      @item_window.hide.deactivate
+      @status_window.unselect
+    end
+    @party_command_window.deactivate.close if BattleManager.action_list(:actor).empty?
+    return if !SceneManager.scene_is?(Scene_Battle) || scene_changing? || !BattleManager.btype?(:catb) || catb_pause?
+    all_battle_members.each { |a|
+      a.clear_actions if a.catb_value == 0
+      a.make_catb_update
+      a.make_catb_action
+      a.make_ct_catb_update
+      # Added to update cooldown
+      a.make_cd_catb_update
+      #
+    }
+    BattleManager.action_list(:actor).each { |a| a.clear_catb unless a.index }
+    if $game_system.catb_turn_type == :tick
+      @tick_clock ||= 0
+      @tick_clock += 1
+      if @tick_clock >= $game_system.catb_tick_count
+        @tick_clock = 0
+        BattleManager.turn_end
+        all_battle_members.each { |member| member.run_lunatic_states(:begin) } if $imported["YEA-LunaticStates"]
+        if $imported["YEA-SkillRestrictions"]
+          $game_party.update_restrictions
+          $game_troop.update_restrictions
+        end
+        all_battle_members.each { |battler|
+          battler.on_turn_end
+          battler.perform_collapse_effect if battler.enemy? && battler.can_collapse?
+        }
+        @status_window.refresh
+        $game_troop.increase_turn
+      end
+    end
+#    BattleManager.action_list(:actor).each { |battler|
+#      battler.make_actions if (battler.actor? && !battler.input)
+#    }
+    @status_window.refresh_catb
+    @f_actor_index = 0 if !@f_actor_index || @f_actor_index < 0 || @f_actor_index + 1 > BattleManager.action_list(:actor).size
+    f_actor = BattleManager.action_list(:actor)[@f_actor_index]
+    f_actor_count = 0
+    # Rewritten to disable selection of actor under cooldown
+    while f_actor_count < BattleManager.action_list(:actor).size && f_actor && (f_actor.input && f_actor.input.item && f_actor.input.confirm || f_actor.auto_battle? || f_actor.confusion? || !f_actor.max_catb_value? || f_actor.ct_catb_value > 0 || f_actor.cd_catb_value > 0)
+      f_actor_count += 1
+      @f_actor_index + 1 < BattleManager.action_list(:actor).size ? @f_actor_index += 1 : @f_actor_index = 0
+      f_actor = BattleManager.action_list(:actor)[@f_actor_index]
+    end
+    #
+    if f_actor && f_actor.input && !f_actor.input.confirm && (!BattleManager.actor || @status_window.index != BattleManager.actor.index) && !@actor_command_window.active && !@party_command_window.active
+      BattleManager.set_actor(f_actor.index)
+      @status_window.select(BattleManager.actor.index)
+      @actor_command_window.show.setup(BattleManager.actor)
+      @hotkeys_bar_window.setup(BattleManager.actor) if $imported['RIFF_HOTKEYS']
+    end
+    BattleManager.action_list.each { |battler|
+      # Rewritten to disable action making during cooldown
+      battler.make_actions if (battler.enemy? || battler.input.confirm) && battler.max_catb_value? && battler.ct_catb_value <= 0 && battler.cd_catb_value <= 0
+      #
+      perform_catb_action(battler) unless @subject
+    }
+  end # process_catb
+
+  #----------------------------------------------------------------------------|
+  #  (v1.04h+)Rewrite method: prior_f_actor                                    |
+  #----------------------------------------------------------------------------|
+  def prior_f_actor
+    return if !@f_actor_index || BattleManager.action_list(:actor).empty?
+    actor_list = {}
+    # Rewritten to disallow picking actors having to cooldown
+    BattleManager.action_list(:actor).each_with_index { |actor, index| actor_list[index] = actor.index unless actor.auto_battle? || actor.confusion? || actor.ct_catb_value > 0.0 || actor.cd_catb_value > 0.0 }
+    #
+    while true
+      @f_actor_index -= 1
+      @f_actor_index %= $game_party.members.size
+      f_actor_index = actor_list.index(@f_actor_index)
+      break if f_actor_index
+    end
+    f_actor = BattleManager.action_list(:actor)[f_actor_index]
+    return unless f_actor
+    BattleManager.set_actor(f_actor.index)
+    @status_window.select(BattleManager.actor.index)
+    @actor_command_window.setup(BattleManager.actor)
+    @hotkeys_bar_window.setup(BattleManager.actor) if $imported['RIFF_HOTKEYS']
+  end # prior_f_actor
+
+  #----------------------------------------------------------------------------|
+  #  (v1.04h+)Rewrite method: next_f_actor                                     |
+  #----------------------------------------------------------------------------|
+  def next_f_actor
+    return if !@f_actor_index || BattleManager.action_list(:actor).empty?
+    actor_list = {}
+    # Rewritten to disallow picking actors having to cooldown
+    BattleManager.action_list(:actor).each_with_index { |actor, index| actor_list[index] = actor.index unless actor.auto_battle? || actor.confusion? || actor.ct_catb_value > 0.0 || actor.cd_catb_value > 0.0 }
+    #
+    while true
+      @f_actor_index += 1
+      @f_actor_index %= $game_party.members.size
+      f_actor_index = actor_list.index(@f_actor_index)
+      break if f_actor_index
+    end
+    f_actor = BattleManager.action_list(:actor)[f_actor_index]
+    return unless f_actor
+    BattleManager.set_actor(f_actor.index)
+    @status_window.select(BattleManager.actor.index)
+    @actor_command_window.setup(BattleManager.actor)
+    @hotkeys_bar_window.setup(BattleManager.actor) if $imported['RIFF_HOTKEYS']
+  end # next_f_actor
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#==============================================================================|

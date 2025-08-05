@@ -1,0 +1,215 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Bug Fixes v1.00b to YSA Battle Add-On: Invert Targets      |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00b(GMT 0600 25-5-2014):                                               |
+#    - Fixed set_skill bug for confused battlers                               |
+#    v1.00a(GMT 0900 30-1-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Authors                                                                   |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle Add-On: Invert Targets                                       |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of YSA Battle Add-On: Invert Targets except that you must    |
+#    also give Yami credit(you should do this anyway) if you give DoubleX or   |
+#    his alias credit                                                          |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - YSA Battle Add-On: Invert Targets                                       |
+#    Knowledge:                                                                |
+#    - That of using the script YSA Battle Add-On: Invert Targets              |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Tries to fix bugs I've found in YSA Battle Add-On: Invert Targets       |
+#    - Fixing compatibility issues isn't this script's aim                     |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script YSA Battle Add-On: Invert Targets and ¡¿ Main.|
+#    Save to take effect.                                                      |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle Add-On: Invert Targets                       |
+#==============================================================================|
+
+#==============================================================================|
+#  ** Fixes                                                                    |
+#------------------------------------------------------------------------------|
+#  * Autobattle flag bug(Fix_Autobattle_Bug):                                  |
+#    - Rewritten method set_skill under class Game_Action                      |
+#------------------------------------------------------------------------------|
+#  * Help window bug(Fix_Help_Window_Bug):                                     |
+#    - Rewritten method refresh_special_case under class Window_BattleHelp     |
+#    - Rewritten method update_input_invert_target under class Scene_Battle    |
+#------------------------------------------------------------------------------|
+#  * Actor/Enemy window bug(Fix_Actor_Enemy_Window_Bug):                       |
+#    - Rewritten method update_input_invert_target under class Scene_Battle    |
+#------------------------------------------------------------------------------|
+#  * Skill/Item window bug(Fix_Skill_Item_Window_Bug):                         |
+#    - Rewritten method update_input_invert_target under class Scene_Battle    |
+#------------------------------------------------------------------------------|
+#  * Command window bug(Fix_Command_Window_Bug):                               |
+#    - Rewritten method on_actor_cancel under class Scene_Battle               |
+#==============================================================================|
+
+$imported = {} if $imported.nil?
+$imported["DoubleX RMVXA Bug Fixes to YSA-InvertTargets"] = true
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YSA-InvertTargets"]
+
+#------------------------------------------------------------------------------|
+#  * Fixes:                                                                    |
+#    - Autobattle flag bug                                                     |
+#------------------------------------------------------------------------------|
+class Game_Action
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: set_skill                                                 |
+  #----------------------------------------------------------------------------|
+  def set_skill(skill_id)
+    invert_target_set_skill(skill_id)
+    # This part is rewritten by this script to return self when auto_battle or confusion is true
+    subject.auto_battle? || subject.confusion? ? self : subject.invert_target = false
+    # Fix_Autobattle_Bug
+  end # set_skill
+
+end # Game_Action
+
+#------------------------------------------------------------------------------|
+#  * Fixes:                                                                    |
+#    - Help window bug                                                         |
+#------------------------------------------------------------------------------|
+if $imported["YEA-BattleEngine"]
+class Window_BattleHelp < Window_Help
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: refresh_special_case                                      |
+  #----------------------------------------------------------------------------|
+  def refresh_special_case(battler)
+    # This part is rewritten by this script to fix help window bug
+    if $game_temp.battle_aid.for_opponent? && !BattleManager.actor.invert_target || $game_temp.battle_aid.for_friend? && BattleManager.actor.invert_target
+      if $game_temp.battle_aid.for_all?
+        text = YEA::BATTLE::HELP_TEXT_ALL_FOES
+      else
+        case $game_temp.battle_aid.number_of_targets
+        when 1
+          text = YEA::BATTLE::HELP_TEXT_ONE_RANDOM_FOE
+        else
+          number = $game_temp.battle_aid.number_of_targets
+          text = sprintf(YEA::BATTLE::HELP_TEXT_MANY_RANDOM_FOE, number)
+        end
+      end
+    else
+      if $game_temp.battle_aid.for_dead_friend?
+        text = YEA::BATTLE::HELP_TEXT_ALL_DEAD_ALLIES
+      elsif $game_temp.battle_aid.for_random?
+        case $game_temp.battle_aid.number_of_targets
+        when 1
+          text = YEA::BATTLE::HELP_TEXT_ONE_RANDOM_ALLY
+        else
+          number = $game_temp.battle_aid.number_of_targets
+          text = sprintf(YEA::BATTLE::HELP_TEXT_RANDOM_ALLIES, number)
+        end
+      else
+        text = YEA::BATTLE::HELP_TEXT_ALL_ALLIES
+      end
+    end
+    # Fix_Help_Window_Bug
+    return if text == @text
+    @text = text
+    contents.clear
+    reset_font_settings
+    draw_text(0, 0, contents.width, line_height*2, @text, 1)
+  end # refresh_special_case
+
+end # Window_BattleHelp
+end # if $imported["YEA-BattleEngine"]
+
+#------------------------------------------------------------------------------|
+#  * Fixes:                                                                    |
+#    - Help window bug                                                         |
+#    - Actor/Enemy window bug                                                  |
+#    - Skill/Item window bug                                                   |
+#    - Command window bug                                                      |
+#------------------------------------------------------------------------------|
+class Scene_Battle < Scene_Base
+
+  # Fixes:
+  # Help window bug
+  # Actor/Enemy window bug
+  # Skill/Item window bug
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: update_input_invert_target                                |
+  #----------------------------------------------------------------------------|
+  def update_input_invert_target
+    return unless BattleManager.actor
+    # This part is rewritten by this script to fix help window bug and actor/enemy window bug
+    if @actor_window.active || @enemy_window.active
+      @help_window.show.activate if $imported["YEA-BattleEngine"]
+    else
+      @actor_window.unselect
+      @actor_window.hide.deactivate
+      @enemy_window.hide.deactivate
+      @help_window.hide.deactivate unless @skill_window.active || @item_window.active
+      return
+    end
+    # Fix_Help_Window_Bug && Fix_Actor_Enemy_Window_Bug
+    if Input.trigger?(YSA::INVERT_TARGETS::INVERT_KEY)
+      return if BattleManager.actor.input.item.no_invert
+      BattleManager.actor.invert_target = !BattleManager.actor.invert_target
+      if @actor_window.active
+        @actor_window.unselect
+        @actor_window.hide.deactivate
+        case @actor_command_window.current_symbol
+        when :skill
+          @skill_window.show
+        when :item
+          @item_window.show
+        end
+        select_enemy_selection
+      elsif @enemy_window.active
+        @enemy_window.hide.deactivate
+        # This part is rewritten by this script to fix skill/item window bug
+        case @actor_command_window.current_symbol
+        when :skill
+          $imported["YEA-BattleEngine"] ? @skill_window.hide : @skill_window.show
+        when :item
+          $imported["YEA-BattleEngine"] ? @item_window.hide : @item_window.show
+        end
+        # Fix_Skill_Item_Window_Bug
+        if $imported["YEA-BattleEngine"]
+          scene_battle_select_actor_selection_abe
+        else
+          select_actor_selection
+        end        
+      end
+    end
+  end # update_input_invert_target
+
+  # Fixes:
+  # Command window bug
+  #----------------------------------------------------------------------------|
+  #  Alias method: on_actor_cancel                                             |
+  #----------------------------------------------------------------------------|
+  alias scene_battle_on_actor_cancel_invtrg_bug_fix on_actor_cancel
+  def on_actor_cancel
+    scene_battle_on_actor_cancel_invtrg_bug_fix
+    # This part is added by this script to activate actor command window upon attack cancel on actor
+    @actor_command_window.activate if @actor_command_window.current_symbol == :attack
+    # Fix_Command_Window_Bug
+  end # on_actor_cancel
+
+end # Scene_Battle
+
+end # if $imported["YSA-InvertTargets"]
+
+#==============================================================================|

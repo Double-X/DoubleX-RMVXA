@@ -1,0 +1,145 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Reset Addon v1.00c to YSA Battle Add-on: Lunatic CATB Reset|
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00c(GMT 0300 6-9-2014):                                                |
+#    - Compatible with Yanfly Engine Ace - Lunatic States                      |
+#    v1.00b(GMT 0700 4-9-2014):                                                |
+#    - Fixed reset values bug                                                  |
+#    v1.00a(GMT 0200 26-8-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle Add-on: Lunatic CATB Reset                                   |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of YSA Battle Add-on: Lunatic CATB Reset except that you must|
+#    also give Yami credit(you should do this anyway) if you give DoubleX or   |
+#    his alias credit                                                          |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - YSA Battle Add-on: Lunatic CATB Reset                                   |
+#    - DoubleX RMVXA Bug Fix to YSA Battle System: Classical ATB               |
+#    Knowledge:                                                                |
+#    - That of using the script YSA Battle Add-on: Lunatic CATB Reset          |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Makes catb reset values stack until the battlers have no more actions   |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script                                              |
+#    DoubleX RMVXA Bug Fix to YSA Battle System: Classical ATB and ¡¿ Main.     |
+#    Save to take effect.                                                      |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle Add-on: Lunatic CATB Reset                   |
+#==============================================================================|
+
+$imported = {} if $imported.nil?
+$imported["DoubleX RMVXA Reset Addon to YSA-LunaticCATBReset"] = true
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["YSA-LunaticCATBReset"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_accessor :reset_value
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: clear_catb                                                  |
+  #----------------------------------------------------------------------------|
+  alias clear_catb_reset_addon clear_catb
+  def clear_catb(value = 0)
+    clear_catb_reset_addon(value)
+    @reset_value = 0 if !@reset_value || !self.index || restriction > 0
+  end # clear_catb
+
+end # Game_Battler
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: perform_catb_action                                       |
+  #----------------------------------------------------------------------------|
+  def perform_catb_action(subject, forced = false)
+    return if subject && !subject.charge_skill_done? && !forced
+    return if subject && subject.actor? && !forced && !subject.input
+    return if subject && subject.actor? && !forced && !subject.input.item
+    return if subject && subject.actor? && !forced && !subject.input.confirm
+    @subject = subject if subject
+    return if !@subject
+    BattleManager.catb_escape = :false
+    if @subject.current_action
+      @subject.current_action.prepare
+      execute_action if @subject.current_action.valid?
+      # This part is added by this script to stack the reset values for @subject
+      @subject.reset_value ||= 0
+      @subject.reset_value += $imported["YSA-LunaticCATBReset"] ? @subject.lunatic_catb_reset_formula : 0
+      item = @subject.current_action ? @subject.current_action.item : nil
+      #
+      process_event
+      loop do
+        @subject.remove_current_action
+        break if forced || !@subject.current_action || !@subject.current_action.valid?
+        @subject.current_action.prepare
+        execute_action
+      end
+      if $game_system.catb_turn_type == :action
+        @tick_action = 0 if !@tick_action
+        @tick_action += 1 if !forced || (forced && YSA::CATB::FORCE_ACTION_COUNT)
+        if @tick_action >= $game_system.catb_after_action
+          @tick_action = 0
+          BattleManager.turn_end if BattleManager.phase
+          all_battle_members.each { |member| member.run_lunatic_states(:begin) } if $imported["YEA-LunaticStates"]
+          if $imported["YEA-SkillRestrictions"]
+            $game_party.update_restrictions
+            $game_troop.update_restrictions
+          end
+          all_battle_members.each { |battler|
+            battler.on_turn_end
+            battler.perform_collapse_effect if BattleManager.phase && battler.enemy? && battler.can_collapse?
+          }
+          @status_window.refresh
+          $game_troop.increase_turn
+        end
+      end
+      @status_aid_window.refresh if @status_aid_window.visible
+      process_action_end
+    end
+    BattleManager.catb_escape = :true
+    return if BattleManager.judge_win_loss
+    if @subject
+      # This part is rewritten by this script to use the stacked reset values of @subject
+      if (YSA::CATB::FORCE_ACTION_CLEAR_ATB && forced) || !forced
+        action = $imported["DoubleX RMVXA Action Addon to YSA-CATB"] && item ? item.action : $imported["YEA-InstantCast"] && item && item.instant ? 0 : 1
+        if @subject.catb_action_times > action
+          @subject.clear_catb(0)
+        else
+          @subject.clear_catb(@subject.reset_value)
+          @subject.reset_value = 0
+        end
+      end
+      #
+      @status_window.draw_item(@subject.index) if @subject.actor?
+      @subject = nil
+    end
+  end # perform_catb_action
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["YSA-LunaticCATBReset"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#==============================================================================|

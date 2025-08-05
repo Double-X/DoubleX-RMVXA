@@ -1,0 +1,107 @@
+#==============================================================================|
+#  ** DoubleX RMVXA CATB Clear Addon Compatibility Fix v1.00c                  |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00c (GMT 0400 11-9-2014):                                              |
+#    - Supports the new clear addon notetags                                   |
+#    v1.00b (GMT 0000 1-7-2014):                                               |
+#    - Updated the way of clearing atb and actions                             |
+#    v1.00a (GMT 1600 9-1-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#    Yanfly:                                                                   |
+#    - Yanfly Engine Ace - Buff & State Manager                                |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as those of                                                          |
+#    - YSA Battle System: Classical ATB                                        |
+#    - Yanfly Engine Ace - Buff & State Manager                                |
+#    except that you must also give Yami and Yanfly credits(you should do this |
+#    anyway) if you give DoubleX or his alias credit                           |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA CATB Clear Addon to YSA Battle System: Classical ATB      |
+#    - Yanfly Engine Ace - Buff & State Manager                                |
+#    Knowledge:                                                                |
+#    That of using scripts                                                     |
+#    - DoubleX RMVXA CATB Clear Addon to YSA Battle System: Classical ATB      |
+#    - Yanfly Engine Ace - Buff & State Manager                                |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Tries to fix compatibility issues I've found in                         |
+#      DoubleX RMVXA CATB Clear Addon to YSA Battle System: Classical ATB      |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot below the script:                                               |
+#    - DoubleX RMVXA CATB Clear Addon to YSA Battle System: Classical ATB      |
+#    - Yanfly Engine Ace - Buff & State Manager                                |
+#    but above ¡¿ Main. Save to take effect.                                    |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Same as those of:                                                         |
+#    - YSA Battle System: Classical ATB                                        |
+#    - Yanfly Engine Ace - Buff & State Manager                                |
+#==============================================================================|
+
+#==============================================================================|
+#  ** Fixes                                                                    |
+#------------------------------------------------------------------------------|
+#  * YEA-Buff&StateManager issues(Fix_BuffAndStateManager_Bug):                |
+#    - Rewritten method add_state under class Game_Battler                     |
+#==============================================================================|
+
+$imported = {} if $imported.nil?
+$imported["DoubleX RMVXA Clear CATB Addon Compatibility Fix"] = true
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"] && $imported["DoubleX RMVXA Clear CATB Addon to YSA-CATB"]
+
+# Fixes:
+# Compatibility issues with Yanfly Engine Ace - Buff & State Manager
+if $imported["YEA-Buff&StateManager"]
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: add_state                                                 |
+  #----------------------------------------------------------------------------|
+  def add_state(state_id)
+    return if $data_states[state_id].nil?
+    state_rules = $data_states[state_id].state_reapply_rules 
+    return if state_rules == 0 && state?(state_id) || !state_addable?(state_id)
+    # This part is rewritten by this script to clear catb if the state has clear catb notetag
+    if !state?(state_id)
+      add_new_state(state_id)
+      state = $data_states[state_id]
+      catb_minus_atb(state)
+      catb_reset_atb(state)
+      catb_minus_charge(state)
+      catb_reset_charge(state)
+      if $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"]
+        catb_minus_cooldown(state)
+        catb_reset_cooldown(state)
+      end
+    end   
+    # Fix_BuffAndStateManager_Bug
+    reset_state_counts(state_id) if state_rules == 0 || state_rules == 1
+    total_state_counts(state_id) if state_rules == 2
+    @result.added_states.push(state_id).uniq!
+  end # add_state
+
+end # Game_Battler
+end # if $imported["YEA-Buff&StateManager"]
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"] && $imported["DoubleX RMVXA Clear CATB Addon to YSA-CATB"]
+
+#==============================================================================|

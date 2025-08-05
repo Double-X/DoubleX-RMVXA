@@ -1,0 +1,254 @@
+#==============================================================================|
+#  ** DoubleX RMVXA CATB Cancel Addon v1.01b to YSA Battle System: Classical ATB|
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.01b(GMT 1200 25-2-2015):                                               |
+#    - Compatible with                                                         |
+#      DoubleX RMVXA CATB Charge Addon to YSA Battle System: Classical ATB     |
+#    - Increased the efficiency of this script                                 |
+#    v1.01a(GMT 0200 11-9-2014):                                               |
+#    - Lets users set the cancel action cost and cancel skill cost             |
+#    v1.00b(GMT 0000 23-1-2014):                                               |
+#    - Compatible with DoubleX RMVXA Unison Addon to YSA Battle System: Classical ATB|
+#    v1.00a(GMT 0300 22-1-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of YSA Battle System: Classical ATB except that you must also|
+#    give Yami credit(you should do this anyway) if you give DoubleX or his    |
+#    alias credit                                                              |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB             |
+#    Knowledge:                                                                |
+#    - That of using the script YSA Battle System: Classical ATB               |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Adds cast cancel feature to YSA Battle System: Classical ATB            |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script                                              |
+#    DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB and ¡¿ Main.   |
+#    Save to take effect.                                                      |
+#    Suggested Complete CATB Scripts Order(Excluding Dhoom Manipulate State):  |
+#    1.  Yanfly Engine Ace - Ace Core Engine                                   |
+#    2.  Yanfly Engine Ace - Ace Battle Engine                                 |
+#    3.  YSA Battle System: Classical ATB                                      |
+#    4.  YSA Battle Add-on: Lunatic CATB Rate                                  |
+#    5.  YSA Battle Add-on: Lunatic CATB Reset                                 |
+#    6.  YSA Battle Add-on: Lunatic CATB Start                                 |
+#    7.  DoubleX RMVXA Bug Fix to YSA Battle System: Classical ATB             |
+#    8.  DoubleX RMVXA Compatibility Fix to YSA Battle System: Classical ATB   |
+#    9.  DoubleX RMVXA Reset Addon to YSA Battle Add-on: Lunatic CATB Reset    |
+#    10. DoubleX RMVXA Action Addon to YSA Battle System: Classical ATB        |
+#    11. DoubleX RMVXA ATB Addon to YSA Battle System: Classical ATB           |
+#    12. DoubleX RMVXA Cancel Addon to YSA Battle System: Classical ATB        |
+#    13. DoubleX RMVXA Clear Addon to YSA Battle System: Classical ATB         |
+#    14. DoubleX RMVXA CATB Clear Addon Compatibility Fix                      |
+#    15. DoubleX RMVXA Cooldown Addon to YSA Battle System: Classical ATB      |
+#    16. DoubleX RMVXA Charge Addon to YSA Battle System: Classical ATB        |
+#    17. DoubleX RMVXA Countdown Addon to YSA Battle System: Classical ATB     |
+#    18. DoubleX RMVXA Countdown Addon Compatibility Fix                       |
+#    19. DoubleX RMVXA Escape Addon to YSA Battle System: Classical ATB        |
+#    20. DoubleX RMVXA Percentage Addon to YSA Battle System: Classical ATB    |
+#    21. DoubleX RMVXA Reset Addon to YSA Battle Add-on: Lunatic CATB Reset    |
+#    22. DoubleX RMVXA SE Addon to YSA Battle System: Classical ATB            |
+#    23. DoubleX RMVXA Tick Addon to YSA Battle System: Classical ATB          |
+#    24. DoubleX RMVXA Turn Addon to YSA Battle System: Classical ATB          |
+#    25. DoubleX RMVXA Unison Addon to YSA Battle System: Classical ATB        |
+#    26. DoubleX RMVXA Update Addon to YSA Battle System: Classical ATB        |
+#    27. DoubleX RMVXA Wait Addon to YSA Battle System: Classical ATB          |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle System: Classical ATB                        |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Cancel Addon to YSA-CATB"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module YSA_CATB_Cancel_Addon
+
+    # This feature needs
+    # DoubleX RMVXA Action Addon to YSA Battle System: Classical ATB
+    # (v1.01a+)CANCEL_ACTION_COST, default = false
+    # Skill users need to pay the action cost of the skill after canceling it
+    # (v1.01b+)CANCEL_ACTION_COST will be ignored if the skill/item demand its
+    # user to pay the action cost before charging(that feature needs
+    # DoubleX RMVXA CATB Charge Addon to YSA Battle System: Classical ATB)
+    CANCEL_ACTION_COST = false
+
+    # (v1.01a+)CANCEL_SKILL_COST, default = false
+    # Skill users need to pay the mp/tp/custom cost of the skill after canceling
+    # it
+    # (v1.01b+)CANCEL_SKILL_COST will be ignored if the skill/item demand its
+    # user to pay the non-action cost before charging(that feature needs
+    # DoubleX RMVXA CATB Charge Addon to YSA Battle System: Classical ATB)
+    CANCEL_SKILL_COST = false
+
+    # Select key which will open the cast cancel selection window, default = :SHIFT
+    CANCEL_KEY = :SHIFT
+    # Press cancel key to close the cast cancel selection window
+
+    # Wait while the cast cancel window is active, default = true
+    CANCEL_WAIT = true
+
+    # Set text displayed in cast cancel help window, default = "Select an actor to cancel his/her/its charging move.\nFully charged or uncharged moves can't be cancelled."
+    HELP_TEXT = "Select an actor without autobattle nor confusion to\ncancel his/her/its partially charging skill or item."
+
+  end # YSA_CATB_Cancel_Addon
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: catb_pause?                                                 |
+  #----------------------------------------------------------------------------|
+  alias catb_cancel_addon_pause? catb_pause?
+  def catb_pause?
+    # Rewritten to pause when cancel window is active
+    @actor_window_catb_cancel.active && DoubleX_RMVXA::YSA_CATB_Cancel_Addon::CANCEL_WAIT || catb_cancel_addon_pause?
+    #
+  end # catb_pause?
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: create_all_windows                                          |
+  #----------------------------------------------------------------------------|
+  alias create_all_windows_catb_cancel_addon create_all_windows
+  def create_all_windows
+    create_all_windows_catb_cancel_addon
+    # Added to create cancel window
+    create_actor_window_catb_cancel if BattleManager.btype?(:catb)
+    #
+  end # create_all_windows
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: update_basic                                                |
+  #----------------------------------------------------------------------------|
+  alias update_basic_catb_cancel_addon update_basic
+  def update_basic
+    update_basic_catb_cancel_addon
+    # Added to trigger cast cancel selection window
+    update_catb_cancel if BattleManager.btype?(:catb)
+    #
+  end # update_basic
+
+  #----------------------------------------------------------------------------|
+  #  New method: update_catb_cancel                                            |
+  #----------------------------------------------------------------------------|
+  def update_catb_cancel
+    return if $game_message.busy? || @skill_window.active || @item_window.active || @actor_window.active || @enemy_window.active || $imported["YEA-CombatLogDisplay"] && @combatlog_window && @combatlog_window.visible
+    if @actor_window_catb_cancel.active
+      @actor_window_catb_cancel.refresh_catb
+      @actor_command_window.close if @actor_command_window.active
+      @party_command_window.close if @party_command_window.active
+    elsif Input.trigger?(DoubleX_RMVXA::YSA_CATB_Cancel_Addon::CANCEL_KEY)
+      @status_window.hide
+      @actor_command_window.close if @actor_command_window.active
+      @party_command_window.close if @party_command_window.active
+      select_catb_cancel_selection
+    end
+  end # update_catb_cancel
+
+  #----------------------------------------------------------------------------|
+  #  New method: create_actor_window_catb_cancel                               |
+  #----------------------------------------------------------------------------|
+  def create_actor_window_catb_cancel
+    @help_window_catb_cancel = Window_Help.new
+    @help_window_catb_cancel.visible = false
+    @help_window_catb_cancel.set_text(DoubleX_RMVXA::YSA_CATB_Cancel_Addon::HELP_TEXT)
+    @actor_window_catb_cancel = Window_BattleActor.new(@info_viewport)
+    @actor_window_catb_cancel.x = 64
+    @actor_window_catb_cancel.set_handler(:ok, method(:catb_cancel_on_actor_ok))
+    @actor_window_catb_cancel.set_handler(:cancel, method(:catb_cancel_on_actor_cancel))
+  end # create_actor_window_catb_cancel
+
+  #----------------------------------------------------------------------------|
+  #  New method: select_catb_cancel_selection                                  |
+  #----------------------------------------------------------------------------|
+  def select_catb_cancel_selection
+    @actor_window_catb_cancel.show.activate.refresh
+    @help_window_catb_cancel.show.activate
+  end # select_catb_cancel_selection
+
+  #----------------------------------------------------------------------------|
+  #  New method: catb_cancel_on_actor_ok                                       |
+  #----------------------------------------------------------------------------|
+  def catb_cancel_on_actor_ok
+    actor_catb_cancel = BattleManager.action_list(:actor).find { |a| a.index == @actor_window_catb_cancel.index && !a.auto_battle? && !a.confusion? && a.ct_catb_value > 0 && !a.charge_skill_done? }
+    if actor_catb_cancel
+      item = actor_catb_cancel.current_action.item
+      if $imported["DoubleX RMVXA Unison Addon to YSA-CATB"] && !item.catb_unison_actor_id.empty?
+        catb_unison_actor_id_list = []
+        item.catb_unison_actor_id.each { |actor_id|
+          next if actor_id == actor_catb_cancel.id
+          actor = BattleManager.action_list(:actor).find { |a| a.id == actor_id && !a.auto_battle? && !a.confusion? && a.ct_catb_value > 0 && !a.charge_skill_done? }
+          if actor
+            catb_unison_actor_id_list.push(actor.id)
+          else
+            catb_unison_actor_id_list = []
+            break
+          end
+        }
+        if catb_unison_actor_id_list.size == item.catb_unison_actor_id.size - 1
+          catb_unison_actor_id_list.each { |actor_id|
+            actor = $game_actors[actor_id]
+            if DoubleX_RMVXA::YSA_CATB_Cancel_Addon::CANCEL_SKILL_COST && (!imported["DoubleX RMVXA Charge Addon to YSA-CATB"] || item.charge_prior_item_cost)
+              actor.pay_skill_cost(item) if item.is_a?(RPG::Skill)
+              actor.consume_item(item) if item.is_a?(RPG::Item)
+            end
+            actor.item_action = DoubleX_RMVXA::YSA_CATB_Cancel_Addon::CANCEL_ACTION_COST && (!imported["DoubleX RMVXA Charge Addon to YSA-CATB"] || item.charge_prior_action_cost) ? item.action : 0 if $imported["DoubleX RMVXA Action Addon to YSA-CATB"]
+            actor.clear_catb
+            actor.clear_actions
+          }
+        end
+      end
+      if DoubleX_RMVXA::YSA_CATB_Cancel_Addon::CANCEL_SKILL_COST && (!imported["DoubleX RMVXA Charge Addon to YSA-CATB"] || item.charge_prior_item_cost)
+        actor_catb_cancel.pay_skill_cost(item) if item.is_a?(RPG::Skill)
+        actor_catb_cancel.consume_item(item) if item.is_a?(RPG::Item)
+      end
+      actor_catb_cancel.item_action = DoubleX_RMVXA::YSA_CATB_Cancel_Addon::CANCEL_ACTION_COST && (!imported["DoubleX RMVXA Charge Addon to YSA-CATB"] || item.charge_prior_action_cost) ? item.action : 0 if $imported["DoubleX RMVXA Action Addon to YSA-CATB"]
+      actor_catb_cancel.clear_catb
+      actor_catb_cancel.clear_actions
+      @status_window.refresh
+    end
+    select_catb_cancel_selection
+  end # catb_cancel_on_actor_ok
+
+  #----------------------------------------------------------------------------|
+  #  New method: catb_cancel_on_actor_cancel                                   |
+  #----------------------------------------------------------------------------|
+  def catb_cancel_on_actor_cancel
+    @actor_window_catb_cancel.hide.deactivate
+    @help_window_catb_cancel.hide.deactivate
+    @status_window.show.x = 128
+    @actor_command_window.open if @actor_command_window.active
+    @party_command_window.open if @party_command_window.active
+  end # catb_cancel_on_actor_cancel
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+end # $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#==============================================================================|

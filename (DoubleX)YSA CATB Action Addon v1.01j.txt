@@ -1,0 +1,420 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Action Addon v1.01j to YSA Battle System: Classical ATB    |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.01j(GMT 1300 1-4-2016):                                                |
+#    - Fixed the command guard action cost not working bug again               |
+#    v1.01i(GMT 1400 15-12-2015):                                              |
+#    - Fixed setting the wrong actor's item_action upon action input confirm   |
+#    v1.01h(GMT 1200 16-11-2015):                                              |
+#    - Fixed nil @item_action bug for confused and/or atuobattle actors        |
+#    v1.01g(GMT 1200 26-2-2015):                                               |
+#    - Fixed the command guard action cost not working bug                     |
+#    v1.01f(GMT 1200 25-2-2015):                                               |
+#    - Compatible with                                                         |
+#      DoubleX RMVXA CATB Charge Addon to YSA Battle System: Classical ATB     |
+#    - Increased the efficiency of this script                                 |
+#    v1.01e(GMT 0000 13-9-2014):                                               |
+#    - Fixed <custom catb action add: a, s> not making nor clearing actions bug|
+#    v1.01d(GMT 0200 20-8-2014):                                               |
+#    - Included the battlers escape bug fix                                    |
+#    v1.01c(GMT 0000 6-8-2014):                                                |
+#    - Fixed more item usability issues                                        |
+#    v1.01b(GMT 0100 5-8-2014):                                                |
+#    - Fixed skills or items not usable outside battles bug                    |
+#    v1.01a(GMT 1200 21-7-2014):                                               |
+#    - Added <custom catb action add: a, s> notetag                            |
+#    - Changed notetag <custom catb action: x> to <custom catb action: a, s>   |
+#    v1.00a(GMT 0000 1-7-2014):                                                |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of YSA Battle System: Classical ATB except that you must also|
+#    give Yami credit(you should do this anyway) if you give DoubleX or his    |
+#    alias credit                                                              |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB             |
+#    Knowledge:                                                                |
+#    - That of using the script YSA Battle System: Classical ATB               |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Lets users to set the number of actions required for skills or items    |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script                                              |
+#    DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB and ¡¿ Main.   |
+#    Save to take effect.                                                      |
+#    Suggested Complete CATB Scripts Order(Excluding Dhoom Manipulate State):  |
+#    1.  Yanfly Engine Ace - Ace Core Engine                                   |
+#    2.  Yanfly Engine Ace - Ace Battle Engine                                 |
+#    3.  YSA Battle System: Classical ATB                                      |
+#    4.  YSA Battle Add-on: Lunatic CATB Rate                                  |
+#    5.  YSA Battle Add-on: Lunatic CATB Reset                                 |
+#    6.  YSA Battle Add-on: Lunatic CATB Start                                 |
+#    7.  DoubleX RMVXA Bug Fix to YSA Battle System: Classical ATB             |
+#    8.  DoubleX RMVXA Compatibility Fix to YSA Battle System: Classical ATB   |
+#    9.  DoubleX RMVXA Action Addon to YSA Battle System: Classical ATB        |
+#    10. DoubleX RMVXA ATB Addon to YSA Battle System: Classical ATB           |
+#    11. DoubleX RMVXA Cancel Addon to YSA Battle System: Classical ATB        |
+#    12. DoubleX RMVXA Clear Addon to YSA Battle System: Classical ATB         |
+#    13. DoubleX RMVXA CATB Clear Addon Compatibility Fix                      |
+#    14. DoubleX RMVXA Color Addon to YSA Battle System: Classical ATB         |
+#    15. DoubleX RMVXA Cooldown Addon to YSA Battle System: Classical ATB      |
+#    16. DoubleX RMVXA Charge Addon to YSA Battle System: Classical ATB        |
+#    17. DoubleX RMVXA Speed Addon to YSA Battle System: Classical ATB         |
+#    18. DoubleX RMVXA Countdown Addon to YSA Battle System: Classical ATB     |
+#    19. DoubleX RMVXA Countdown Addon Compatibility Fix                       |
+#    20. DoubleX RMVXA Escape Addon to YSA Battle System: Classical ATB        |
+#    21. DoubleX RMVXA Hotkey Addon to YSA Battle System: Classical ATB        |
+#    22. DoubleX RMVXA CATB Input Addon to YSA Battle System: Classical ATB    |
+#    23. DoubleX RMVXA Percentage Addon to YSA Battle System: Classical ATB    |
+#    24. DoubleX RMVXA Reset Addon to YSA Battle Add-on: Lunatic CATB Reset    |
+#    25. DoubleX RMVXA SE Addon to YSA Battle System: Classical ATB            |
+#    26. DoubleX RMVXA Tick Addon to YSA Battle System: Classical ATB          |
+#    27. DoubleX RMVXA Turn Addon to YSA Battle System: Classical ATB          |
+#    28. DoubleX RMVXA Unison Addon to YSA Battle System: Classical ATB        |
+#    29. DoubleX RMVXA Update Addon to YSA Battle System: Classical ATB        |
+#    30. DoubleX RMVXA Wait Addon to YSA Battle System: Classical ATB          |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle System: Classical ATB                        |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Action Addon to YSA-CATB"] = true
+
+#------------------------------------------------------------------------------|
+#  * (v1.01a+)Skill/Item Notetags:(skill/item notebox in the database)         |
+#    - <custom catb action add: a, s>                                          |
+#    Sets the number of action points added to the targets after using the     |
+#    skill or item. If the result is negative, it'll be set as 0.              |
+#    Setting a as 0 is effectively changing nothing.                           |
+#    Setting a as negative means a will be substracted from the action points  |
+#    of the targets. The minimum of the result is 0.                           |
+#    s can be either 0 or 1 meaning a is negative or positive respectively.    |
+#------------------------------------------------------------------------------|
+#  * Skill/Item Notetags:(skill/item notebox in the database)                  |
+#    - <custom catb action: a, s>                                              |
+#    Sets the number of actions required for this skill or item. Battlers can't|
+#    use it if they don't have enough currently available actions.             |
+#    Setting a as 0 is effectively the same as using the <instant> notetag of  |
+#    Yanfly Engine Ace - Instant Cast.                                         |
+#    Setting a as negative means more actions will be available to the users of|
+#    this skill or item after using it.                                        |
+#    s can be either 0 or 1 meaning a is negative or positive respectively.    |
+#------------------------------------------------------------------------------|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#  * Edit module: DataManager                                                  |
+#------------------------------------------------------------------------------|
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: load_database                                               |
+  #----------------------------------------------------------------------------|
+  alias load_database_catb_action_addon load_database
+  def load_database
+    load_database_catb_action_addon
+    # Added to load action notetags
+    load_notetags_catb_action_addon
+    #
+  end # load_database
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_catb_action_addon                               |
+  #----------------------------------------------------------------------------|
+  def load_notetags_catb_action_addon
+    $data_skills.each { |obj| obj.load_notetags_catb_action_addon if obj }
+    $data_items.each { |obj| obj.load_notetags_catb_action_addon if obj }
+  end # load_notetags_catb_action_addon
+
+end # DataManager
+
+#------------------------------------------------------------------------------|
+#  * Edit class: RPG::UsableItem                                               |
+#------------------------------------------------------------------------------|
+
+class RPG::UsableItem < RPG::BaseItem
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  attr_accessor :action
+  attr_accessor :action_add
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_catb_action_addon                               |
+  #----------------------------------------------------------------------------|
+  def load_notetags_catb_action_addon
+    @action = $imported["YEA-InstantCast"] && @instant ? 0 : 1
+    @action_add = 0
+    @note.split(/[\r\n]+/).each { |line|
+      case line
+      when @action != 0 && /<custom catb action:[ ](\d+(?:\s*,\s*\d+)*)>/i
+        $1.scan(/\d+/).each_with_index { |input, index|
+          index > 1 ? break : @action = index == 0 ? input.to_i : @action * ([input.to_i, 1].min * 2 - 1)
+        }
+      when /<custom catb action add:[ ](\d+(?:\s*,\s*\d+)*)>/i
+        $1.scan(/\d+/).each_with_index { |input, index|
+          index > 1 ? break : @action_add = index == 0 ? input.to_i : @action_add * ([input.to_i, 1].min * 2 - 1)
+        }
+      end
+    }
+  end # load_notetags_catb_action_addon
+
+end # RPG::UsableItem
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_BattlerBase                                              |
+#------------------------------------------------------------------------------|
+
+class Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: usable?                                                     |
+  #----------------------------------------------------------------------------|
+  alias catb_action_item_usable? usable?
+  def usable?(item)
+    # Rewritten to check if the battler has enough actions
+    (!SceneManager.scene_is?(Scene_Battle) || item && item.is_a?(RPG::UsableItem) && (@catb_action_times >= item.action || @action_cost_paid)) && catb_action_item_usable?(item)
+    #
+  end # usable?
+
+end # Game_BattlerBase
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_Battler                                                  |
+#------------------------------------------------------------------------------|
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01f+)New public instance variable                                     |
+  #----------------------------------------------------------------------------|
+  attr_writer :item_action
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: make_ct_catb_update                                       |
+  #----------------------------------------------------------------------------|
+  def make_ct_catb_update
+    return if @catb_value < MAX_CATB_VALUE || @ct_catb_value >= MAX_CATB_VALUE || !current_action
+    return @ct_catb_value = 0 unless current_action.item
+    return if actor? && !current_action.confirm
+    clear_catb unless movable?
+    @ct_catb_value = MAX_CATB_VALUE unless current_action.item.charge_on
+    value = $imported["YSA-LunaticCATBRate"] ? lunatic_catb_rate_formula : real_gain_catb
+    @ct_catb_value += [value * current_action.item.charge_rate / 100, MAX_CATB_VALUE - @ct_catb_value].min
+  end # make_ct_catb_update
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: clear_catb                                                |
+  #----------------------------------------------------------------------------|
+  def clear_catb(value = 0)
+    # Rewritten to subtract @catb_action_times by @item_action
+    @catb_action_times -= @item_action if @ct_catb_value > 0
+    #
+    @catb_value = value unless @catb_action_times > 0 && movable?
+    @catb_action_times = 0 unless @catb_action_times <= 0 || movable?
+    @cd_catb_value = MAX_CATB_VALUE if $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"] && movable? && @ct_catb_value >= MAX_CATB_VALUE
+    @ct_catb_value = 0
+    BattleManager.clear_actor if actor? && BattleManager.actor == self
+    BattleManager.delete_catb_action(self)
+  end # clear_catb
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01e+)New method: catb_add_action                                      |
+  #----------------------------------------------------------------------------|
+  def catb_add_action(item)
+    last_action_times = @catb_action_times
+    @catb_action_times = [@catb_action_times + item.action_add, 0].max
+    return clear_catb if last_action_times > 0 && @catb_action_times == 0
+    @catb_value = MAX_CATB_VALUE if last_action_times == 0 && @catb_action_times > 0 && movable?
+  end # catb_add_action
+
+end # Game_Battler
+
+#------------------------------------------------------------------------------|
+#  * (v1.01h+)Edit class: Game_Actor                                           |
+#------------------------------------------------------------------------------|
+
+class Game_Actor < Game_Battler
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_auto_battle_actions                                    |
+  #----------------------------------------------------------------------------|
+  alias make_auto_battle_actions_catb_action_addon make_auto_battle_actions
+  def make_auto_battle_actions
+    make_auto_battle_actions_catb_action_addon
+    # Added to store the skill/item's action cost
+    @item_action = current_action.item.action if BattleManager.btype?(:catb) && current_action && current_action.item
+    #
+  end # make_auto_battle_actions
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_confusion_actions                                      |
+  #----------------------------------------------------------------------------|
+  alias make_confusion_actions_catb_action_addon make_confusion_actions
+  def make_confusion_actions
+    make_confusion_actions_catb_action_addon
+    # Added to store the skill/item's action cost
+    @item_action = current_action.item.action if BattleManager.btype?(:catb) && current_action && current_action.item
+    #
+  end # make_confusion_actions
+
+end # Game_Actor
+
+#------------------------------------------------------------------------------|
+#  * (v1.01f+)Edit class: Game_Enemy                                           |
+#------------------------------------------------------------------------------|
+
+class Game_Enemy < Game_Battler
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_actions                                                |
+  #----------------------------------------------------------------------------|
+  alias make_actions_catb_action_addon make_actions
+  def make_actions
+    make_actions_catb_action_addon
+    # Added to store the skill/item's action cost
+    @item_action = current_action.item.action if BattleManager.btype?(:catb) && current_action && current_action.item
+    #
+  end # make_actions
+
+end # Game_Enemy
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Window_ItemList                                               |
+#------------------------------------------------------------------------------|
+
+class Window_ItemList < Window_Selectable
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: enable?                                                     |
+  #----------------------------------------------------------------------------|
+  alias catb_action_enable? enable?
+  def enable?(item)
+    # Rewritten to set disable items when the user doesn't have enough action points
+    SceneManager.scene_is?(Scene_Battle) && item && item.is_a?(RPG::Item) && item.action > 1 ? BattleManager.actor.usable?(item) : catb_action_enable?(item)
+    #
+  end # enable?
+
+end # Window_ItemList
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Scene_Battle                                                  |
+#------------------------------------------------------------------------------|
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01g+)Alias method: command_guard                                      |
+  #----------------------------------------------------------------------------|
+  alias command_guard_catb_action_addon command_guard
+  def command_guard
+    # Added to store the skill/item's action cost
+    return unless actor = BattleManager.actor
+    #
+    command_guard_catb_action_addon
+    # Added to store the skill/item's action cost
+    actor.item_action = actor.input.item.action if BattleManager.btype?(:catb)
+    #
+  end # command_guard
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01f+)Alias method: on_actor_ok                                        |
+  #----------------------------------------------------------------------------|
+  alias on_actor_ok_catb_action_addon on_actor_ok
+  def on_actor_ok
+    # Added to store the skill/item's action cost
+    return unless actor = BattleManager.actor
+    actor.item_action = actor.input.item.action if BattleManager.btype?(:catb)
+    #
+    on_actor_ok_catb_action_addon
+  end # on_actor_ok
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01f+)Alias method: on_enemy_ok                                        |
+  #----------------------------------------------------------------------------|
+  alias on_enemy_ok_catb_action_addon on_enemy_ok
+  def on_enemy_ok
+    # Added to store the skill/item's action cost
+    return unless actor = BattleManager.actor
+    actor.item_action = actor.input.item.action if BattleManager.btype?(:catb)
+    #
+    on_enemy_ok_catb_action_addon
+  end # on_enemy_ok
+
+  if $imported["YEA-TargetManager"]
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01j+)Alias method: on_skill_ok                                        |
+  #----------------------------------------------------------------------------|
+  alias on_skill_ok_action_addon on_skill_ok
+  def on_skill_ok
+    # Added to cache cooldown if skill doesn't show the target selection window
+    if BattleManager.btype?(:catb) && !(skill = @skill_window.item).for_opponent? && !skill.for_friend?
+      BattleManager.actor.item_action = skill.action
+    end
+    #
+    on_skill_ok_action_addon
+  end # on_skill_ok
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01j+)Alias method: on_item_ok                                         |
+  #----------------------------------------------------------------------------|
+  alias on_item_ok_action_addon on_item_ok
+  def on_item_ok
+    # Added to cache cooldown if item doesn't show the target selection window
+    if BattleManager.btype?(:catb) && !(item = @skill_window.item).for_opponent? && !item.for_friend?
+      BattleManager.actor.item_action = item.action
+    end
+    #
+    on_item_ok_action_addon
+  end # on_item_ok
+
+  end # if $imported["YEA-TargetManager"]
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)Alias method: use_item                                           |
+  #----------------------------------------------------------------------------| 
+  alias catb_action_use_item use_item
+  def use_item
+    catb_action_use_item
+    # Added to add action points to targets
+    action = @subject.current_action
+    action_addon_target_add_action(action) if action && action.item.action_add != 0
+    #
+  end # use_item
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)New method: action_addon_target_add_action                       |
+  #----------------------------------------------------------------------------| 
+  def action_addon_target_add_action(action)
+    targets = action.make_targets.compact rescue []
+    targets.each { |target| target.catb_add_action(action.item) } unless targets.empty?
+  end # action_addon_target_add_action
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#==============================================================================|

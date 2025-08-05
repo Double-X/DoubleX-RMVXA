@@ -1,0 +1,844 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Compatibility Fix v1.09a to YSA Battle System: Classical ATB|
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.09a(GMT 1400 1-4-2016):                                                |
+#    - Fixed not confirming skills/items not for opponents only or allies only |
+#    v1.08c(GMT 1400 15-12-2015):                                              |
+#    - Fixed setting the wrong actor's item_instant upon action input confirm  |
+#    v1.08b(GMT 1200 30-6-2015):                                               |
+#    - Fixed wait or quarter not waiting when the summon window's active bug   |
+#    v1.08a(GMT 1400 29-6-2015):                                               |
+#    - Tried to fix compatibility issues with Yami Engine Ace - Guardian Summon|
+#    v1.07a(GMT 1100 14-4-2015):                                               |
+#    - Fixed enemy atb bar compatibility issues with overlapping windows       |
+#    - Changed this script's terms of use                                      |
+#    v1.06c(GMT 1100 26-2-2015):                                               |
+#    - Fixed bugs on the improved fixes with Yanfly Engine Ace - Instant Cast  |
+#    - Improved the efficiency of fixes with Actor Personal Hotkeys            |
+#    v1.06b(GMT 1100 25-2-2015):                                               |
+#    - Improved the efficiency of fixes with Yanfly Engine Ace - Instant Cast  |
+#    v1.06a(GMT 0300 6-9-2014):                                                |
+#    - Tried to fix compatibility issues with                                  |
+#      Yanfly Engine Ace - Lunatic States                                      |
+#    v1.05a(GMT 0700 29-8-2014):                                               |
+#    - Tried to fix compatibility issues with DoubleX RMVXA Enemy MP/TP Bars   |
+#      Addon to Yanfly Engine Ace - Ace Battle Engine                          |
+#    v1.04b(GMT 0200 20-8-2014):                                               |
+#    - Included the battlers escape bug fix                                    |
+#    v1.04a(GMT 0100 11-8-2014):                                               |
+#    - Tried to fix compatibility issues with                                  |
+#      Yanfly Engine Ace - Skill Restrictions                                  |
+#    v1.03b(GMT 1000 30-6-2014):                                               |
+#    - Updated the action times+ bug fix                                       |
+#    v1.03a(GMT 0100 9-4-2014):                                                |
+#    - Tried to fix compatibility issues with Yanfly Engine Ace - Instant Cast |
+#    v1.02c(GMT 0400 27-1-2014):                                               |
+#    - Tried to fix more compatibility issues with Actor Personal Hotkeys      |
+#    v1.02b(GMT 1500 26-1-2014):                                               |
+#    - Tried to fix compatibility issues with Actor Personal Hotkeys           |
+#    v1.01b(GMT 0400 23-1-2014):                                               |
+#    - Updated the fix to compatibility issues with TH_BattleReactions         |
+#    v1.01a(GMT 0400 17-1-2014):                                               |
+#    - Tried to fix compatibility issues with TH_BattleReactions               |
+#    v1.00a(GMT 1200 9-1-2014):                                                |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Authors                                                                   |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    - DoubleX RMVXA Bug Fix to YSA Battle System: Classical ATB               |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of YSA Battle System: Classical ATB except that you must also|
+#    give Yami credit (you should do this anyway) if you give DoubleX or his   |
+#    alias credit                                                              |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Bug Fix to YSA Battle System: Classical ATB               |
+#    Knowledge:                                                                |
+#    - Nothing special                                                         |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Tries to fix compatibility issues in YSA Battle System: Classical ATB   |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot below DoubleX RMVXA Bug Fix to YSA Battle System: Classical ATB |
+#    and the addressed scripts but above any                                   |
+#    DoubleX RMVXA Addon to YSA Battle System: Classical ATB. Save to take     |
+#    effect.                                                                   |
+#    Some Hidden YSA Battle System: Classical ATB Tips and Tricks:             |
+#    http://forums.rpgmakerweb.com/index.php?/topic/38568-some-hidden-ysa-battle-system-classical-atb-tips-and-tricks/|
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle System: Classical ATB except those fixed in  |
+#      this script                                                             |
+#==============================================================================|
+
+#==============================================================================|
+#  ** Fixes                                                                    |
+#------------------------------------------------------------------------------|
+#  * (v1.09a+)YEA-TargetManager issues(Fix_YEA_TargetManager_Bug):             |
+#    - Aliased on_skill_ok and on_item_ok                                      |
+#------------------------------------------------------------------------------|
+#  * (v1.08a+)YSE-GuardianSummon issues(Fix_YSE_GuardianSummon_Bug):           |
+#    - Aliased on_summon_ok under Scene_Battle                                 |
+#------------------------------------------------------------------------------|
+#  * (v1.06a+)YEA-LunaticStates issues(Fix_YEA_LunaticStates_Bug):             |
+#    - Rewritten process_catb, perform_catb_action and turn start under        |
+#      Scene_Battle                                                            |
+#------------------------------------------------------------------------------|
+#  * (v1.05a+)DoubleX RMVXA Enemy MP/TP Bars Addon to YEA-BattleEngine issues(Fix_Enemy_MP_TP_Addon_Bug):|
+#    - Aliased update_position under Enemy_CATB_Gauge_Viewport                 |
+#------------------------------------------------------------------------------|
+#  * (v1.04a+)YEA-SkillRestrictions issues(Fix_YEA_SkillRestrictions_Bug):     |
+#    - Rewritten process_catb and perform_catb_action under Scene_Battle       |
+#------------------------------------------------------------------------------|
+#  * (v1.03a+)YEA-InstantCast issues(Fix_YEA_InstantCast_Bug):                 |
+#    - Rewritten                                                               |
+#      clear_catb under Game_Battler                                           |
+#      command_guard, on_actor_ok, on_enemy_ok, next_command and execute_action|
+#      under Scene_Battle                                                      |
+#------------------------------------------------------------------------------|
+#  * (v1.02b+)RIFF_HOTKEYS issues(Fix_RIFF_HOTKEYS_Bug):                       |
+#    - (v1.02c+)Aliased start_party_command_selection and                      |
+#      create_hotkeys_bar_window under Scene_Battle                            |
+#    - Rewritten                                                               |
+#      item_valid? under Window_Hotkeys_Bar                                    |
+#      scene_battle_on_enemy_cancel_abe, catb_on_actor_cancel, process_catb,   |
+#      prior_f_actor, next_f_actor, call_hotkeys and set_hotkey_action under   |
+#      Scene_Battle                                                            |
+#------------------------------------------------------------------------------|
+#  * (v1.01b+)TH_BattleReactions issues(Fix_TH_BattleReactions_Bug):           |
+#    - Rewritten perform_reactions under Scene_Battle                          |
+#------------------------------------------------------------------------------|
+#  * YEA-CommandParty issues(Fix_YEA_CommandParty_Bug):                        |
+#    - Rewritten command_party under Scene_Battle                              |
+#------------------------------------------------------------------------------|
+#  * YEA-CommandAutobattle issues(Fix_YEA_CommandAutobattle_Bug):              |
+#    - Rewritten command_aautobattle and command_aautobattle under Scene_Battle|
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Compatibility Fixes to YSA-CATB"] = true
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#  * Fixes:                                                                    |
+#    - (v1.07a+)General window compatibility issues with enemy atb bar         |
+#------------------------------------------------------------------------------|
+class Enemy_CATB_Gauge_Viewport < Viewport
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: initialize                                                  |
+  #----------------------------------------------------------------------------|
+  alias fix_catb_initialize initialize
+  def initialize(battler, sprite, type)
+    fix_catb_initialize(battler, sprite, type)
+    # Added to prevent enemy atb bars from displaying above overlapping windows
+    self.z = 0
+    #
+  end # initialize
+
+end # Enemy_CATB_Gauge_Viewport
+
+#------------------------------------------------------------------------------|
+#  * Fixes:                                                                    |
+#    - (v1.03a+)YEA-InstantCast issues                                         |
+#------------------------------------------------------------------------------|
+if $imported["YEA-InstantCast"]
+
+#------------------------------------------------------------------------------|
+#  * (v1.03a+)Edit class: Game_Battler                                         |
+#------------------------------------------------------------------------------|
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  (v1.06b+)New public instance variable                                     |
+  #----------------------------------------------------------------------------|
+  attr_writer :item_instant
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: clear_catb                                                |
+  #----------------------------------------------------------------------------|
+  def clear_catb(value = 0)
+    # Rewritten to not clear actor's catb if the item is instant cast
+    @catb_action_times -= 1 unless @ct_catb_value <= 0 || @item_instant
+    # Fix_YEA_InstantCast_Bug
+    @catb_value = value unless @catb_action_times > 0 && movable?
+    @catb_action_times = 0 unless @catb_action_times <= 0 || movable?
+    @ct_catb_value = 0
+    BattleManager.clear_actor if actor? && BattleManager.actor == self
+    BattleManager.delete_catb_action(self)
+  end # clear_catb
+
+end # Game_Battler
+
+#------------------------------------------------------------------------------|
+#  * (v1.06b+)Edit class: Game_Enemy                                           |
+#------------------------------------------------------------------------------|
+
+class Game_Enemy < Game_Battler
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_actions                                                |
+  #----------------------------------------------------------------------------|
+  alias fix_catb_make_actions make_actions
+  def make_actions
+    fix_catb_make_actions
+    # Added to store if the skill/item's an instant action
+    @item_instant = current_action.item.instant if BattleManager.btype?(:catb) && current_action && current_action.item
+    # Fix_YEA_InstantCast_Bug
+  end # make_actions
+
+end # Game_Enemy
+
+end # if $imported["YEA-InstantCast"]
+
+#------------------------------------------------------------------------------|
+#  * Fixes:                                                                    |
+#    - (v1.02b+)RIFF_HOTKEYS issues                                            |
+#------------------------------------------------------------------------------|
+if $imported['RIFF_HOTKEYS']
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Window_Hotkeys_Bar                                           |
+#------------------------------------------------------------------------------|
+
+class Window_Hotkeys_Bar < Window_Selectable
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: item_valid?                                               |
+  #----------------------------------------------------------------------------|
+  def item_valid?(item)
+    # Rewritten to fix item valid bug
+    if item.is_a?(RPG::Item)
+      return $imported["DoubleX RMVXA Unison Addon to YSA-CATB"] && !item.catb_unison_actor_id.empty? ? @actor.usable?(item) : $game_party.usable?(item)
+    elsif item.is_a?(RPG::Skill)
+      (return BattleManager.actor ? BattleManager.actor.usable?(item) : false) if SceneManager.scene_is?(Scene_Battle)
+      @actor.usable?(item)
+    end
+    # Fix_RIFF_HOTKEYS_Bug
+  end # item_valid?
+
+end # Window_Hotkeys_Bar
+end # if $imported['RIFF_HOTKEYS']
+
+#------------------------------------------------------------------------------|
+#  * Fixes:                                                                    |
+#    - (v1.05a+)DoubleX RMVXA Enemy MP/TP Bars Addon to YEA-BattleEngine issues|
+#------------------------------------------------------------------------------|
+if $imported["DoubleX RMVXA Enemy MP/TP Bars Addon to YEA-BattleEngine"]
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Enemy_CATB_Gauge_Viewport                                     |
+#------------------------------------------------------------------------------|
+
+class Enemy_CATB_Gauge_Viewport < Viewport
+
+  #----------------------------------------------------------------------------|
+  #  (v1.05a+)Alias method: update_position                                    |
+  #----------------------------------------------------------------------------|
+  alias fix_catb_update_position update_position
+  def update_position
+    fix_catb_update_position
+    # Added to put atb bar above mp and tp bars
+    mp_tp = DoubleX_RMVXA::YEA_BattleEngine_Enemy_MP_TP_Bars_Addon
+    rect.y -= mp_tp::ENEMY_MP_GAUGE_HEIGHT + mp_tp::ENEMY_TP_GAUGE_HEIGHT
+    # Fix_Enemy_MP_TP_Addon_Bug
+  end # update_position
+
+end # Enemy_CATB_Gauge_Viewport
+end # if $imported["DoubleX RMVXA Enemy MP/TP Bars Addon to YEA-BattleEngine"]
+
+#------------------------------------------------------------------------------|
+#  * Fixes:                                                                    |
+#    - (v1.06a+)YEA-LunaticStates issues                                       |
+#    - (v1.04a+)YEA-SkillRestrictions issues                                   |
+#    - (v1.03a+)YEA-InstantCast issues                                         |
+#    - (v1.02b+)RIFF_HOTKEYS issues                                            |
+#    - (v1.01b+)TH_BattleReactions issues                                      |
+#    - YEA-CommandParty issues                                                 |
+#    - YEA-CommandAutobattle issues                                            |
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Scene_Battle                                                  |
+#------------------------------------------------------------------------------|
+
+class Scene_Battle
+
+  # Fixes:
+  # (v1.09a+)YEA-TargetManager issues
+  if $imported["YEA-TargetManager"]
+
+  #----------------------------------------------------------------------------|
+  #  (v1.09a+)Alias method: on_skill_ok                                        |
+  #----------------------------------------------------------------------------|
+  alias compatibility_fix_catb_on_skill_ok on_skill_ok
+  def on_skill_ok
+    # Added to confirm the skill if it doesn't show the target selection window
+    if BattleManager.btype?(:catb) && !(skill = @skill_window.item).for_opponent? && !skill.for_friend?
+      BattleManager.actor.input.confirm = true
+      BattleManager.actor.item_instant = skill.instant if $imported["YEA-InstantCast"]
+    end
+    # Fix_YEA_TargetManager_Bug
+    compatibility_fix_catb_on_skill_ok
+  end # on_skill_ok
+
+  #----------------------------------------------------------------------------|
+  #  (v1.09a+)Alias method: on_item_ok                                         |
+  #----------------------------------------------------------------------------|
+  alias compatibility_fix_catb_on_item_ok on_item_ok
+  def on_item_ok
+    # Added to confirm the item if it doesn't show the target selection window
+    if BattleManager.btype?(:catb) && !(item = @item_window.item).for_opponent? && !item.for_friend?
+      BattleManager.actor.input.confirm = true
+      BattleManager.actor.item_instant = item.instant if $imported["YEA-InstantCast"]
+    end
+    # Fix_YEA_TargetManager_Bug
+    compatibility_fix_catb_on_item_ok
+  end # on_item_ok
+
+  end # if $imported["YEA-TargetManager"]
+
+  # Fixes:
+  # (v1.03a+)YEA-InstantCast issues
+  if $imported["YEA-InstantCast"]
+
+  #----------------------------------------------------------------------------|
+  #  (v1.06c+)Alias method: command_guard                                      |
+  #----------------------------------------------------------------------------|
+  alias compatibility_fix_catb_command_guard command_guard
+  def command_guard
+    # Added to store if the skill/item's instant action
+    return unless actor = BattleManager.actor
+    actor.item_instant = actor.input.item.instant if BattleManager.btype?(:catb)
+    # Fix_YEA_InstantCast_Bug
+    compatibility_fix_catb_command_guard
+  end # command_guard
+
+  #----------------------------------------------------------------------------|
+  #  (v1.06b+)Alias method: on_actor_ok                                        |
+  #----------------------------------------------------------------------------|
+  alias compatibility_fix_catb_on_actor_ok on_actor_ok
+  def on_actor_ok
+    # Added to store if the skill/item's instant action
+    return unless actor = BattleManager.actor
+    actor.item_instant = actor.input.item.instant if BattleManager.btype?(:catb)
+    # Fix_YEA_InstantCast_Bug
+    compatibility_fix_catb_on_actor_ok
+  end # on_actor_ok
+
+  #----------------------------------------------------------------------------|
+  #  (v1.06b+)Alias method: on_enemy_ok                                        |
+  #----------------------------------------------------------------------------|
+  alias compatibility_fix_catb_on_enemy_ok on_enemy_ok
+  def on_enemy_ok
+    # Added to store if the skill/item's instant action
+    return unless actor = BattleManager.actor
+    actor.item_instant = actor.input.item.instant if BattleManager.btype?(:catb)
+    # Fix_YEA_InstantCast_Bug
+    compatibility_fix_catb_on_enemy_ok
+  end # on_enemy_ok
+
+  #----------------------------------------------------------------------------|
+  #  (v1.03a+)Rewrite method: next_command                                     |
+  #----------------------------------------------------------------------------|
+  def next_command
+    # Rewritten to call the original method next_command
+    scene_battle_next_command_instant
+    # Fix_YEA_InstantCast_Bug
+  end # next_command
+
+  #----------------------------------------------------------------------------|
+  #  (v1.03a+)Rewrite method: execute_action                                   |
+  #----------------------------------------------------------------------------|
+  def execute_action
+    # Rewritten to call the original method execute_action
+    scene_battle_execute_action_instant
+    # Fix_YEA_InstantCast_Bug
+  end # next_command
+
+  end # if $imported["YEA-InstantCast"]
+
+  # Fixes:
+  # (v1.02b+)RIFF_HOTKEYS issues
+  if $imported['RIFF_HOTKEYS']
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02c+)Alias method: start_party_command_selection                      |
+  #----------------------------------------------------------------------------|
+  alias fix_catb_start_party_command_selection start_party_command_selection
+  def start_party_command_selection
+    # Added to fix hotkey bar not hiding bug
+    @hotkeys_bar_window.hide unless scene_changing?
+    # Fix_RIFF_HOTKEYS_Bug
+    fix_catb_start_party_command_selection
+  end # start_party_command_selection
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02c+)Alias method: create_hotkeys_bar_window                          |
+  #----------------------------------------------------------------------------|
+  alias fix_catb_create_hotkeys_bar_window create_hotkeys_bar_window
+  def create_hotkeys_bar_window
+    fix_catb_create_hotkeys_bar_window
+    # Added to place the hotkey bar at the outermost layer
+    @hotkeys_bar_window.z = 500
+    # Fix_RIFF_HOTKEYS_Bug
+  end # create_hotkeys_bar_window
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: scene_battle_on_enemy_cancel_abe                          |
+  #----------------------------------------------------------------------------|
+  def scene_battle_on_enemy_cancel_abe
+    @enemy_window.hide
+    # Rewritten to fix hotkey item cancel bug
+    if !@hotkey_action && @actor_command_window.current_symbol == :skill
+      @skill_window.activate
+    elsif !@hotkey_action && @actor_command_window.current_symbol == :item
+      @item_window.activate
+    else
+      @actor_command_window.activate
+    end
+    @hotkey_action = false
+    # Fix_RIFF_HOTKEYS_Bug
+  end # scene_battle_on_enemy_cancel_abe
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02c+)Rewrite method: catb_on_actor_cancel                             |
+  #----------------------------------------------------------------------------|
+  def catb_on_actor_cancel
+    BattleManager.actor.input.clear
+    @status_aid_window.refresh
+    $game_temp.battle_aid = nil
+    # Rewritten to fix hotkey item cancel bug
+    @actor_window.hide
+    if @actor_command_window.current_symbol == :skill
+      if @hotkey_action
+        @actor_command_window.activate.show
+        @status_window.show
+        @help_window.hide
+      else
+        @skill_window.activate.show
+      end
+    elsif @actor_command_window.current_symbol == :item
+      if @hotkey_action
+        @actor_command_window.activate.show
+        @status_window.show
+        @help_window.hide
+      else
+        @item_window.activate.show
+      end
+    else
+      @actor_command_window.activate.show
+      @status_window.show
+      @help_window.hide
+    end
+    @hotkey_action = false
+    # Fix_RIFF_HOTKEYS_Bug
+  end # catb_on_actor_cancel
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: prior_f_actor                                             |
+  #----------------------------------------------------------------------------|
+  def prior_f_actor
+    return if !@f_actor_index || BattleManager.action_list(:actor).empty?
+    actor_list = {}
+    BattleManager.action_list(:actor).each_with_index { |actor, index| actor_list[index] = actor.index unless actor.auto_battle? || actor.confusion? || actor.ct_catb_value > 0.0 }
+    while true
+      @f_actor_index -= 1
+      @f_actor_index %= $game_party.members.size
+      f_actor_index = actor_list.index(@f_actor_index)
+      break if f_actor_index
+    end
+    f_actor = BattleManager.action_list(:actor)[f_actor_index]
+    return unless f_actor
+    BattleManager.set_actor(f_actor.index)
+    @status_window.select(BattleManager.actor.index)
+    @actor_command_window.setup(BattleManager.actor)
+    # Added to setup @hotkeys_bar_window
+    @hotkeys_bar_window.setup(BattleManager.actor)
+    # Fix_RIFF_HOTKEYS_Bug
+  end # prior_f_actor
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: next_f_actor                                              |
+  #----------------------------------------------------------------------------|
+  def next_f_actor
+    return if !@f_actor_index || BattleManager.action_list(:actor).empty?
+    actor_list = {}
+    BattleManager.action_list(:actor).each_with_index { |actor, index| actor_list[index] = actor.index unless actor.auto_battle? || actor.confusion? || actor.ct_catb_value > 0.0 }
+    while true
+      @f_actor_index += 1
+      @f_actor_index %= $game_party.members.size
+      f_actor_index = actor_list.index(@f_actor_index)
+      break if f_actor_index
+    end
+    f_actor = BattleManager.action_list(:actor)[f_actor_index]
+    return unless f_actor
+    BattleManager.set_actor(f_actor.index)
+    @status_window.select(BattleManager.actor.index)
+    @actor_command_window.setup(BattleManager.actor)
+    # Added to setup @hotkeys_bar_window
+    @hotkeys_bar_window.setup(BattleManager.actor)
+    # Fix_RIFF_HOTKEYS_Bug
+  end # next_f_actor
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: call_hotkeys                                              |
+  #----------------------------------------------------------------------------|
+  def call_hotkeys(hotkey_index)
+    # Rewritten to fix nil hotkeys bar and invalid item bug
+    if @party_command_window.close? && @hotkeys_bar_window.visible
+      @actor_command_window.deactivate
+      actor = BattleManager.actor
+      item = actor.hotkeys[hotkey_index]
+      return set_hotkey_action(item) if actor && item && @hotkeys_bar_window.item_valid?(item)
+      return @actor_command_window.activate
+    end
+    @party_command_window.activate unless BattleManager.btype?(:catb)
+    # Fix_RIFF_HOTKEYS_Bug
+  end # call_hotkeys
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: set_hotkey_action                                         |
+  #----------------------------------------------------------------------------|
+  def set_hotkey_action(item)
+    # Rewritten to be compatible with DoubleX RMVXA Unison Addon to YSA Battle System: Classical ATB, set @hotkey_action as true and fix all allies/enemies bug
+    @hotkey_action = true
+    if item.class == RPG::Skill
+      $game_temp.battle_aid = @skill = item
+      if $imported["DoubleX RMVXA Unison Addon to YSA-CATB"] && !@skill.catb_unison_actor_id.empty?
+        @skill.catb_unison_actor_id.each { |actor_id|
+          next if actor_id == BattleManager.actor.id
+          break unless BattleManager.action_list(:actor).any? { |a| a.id == actor_id && !a.auto_battle? && !a.confusion? }
+          $game_actors[actor_id].input.set_skill(@skill.id)
+          $game_actors[actor_id].last_skill.object = @skill
+          @status_window.draw_item($game_actors[actor_id].index)
+        }
+      end
+      BattleManager.actor.input.set_skill(@skill.id)
+      BattleManager.actor.last_skill.object = @skill
+      if @skill.for_opponent?
+        select_enemy_selection
+      elsif @skill.for_friend?
+        select_actor_selection
+      else
+        next_command
+        $game_temp.battle_aid = nil
+      end
+      @status_window.draw_item(BattleManager.actor.index)
+    elsif item.class == RPG::Item
+      $game_temp.battle_aid = @item = item
+      if $imported["DoubleX RMVXA Unison Addon to YSA-CATB"] && !@item.catb_unison_actor_id.empty?
+        @item.catb_unison_actor_id.each { |actor_id|
+          next if actor_id == BattleManager.actor.id
+          break unless BattleManager.action_list(:actor).any? { |a| a.id == actor_id && !a.auto_battle? && !a.confusion? }
+          $game_actors[actor_id].input.set_item(@item.id)
+          @status_window.draw_item($game_actors[actor_id].index)
+        }
+      end
+      BattleManager.actor.input.set_item(@item.id)
+      if @item.for_opponent?
+        select_enemy_selection
+      elsif @item.for_friend?
+        select_actor_selection
+      else
+        next_command
+        $game_temp.battle_aid = nil
+      end
+      @status_window.draw_item(BattleManager.actor.index)
+      $game_party.last_item.object = @item
+    end
+    # Fix_RIFF_HOTKEYS_Bug
+  end # set_hotkey_action
+
+  end # if $imported['RIFF_HOTKEYS']
+
+  # Fixes:
+  # (v1.06a+)YEA-LunaticStates issues
+  # (v1.04a+)YEA-SkillRestrictions issues
+  # (v1.02b+)RIFF_HOTKEYS issues
+  if $imported["YEA-LunaticStates"] || $imported["YEA-SkillRestrictions"] || $imported['RIFF_HOTKEYS']
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: process_catb                                              |
+  #----------------------------------------------------------------------------|
+  def process_catb
+    if @status_window.index >= 0 && (!$game_party.members[@status_window.index] || $game_party.members[@status_window.index].dead? || !BattleManager.action_list(:actor).include?($game_party.members[@status_window.index]))
+      $game_party.members[@status_window.index].clear_catb if $game_party.members[@status_window.index]
+      if @skill_window.visible || @item_window.visible || @actor_window.visible || @enemy_window.visible
+        @status_window.open.show
+        @status_aid_window.hide
+      end
+      @actor_window.hide.deactivate
+      @enemy_window.hide.deactivate
+      @actor_command_window.deactivate.close
+      @skill_window.hide.deactivate
+      @item_window.hide.deactivate
+      @status_window.unselect
+    end
+    @party_command_window.deactivate.close if BattleManager.action_list(:actor).size <= 0
+    return if !SceneManager.scene_is?(Scene_Battle) || scene_changing? || !BattleManager.btype?(:catb) || catb_pause?
+    all_battle_members.each { |a|
+      a.clear_actions if a.catb_value == 0
+      a.make_catb_update
+      a.make_catb_action
+      a.make_ct_catb_update
+    }
+    BattleManager.action_list(:actor).each { |a| a.clear_catb unless a.index }
+    if $game_system.catb_turn_type == :tick
+      @tick_clock ||= 0
+      @tick_clock += 1
+      if @tick_clock >= $game_system.catb_tick_count
+        @tick_clock = 0
+        BattleManager.turn_end
+        # Added to run lunatic states begin effects
+        all_battle_members.each { |member| member.run_lunatic_states(:begin) } if $imported["YEA-LunaticStates"]
+        # Fix_YEA_LunaticStates_Bug
+        # Added to update game party and troop restrictions
+        if $imported["YEA-SkillRestrictions"]
+          $game_party.update_restrictions
+          $game_troop.update_restrictions
+        end
+        # Fix_YEA_SkillRestrictions_Bug
+        all_battle_members.each { |battler|
+          battler.on_turn_end
+          battler.perform_collapse_effect if battler.enemy? && battler.can_collapse?
+        }
+        @status_window.refresh
+        $game_troop.increase_turn
+      end
+    end
+#    BattleManager.action_list(:actor).each { |battler|
+#      battler.make_actions if (battler.actor? && !battler.input)
+#    }
+    @status_window.refresh_catb
+    @f_actor_index = 0 if !@f_actor_index || @f_actor_index < 0 || @f_actor_index + 1 > BattleManager.action_list(:actor).size
+    f_actor = BattleManager.action_list(:actor)[@f_actor_index]
+    f_actor_count = 0
+    while f_actor_count < BattleManager.action_list(:actor).size && f_actor && (f_actor.input && f_actor.input.item && f_actor.input.confirm || f_actor.auto_battle? || f_actor.confusion? || !f_actor.max_catb_value? || f_actor.ct_catb_value > 0)
+      f_actor_count += 1
+      @f_actor_index + 1 < BattleManager.action_list(:actor).size ? @f_actor_index += 1 : @f_actor_index = 0
+      f_actor = BattleManager.action_list(:actor)[@f_actor_index]
+    end
+    if f_actor && f_actor.input && !f_actor.input.confirm && (!BattleManager.actor || @status_window.index != BattleManager.actor.index) && !@actor_command_window.active && !@party_command_window.active
+      BattleManager.set_actor(f_actor.index)
+      @status_window.select(BattleManager.actor.index)
+      @actor_command_window.show.setup(BattleManager.actor)
+      # Added to setup @hotkeys_bar_window
+      @hotkeys_bar_window.setup(BattleManager.actor) if $imported['RIFF_HOTKEYS']
+      # Fix_RIFF_HOTKEYS_Bug
+    end
+    BattleManager.action_list.each { |battler|
+      battler.make_actions if (battler.enemy? || battler.input.confirm) && battler.max_catb_value? && battler.ct_catb_value <= 0
+      perform_catb_action(battler) unless @subject
+    }
+  end # process_catb
+  end # if $imported["YEA-LunaticStates"] || $imported["YEA-SkillRestrictions"] || $imported['RIFF_HOTKEYS']
+
+  # Fixes:
+  # (v1.06a+)YEA-LunaticStates issues
+  # (v1.04a+)YEA-SkillRestrictions issues
+  if $imported["YEA-LunaticStates"] || $imported["YEA-SkillRestrictions"]
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: perform_catb_action                                       |
+  #----------------------------------------------------------------------------|
+  def perform_catb_action(subject, forced = false)
+    return if subject && (!subject.charge_skill_done? && !forced || subject.actor? && !forced && (!subject.input || !subject.input.item || !subject.input.confirm))
+    subject ? @subject = subject : return
+    BattleManager.catb_escape = :false
+    if @subject.current_action
+      @subject.current_action.prepare
+      execute_action if @subject.current_action.valid?
+      reset_value = $imported["YSA-LunaticCATBReset"] ? @subject.lunatic_catb_reset_formula : 0
+      process_event
+      while true
+        @subject.remove_current_action
+        break if forced || !@subject.current_action || !@subject.current_action.valid?
+        @subject.current_action.prepare
+        execute_action
+      end
+      if $game_system.catb_turn_type == :action
+        @tick_action ||= 0
+        @tick_action += 1 if !forced || YSA::CATB::FORCE_ACTION_COUNT
+        if @tick_action >= $game_system.catb_after_action
+          @tick_action = 0
+          BattleManager.turn_end if BattleManager.phase
+          # Added to run lunatic states begin effects
+          all_battle_members.each { |member| member.run_lunatic_states(:begin) } if $imported["YEA-LunaticStates"]
+          # Fix_YEA_LunaticStates_Bug
+          # Added to update game party and troop restrictions
+          if $imported["YEA-SkillRestrictions"]
+            $game_party.update_restrictions
+            $game_troop.update_restrictions
+          end
+          # Fix_YEA_SkillRestrictions_Bug
+          all_battle_members.each { |battler|
+            battler.on_turn_end
+            battler.perform_collapse_effect if BattleManager.phase && battler.enemy? && battler.can_collapse?
+          }
+          @status_window.refresh
+          $game_troop.increase_turn
+        end
+      end
+      @status_aid_window.refresh if @status_aid_window.visible
+      process_action_end
+    end
+    BattleManager.catb_escape = :true
+    return if BattleManager.judge_win_loss || !@subject
+    @subject.clear_catb(reset_value) if !forced || YSA::CATB::FORCE_ACTION_CLEAR_ATB
+    @status_window.draw_item(@subject.index) if @subject.actor?
+    @subject = nil
+  end # perform_catb_action
+  end # if $imported["YEA-LunaticStates"] || $imported["YEA-SkillRestrictions"]
+
+  # Fixes:
+  # (v1.06a+)YEA-LunaticStates issues
+  if $imported["YEA-LunaticStates"]
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: turn_start                                                |
+  #----------------------------------------------------------------------------|
+  def turn_start
+    # Rewritten to call the original turn_start method
+    scene_battle_turn_start_lsta
+    # Fix_YEA_LunaticStates_Bug
+  end # turn_start
+  end # if $imported["YEA-LunaticStates"]
+
+  # Fixes:
+  # (v1.01b+)TH_BattleReactions issues
+  if $imported["TH_BattleReactions"]
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: perform_reactions                                         |
+  #----------------------------------------------------------------------------|
+  def perform_reactions(target, item)
+    @log_window.display_reaction(target, item)
+    BattleManager.reaction_processing = true
+    last_subject = @subject
+    @subject = target
+    while @subject.current_action
+      # Rewritten to call the original method process_action
+      catb_process_action
+      # Fix_TH_BattleReactions_Bug
+    end
+    @subject = last_subject
+    BattleManager.clear_reaction_processing
+  end # perform_reactions
+  end # if $imported["TH_BattleReactions"]
+
+  # Fixes:
+  # YEA-CommandParty issues
+  if $imported["YEA-CommandParty"]
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: command_party                                             |
+  #----------------------------------------------------------------------------|
+  def command_party
+    Graphics.freeze
+    @info_viewport.visible = false
+    hide_extra_gauges if $imported["YEA-BattleEngine"]
+    SceneManager.snapshot_for_background
+    previous_party = $game_party.battle_members.clone
+    index = @party_command_window.index
+    oy = @party_command_window.oy
+    #---
+    SceneManager.call(Scene_Party)
+    SceneManager.scene.main
+    SceneManager.force_recall(self)
+    #---
+    show_extra_gauges if $imported["YEA-BattleEngine"]
+    if previous_party != $game_party.battle_members
+      # Rewritten to disable action making right after the change if the battle system is catb
+      $game_party.make_actions unless BattleManager.btype?(:catb)
+      # Fix_YEA_CommandParty_Bug
+      $game_party.set_party_cooldown
+    end
+    @info_viewport.visible = true
+    @status_window.refresh
+    @party_command_window.setup
+    @party_command_window.select(index)
+    @party_command_window.oy = oy
+    perform_transition
+  end # command_party
+  end # if $imported["YEA-CommandParty"]
+
+  # Fixes:
+  # YEA-CommandAutobattle issues
+  if $imported["YEA-CommandAutobattle"]
+
+  #----------------------------------------------------------------------------|
+  #  * Rewrite method: command_pautobattle                                     |
+  #----------------------------------------------------------------------------|
+  def command_pautobattle
+    $game_party.battle_members.each { |member|
+      next unless member.inputable?
+      member.make_auto_battle_actions
+      # Added to set confirm as true if item exists
+      member.input.confirm ||= member.input.item
+      # Fix_YEA_CommandAutobattle_Bug
+    }
+    $game_temp.continous_autobattle = YEA::AUTOBATTLE::ENABLE_CONTINOUS
+    @disable_autobattle_window.show if $game_temp.continous_autobattle
+    refresh_autobattler_status_window
+    turn_start
+  end # command_pautobattle
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: command_aautobattle                                         |
+  #----------------------------------------------------------------------------|
+  alias command_aautobattle_catb command_aautobattle
+  def command_aautobattle
+    command_aautobattle_catb
+    # Added to set confirm as true
+    BattleManager.actor.input.confirm = true
+    # Fix_YEA_CommandAutobattle_Bug
+  end # command_aautobattle
+
+  end # if $imported["YEA-CommandAutobattle"]
+
+  # Fixes:
+  # (v1.08a+)YSE-GuardianSummon issues
+  if $imported["YSE-GuardianSummon"]
+
+  #----------------------------------------------------------------------------|
+  #  (v1.08b+)Alias method: catb_pause?                                        |
+  #----------------------------------------------------------------------------|
+  alias fix_catb_pause? catb_pause?
+  def catb_pause?
+    # Rewritten to pause when the summon window's active in wait or quarter mode
+    @summon_window.active && ($game_system.catb_wait_type == :wait || $game_system.catb_wait_type == :quarter) || fix_catb_pause?
+    #
+  end # catb_pause?
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: on_summon_ok                                                |
+  #----------------------------------------------------------------------------|
+  alias on_summon_ok_catb on_summon_ok
+  def on_summon_ok
+    # Added to return upon invalid actor or confirm the input first
+    return unless actor = BattleManager.actor
+    actor.input.confirm = true
+    # Fix_YSE_GuardianSummon_Bug
+    on_summon_ok_catb
+  end # on_summon_ok
+
+  end # $imported["YSE-GuardianSummon"]
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#==============================================================================|

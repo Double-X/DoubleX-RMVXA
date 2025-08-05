@@ -1,0 +1,318 @@
+#==============================================================================|
+#  ** DoubleX RMVXA CATB Charge Addon v1.00d to YSA Battle System: Classical ATB|
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00d(GMT 1400 1-4-2016):                                                |
+#    - Fixed not paying the skill/item/action costs before charging for        |
+#      skills/items not targeting opponents only/allies only                   |
+#    v1.00c(GMT 1400 15-12-2015):                                              |
+#    - Fixed asking the wrong actor to pay the action cost before charging     |
+#    v1.00b(GMT 1200 26-2-2015):                                               |
+#    - Fixed the command guard charge prior cost not working bug               |
+#    v1.00a(GMT 1200 25-2-2015):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yami:                                                                     |
+#    - YSA Battle System: Classical ATB                                        |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of YSA Battle System: Classical ATB except that you must also|
+#    give Yami credit(you should do this anyway) if you give DoubleX or his    |
+#    alias credit                                                              |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB             |
+#    Knowledge:                                                                |
+#    - That of using the script YSA Battle System: Classical ATB               |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Lets users set some skills/items to pay their costs before charging     |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script                                              |
+#    DoubleX RMVXA Bug Fixes to YSA Battle System: Classical ATB and ¡¿ Main.   |
+#    Save to take effect.                                                      |
+#    Suggested Complete CATB Scripts Order(Excluding Dhoom Manipulate State):  |
+#    1.  Yanfly Engine Ace - Ace Core Engine                                   |
+#    2.  Yanfly Engine Ace - Ace Battle Engine                                 |
+#    3.  YSA Battle System: Classical ATB                                      |
+#    4.  YSA Battle Add-on: Lunatic CATB Rate                                  |
+#    5.  YSA Battle Add-on: Lunatic CATB Reset                                 |
+#    6.  YSA Battle Add-on: Lunatic CATB Start                                 |
+#    7.  DoubleX RMVXA Bug Fix to YSA Battle System: Classical ATB             |
+#    8.  DoubleX RMVXA Compatibility Fix to YSA Battle System: Classical ATB   |
+#    9. DoubleX RMVXA Action Addon to YSA Battle System: Classical ATB         |
+#    10. DoubleX RMVXA ATB Addon to YSA Battle System: Classical ATB           |
+#    11. DoubleX RMVXA Cancel Addon to YSA Battle System: Classical ATB        |
+#    12. DoubleX RMVXA Clear Addon to YSA Battle System: Classical ATB         |
+#    13. DoubleX RMVXA CATB Clear Addon Compatibility Fix                      |
+#    14. DoubleX RMVXA Cooldown Addon to YSA Battle System: Classical ATB      |
+#    15. DoubleX RMVXA Charge Addon to YSA Battle System: Classical ATB        |
+#    16. DoubleX RMVXA Countdown Addon to YSA Battle System: Classical ATB     |
+#    17. DoubleX RMVXA Countdown Addon Compatibility Fix                       |
+#    18. DoubleX RMVXA Escape Addon to YSA Battle System: Classical ATB        |
+#    19. DoubleX RMVXA Percentage Addon to YSA Battle System: Classical ATB    |
+#    20. DoubleX RMVXA Reset Addon to YSA Battle Add-on: Lunatic CATB Reset    |
+#    21. DoubleX RMVXA SE Addon to YSA Battle System: Classical ATB            |
+#    22. DoubleX RMVXA Tick Addon to YSA Battle System: Classical ATB          |
+#    23. DoubleX RMVXA Turn Addon to YSA Battle System: Classical ATB          |
+#    24. DoubleX RMVXA Unison Addon to YSA Battle System: Classical ATB        |
+#    25. DoubleX RMVXA Update Addon to YSA Battle System: Classical ATB        |
+#    26. DoubleX RMVXA Wait Addon to YSA Battle System: Classical ATB          |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of YSA Battle System: Classical ATB                        |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Charge Addon to YSA-CATB"] = true
+
+#------------------------------------------------------------------------------|
+#  * Skill/Item Notetags:(skill/item notebox in the database)                  |
+#    - <charge prior action cost: boolean>                                        |
+#      Sets the skill/item's action cost to be paid before and after finished  |
+#      charging if boolean is false and true respectively                      |
+#    - <charge prior item cost: boolean>                                       |
+#      Sets the skill/item's non-action cost to be paid before and after       |
+#      finished charging if boolean is false and true respectively             |
+#------------------------------------------------------------------------------|
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module YSA_CATB_Charge_Addon
+
+    # The skill/item's action cost will be paid after finished charging if
+    # CHARGE_PRIOR_ACTION_COST is true
+    # It'll only be used if <charge prior act cost> is absent
+    CHARGE_PRIOR_ACTION_COST = true
+
+    # The skill/item's non-action costs will be paid after finished charging if
+    # CHARGE_PRIOR_ITEM_COST is true
+    # It'll only be used if <charge prior item cost> is absent
+    CHARGE_PRIOR_ITEM_COST = true
+
+  end # YSA_CATB_Charge_Addon
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#------------------------------------------------------------------------------|
+#  * Edit module: DataManager                                                  |
+#------------------------------------------------------------------------------|
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: load_database                                               |
+  #----------------------------------------------------------------------------|
+  alias load_database_catb_charge_addon load_database
+  def load_database
+    load_database_catb_charge_addon
+    # Added to load charge addon notetags
+    load_notetags_catb_charge_addon
+    #
+  end # load_database
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_catb_charge_addon                               |
+  #----------------------------------------------------------------------------|
+  def load_notetags_catb_charge_addon
+    $data_skills.each { |obj| obj.load_notetags_catb_charge_addon if obj }
+    $data_items.each { |obj| obj.load_notetags_catb_charge_addon if obj }
+  end # load_notetags_catb_charge_addon
+
+end # DataManager
+
+#------------------------------------------------------------------------------|
+#  * Edit class: RPG::UsableItem                                               |
+#------------------------------------------------------------------------------|
+
+class RPG::UsableItem < RPG::BaseItem
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  attr_accessor :charge_prior_action_cost
+  attr_accessor :charge_prior_item_cost
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_catb_charge_addon                               |
+  #----------------------------------------------------------------------------|
+  def load_notetags_catb_charge_addon
+    @charge_prior_action_cost = DoubleX_RMVXA::YSA_CATB_Charge_Addon::CHARGE_PRIOR_ACTION_COST
+    @charge_prior_item_cost = DoubleX_RMVXA::YSA_CATB_Charge_Addon::CHARGE_PRIOR_ITEM_COST
+    @note.split(/[\r\n]+/).each { |line|
+      case line
+      when /<charge prior action cost:\s*(\w+)\s*>/i
+        @charge_prior_action_cost = eval($1)
+      when /<charge prior item cost:\s*(\w+)\s*>/i
+        @charge_prior_item_cost = eval($1)
+      end
+    }
+  end # load_notetags_catb_charge_addon
+
+end # RPG::UsableItem
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_Battler                                                  |
+#------------------------------------------------------------------------------|
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: use_item                                                    |
+  #----------------------------------------------------------------------------|
+  alias use_item_catb_charge_addon use_item
+  def use_item(item)
+    BattleManager.btype?(:catb) && !item.charge_prior_item_cost ? item.effects.each { |effect| item_global_effect_apply(effect) } : use_item_catb_charge_addon(item)   
+  end # use_item
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: clear_catb                                                  |
+  #----------------------------------------------------------------------------|
+  alias clear_catb_charge_addon clear_catb
+  def clear_catb(value = 0)
+    # Added to not pay the action cost if it's paid before charging
+    if @action_cost_paid
+      @item_action ? @item_action = 0 : (@catb_action_times += 1 if @ct_catb_value > 0)
+      @action_cost_paid = false
+    end
+    #
+    clear_catb_charge_addon(value)
+  end # clear_catb
+
+  #----------------------------------------------------------------------------|
+  #  New method: pay_prior_catb_charge                                         |
+  #----------------------------------------------------------------------------|
+  def pay_prior_catb_charge
+    return unless current_action && current_action.item
+    unless current_action.item.charge_prior_action_cost
+      @catb_action_times -= $imported["DoubleX RMVXA Action Addon to YSA-CATB"] ? current_action.item.action : $imported["YEA-InstantCast"] ? 0 : 1
+      @action_cost_paid = true
+    end
+    return if current_action.item.charge_prior_item_cost
+    pay_skill_cost(current_action.item) if current_action.item.is_a?(RPG::Skill)
+    consume_item(current_action.item) if current_action.item.is_a?(RPG::Item)
+  end # pay_prior_catb_charge
+
+end # Game_Battler
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_Enemy                                                    |
+#------------------------------------------------------------------------------|
+
+class Game_Enemy < Game_Battler
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_actions                                                |
+  #----------------------------------------------------------------------------|
+  alias make_actions_catb_charge_addon make_actions
+  def make_actions
+    make_actions_catb_charge_addon
+    # Added to pay the action and item costs now if charge prior costs are true
+    pay_prior_catb_charge if BattleManager.btype?(:catb)
+    #
+  end # make_actions
+
+end # Game_Enemy
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Scene_Battle                                                  |
+#------------------------------------------------------------------------------|
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  (v1.00b+)Alias method: command_guard                                      |
+  #----------------------------------------------------------------------------|
+  alias command_guard_catb_charge_addon command_guard
+  def command_guard
+    return unless actor = BattleManager.actor
+    command_guard_catb_charge_addon
+    # Added to pay the action and item costs now if charge prior costs are true
+    return unless BattleManager.btype?(:catb)
+    actor.pay_prior_catb_charge
+    @status_window.draw_item(actor.index)
+    #
+  end # command_guard
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: on_actor_ok                                                 |
+  #----------------------------------------------------------------------------|
+  alias on_actor_ok_catb_charge_addon on_actor_ok
+  def on_actor_ok
+    return unless actor = BattleManager.actor
+    on_actor_ok_catb_charge_addon
+    # Added to pay the action and item costs now if charge prior costs are true
+    return unless BattleManager.btype?(:catb)
+    actor.pay_prior_catb_charge
+    @status_window.draw_item(actor.index)
+    #
+  end # on_actor_ok
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: on_enemy_ok                                                 |
+  #----------------------------------------------------------------------------|
+  alias on_enemy_ok_catb_charge_addon on_enemy_ok
+  def on_enemy_ok
+    return unless actor = BattleManager.actor
+    on_enemy_ok_catb_charge_addon
+    # Added to pay the action and item costs now if charge prior costs are true
+    return unless BattleManager.btype?(:catb)
+    actor.pay_prior_catb_charge
+    @status_window.draw_item(actor.index)
+    #
+  end # on_enemy_ok
+
+  if $imported["YEA-TargetManager"]
+
+  #----------------------------------------------------------------------------|
+  #  (v1.00d+)Alias method: on_skill_ok                                        |
+  #----------------------------------------------------------------------------|
+  alias on_skill_ok_charge_addon on_skill_ok
+  def on_skill_ok
+    # Added to cache cooldown if skill doesn't show the target selection window
+    if BattleManager.btype?(:catb) && !(skill = @skill_window.item).for_opponent? && !skill.for_friend?
+      BattleManager.actor.pay_prior_catb_charge
+      @status_window.draw_item(BattleManager.actor.index)
+    end
+    #
+    on_skill_ok_charge_addon
+  end # on_skill_ok
+
+  #----------------------------------------------------------------------------|
+  #  (v1.00d+)Alias method: on_item_ok                                         |
+  #----------------------------------------------------------------------------|
+  alias on_item_ok_charge_addon on_item_ok
+  def on_item_ok
+    # Added to cache cooldown if item doesn't show the target selection window
+    if BattleManager.btype?(:catb) && !(item = @skill_window.item).for_opponent? && !item.for_friend?
+      BattleManager.actor.pay_prior_catb_charge
+      @status_window.draw_item(BattleManager.actor.index)
+    end
+    #
+    on_item_ok_charge_addon
+  end # on_item_ok
+
+  end # if $imported["YEA-TargetManager"]
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+end # $imported["YEA-BattleEngine"] && $imported["YSA-CATB"] && $imported["DoubleX RMVXA Bug Fixes to YSA-CATB"]
+
+#==============================================================================|
