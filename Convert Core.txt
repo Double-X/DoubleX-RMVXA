@@ -1,0 +1,29 @@
+#==============================================================================|
+#  ** Converts Battle Luna and Menu Luna to their Multiple Styles versions     |
+#     Only Luna Engine Developers are meant to edit and/or enable this snippet |
+#     It should only be enabled right when it's going to convert the core files|
+#------------------------------------------------------------------------------|
+
+def_regex = /def[\s\t]+(?:lunatic|setting|type)/
+["BattleLuna", "MenuLuna"].each { |core|
+  eng = ""
+  val_regex = /(?:#{core}::[A-Z]\w+::[A-Z]\w+|lunatic|option|setting|setting_type|type)[^.,()\n\s\t]+:[^.,()\n\s\t]+/
+  File.open("#{core}.txt", "r") { |file|
+    skip_l = false
+    file.each_line { |l|
+      if l[def_regex]
+        skip_l = true
+      elsif skip_l && l[/def[\s\t]+[^\n]+/]
+        skip_l = false
+      end
+      unless skip_l
+        val = l[val_regex]
+        l.sub!(val_regex) {"eval(#{val})"} if val
+      end
+      eng += l
+    }
+  }
+  File.open("#{core}.txt", "w") { |file| file.write(eng) }
+}
+
+#==============================================================================|

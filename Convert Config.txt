@@ -1,0 +1,38 @@
+#==============================================================================|
+#  ** Snippet Configurations                                                   |
+#     You only need to edit this part as it's about what this snippet does     |
+#------------------------------------------------------------------------------|
+
+module LunaConverter
+
+  # Sets the configuration file to be converted into its multiple style version
+  # Its name, path and file extension should be specified as well
+  # It must be encoded into the UTF-8 format
+  # The specified configuration file will be converted once upon each game start
+  # No configuration file's meant to be converted more than once
+  # E.g.: To convert the configuration file named Configuration Main Menu having
+  #       txt as its file extension and placed in the project's root directory,
+  #       set this as "Configuration Main Menu.txt"
+  CONFIG_PATH = "Configuration Main Menu.txt"
+
+end # LunaConverter
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** Snippet Implementations                                                  |
+#     You need not edit this part as it's about how this snippet works         |
+#------------------------------------------------------------------------------|
+
+config = ""
+regex = /=>.+,/i
+File.open(LunaConverter::CONFIG_PATH, "r") { |file|
+  file.each_line { |line|
+    val = line[regex]
+    line.gsub!(regex) {"=> %Q(#{val[0..-2].gsub!(/=>\s*/i) {""}}),"} if val
+    config += line
+  }
+}
+File.open(LunaConverter::CONFIG_PATH, "w") { |file| file.write(config) }
+
+#==============================================================================|

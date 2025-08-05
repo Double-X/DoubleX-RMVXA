@@ -1,0 +1,29 @@
+#==============================================================================|
+#  ** Luna Engine Multiple Styles Introdcution                                 |
+#------------------------------------------------------------------------------|
+#  * Function                                                                  |
+#    1. Lets users change the luna configurations on the fly                   |
+#    2. Lets players change the luna engine style on the fly                   |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Abilities:                                                                |
+#    1. Little RGSS3 scripting proficiency to fully utilize this script        |
+#------------------------------------------------------------------------------|
+#  * Instructions                                                              |
+#    1. The original Battle Luna and Menu Luna can't be used with their        |
+#       Multiple Styles versions so the original ones should be disabled       |
+#    2. Change all configuration values from val to %Q(val)                    |
+#       Alternatively, use Convert Config to convert the default configurations|
+#       into the multiple style version preserving all values by copying them  |
+#       to separate files placed in the project's directory                    |
+#       Convert Config should only be enabled right when it's going to be used |
+#    3. Every value of every configuration's a RGSS3 code string               |
+#       (Advanced)Every configuration value's evaluated under its classes      |
+#       having its RGSS3 code string                                           |
+#       E.g.: To set a configuration to return d as its value if switch with id|
+#       a is on and the value of variable with id b is greater than or equal to|
+#       c, and return e as its value otherwise, set its value's code string as |
+#       %Q($game_switches[a] && $game_variables[b] >= c ? d : e)               |
+#    4. Use Yanfly Engine Ace - System Options to let players easily change the|
+#       states of switches and values of variables on the fly                  |
+#==============================================================================|
