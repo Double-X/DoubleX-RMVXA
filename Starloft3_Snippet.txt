@@ -1,0 +1,48 @@
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this snippet does     |
+#------------------------------------------------------------------------------|
+
+module Starloft3_Snippet
+
+  # Adds the ids of the states in DISSIPATE_STATE to dissipate them when the
+  # battlers having them can act again
+  # Example: DISSIPATE_STATE = [8, 9]
+  # States with id 8 and 9 respectively will be dissipated when the battlers
+  # having them can act again
+  DISSIPATE_STATE = []
+
+end # Starloft3_Snippet
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this snippet works         |
+#------------------------------------------------------------------------------|
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_catb_action                                            |
+  #----------------------------------------------------------------------------|
+  alias make_catb_action_starloft3_snippet make_catb_action
+  def make_catb_action
+    # This part is added by this snippet to check if battler's atb bar was full
+    @prior_catb_full = BattleManager.action_list(:actor).find { |actor| actor == self }
+    #
+    make_catb_action_starloft3_snippet
+    # This part is added by this snippet to check if battler's atb bar becomes full
+    @next_catb_full = BattleManager.action_list(:actor).find { |actor| actor == self }
+    dissipate_state_starloft3_snippet if @prior_catb_full != @next_catb_full
+    #
+  end # make_catb_action
+
+  #----------------------------------------------------------------------------|
+  #  New method: dissipate_state_starloft3_snippet                             |
+  #----------------------------------------------------------------------------|
+  def dissipate_state_starloft3_snippet
+    Starloft3_Snippet::DISSIPATE_STATE.each{ |id| remove_state(id) }
+  end # dissipate_state_starloft3_snippet
+
+end # class Game_Battler
+
+#==============================================================================|

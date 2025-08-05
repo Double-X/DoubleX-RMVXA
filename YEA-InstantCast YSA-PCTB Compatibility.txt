@@ -1,0 +1,83 @@
+if $imported["YSA-PCTB"] && $imported["YEA-InstantCast"]
+
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#  * Edit module: BattleManager                                                |
+#------------------------------------------------------------------------------|
+
+class << BattleManager
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: sort_battlers                                             |
+  #----------------------------------------------------------------------------|
+  def sort_battlers(cache = false)
+    return if !btype?(:pctb)
+    battlers = []
+    for battler in ($game_party.members + $game_troop.members)
+      # Rewritten to exclude the actor with an instant action
+      next if battler.dead? || battler == $game_temp.instant_actor
+      #
+      battlers.push(battler)
+    end
+    battlers.sort! { |a,b|
+      if a.pctb_ctr(cache) != b.pctb_ctr(cache)
+        a.pctb_ctr(cache) <=> b.pctb_ctr(cache)
+      elsif a.pctb_prediction != b.pctb_prediction
+        b.pctb_prediction <=> a.pctb_prediction
+      elsif a.agi != b.agi
+        b.agi <=> a.agi
+      elsif a.screen_x != b.screen_x
+        a.screen_x <=> b.screen_x
+      else
+        a.name <=> b.name
+      end
+    }
+    # Added to add the actor with an instant action as the 1st battler
+    if $game_temp.instant_actor
+      battlers = [$game_temp.instant_actor] + battlers
+      $game_temp.instant_actor = nil
+    end
+    #
+    return battlers
+  end # sort_battlers
+
+end # BattleManager
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_Temp                                                     |
+#------------------------------------------------------------------------------|
+
+class Game_Temp
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  # Stores the actor with an instant action
+  attr_accessor :instant_actor
+  #
+
+end # Game_Temp
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Scene_Battle                                                  |
+#------------------------------------------------------------------------------|
+
+class Scene_Battle
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: perform_instant_action                                      |
+  #----------------------------------------------------------------------------|
+  alias perform_instant_action_pctb perform_instant_action
+  def perform_instant_action
+    # Added to store the actor with an instant action
+    $game_temp.instant_actor = BattleManager.actor
+    #
+    perform_instant_action_pctb
+  end # perform_instant_action
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["YSA-PCTB"] && $imported["YEA-InstantCast"]

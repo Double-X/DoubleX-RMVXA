@@ -1,0 +1,27 @@
+#==============================================================================|
+#  ** You need not edit this part as it's about how this snippet works         |
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Window_Base                                                   |
+#------------------------------------------------------------------------------|
+
+class Window_Base < Window
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: draw_gauge                                                |
+  #----------------------------------------------------------------------------|
+  def draw_gauge(x, y, width, rate, color1, color2)
+    # Rewritten to fill the gauge from right to left
+    fill_w = (width * (1 - rate)).to_i
+    #
+    gauge_y = y + line_height - 8
+    contents.fill_rect(x, gauge_y, width, 6, gauge_back_color)
+    # Rewritten to fill the gauge from right to left
+    contents.gradient_fill_rect(x + fill_w, gauge_y, width - fill_w, 6, color1, color2)
+    #
+  end # draw_gauge
+
+end # Window_Base
+
+#==============================================================================|

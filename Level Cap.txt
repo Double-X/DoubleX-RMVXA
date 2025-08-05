@@ -1,0 +1,37 @@
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this snippet does     |
+#------------------------------------------------------------------------------|
+
+module Level_Cap
+
+  # The level cap of all actors when game switch with id CAP_SWITCH_ID is true
+  LEVEL_CAP = 50
+
+  # Id of game switch used to apply LEVEL_CAP to all actors
+  # Setting CAP_SWITCH_ID as 0 disables the entire feature
+  CAP_SWITCH_ID = 0
+
+end # Level_Cap
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this snippet works         |
+#------------------------------------------------------------------------------|
+
+class Game_Actor < Game_Battler
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: max_level                                                   |
+  #----------------------------------------------------------------------------|
+  alias max_level_cap max_level
+  def max_level
+    # This part is rewritten by this snippet to use LEVEL_CAP if switch with id CAP_SWITCH_ID is true
+    cap_switch_id = Level_Cap::CAP_SWITCH_ID
+    cap_switch_id > 0 && $game_switches[cap_switch_id] ? Level_Cap::LEVEL_CAP : max_level_cap
+    #
+  end # max_level
+
+end # Game_Actor
+
+#==============================================================================|

@@ -1,0 +1,43 @@
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this snippet does     |
+#------------------------------------------------------------------------------|
+
+module Game_Over_Delete_Save
+
+  # Sets which save files will be deleted upon game over
+  # :all - all save files will be deleted
+  # :last - the last save file will be deleted
+  SAVE = :all
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this snippet works         |
+#------------------------------------------------------------------------------|
+
+  DELETE = %Q(
+  def start
+    start_delete_save#{SAVE == :all ? "
+    DataManager.savefile_max.times { |index|
+      DataManager.delete_save_file(index)
+    }" : SAVE == :last ? "
+    DataManager.delete_save_file(DataManager.last_savefile_index)" : ""}
+  end
+  )
+end # Game_Over_Delete_Save
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Scene_Gameover                                                |
+#------------------------------------------------------------------------------|
+
+class Scene_Gameover < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: start                                                       |
+  #----------------------------------------------------------------------------|
+  alias start_delete_save start
+  module_eval(Game_Over_Delete_Save::DELETE)
+
+end # Scene_Gameover
+
+#==============================================================================|

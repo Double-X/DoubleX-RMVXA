@@ -1,0 +1,20 @@
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_BattlerBase                                              |
+#------------------------------------------------------------------------------|
+
+class Game_BattlerBase
+  
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: skill_cost_payable?                                       |
+  #----------------------------------------------------------------------------|
+  def skill_cost_payable?(skill)
+    # Rewritten to fix hp cost bug when the battler resists death state
+    return false if hp < skill_hp_cost(skill)
+    return false if hp == skill_hp_cost(skill) && !state_resist?(death_state_id)
+    #
+    return false unless gold_cost_met?(skill)
+    return false unless custom_cost_met?(skill)
+    return game_battlerbase_skill_cost_payable_scm(skill)
+  end # skill_cost_payable?
+
+end # Game_BattlerBase

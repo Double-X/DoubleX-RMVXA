@@ -1,0 +1,209 @@
+#------------------------------------------------------------------------------|
+#  * Edit class: Window_BattleLog                                              |
+#------------------------------------------------------------------------------|
+
+class Window_BattleLog < Window_Selectable
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this snippet does     |
+#------------------------------------------------------------------------------|
+
+  #----------------------------------------------------------------------------|
+  #  New constant                                                              |
+  #----------------------------------------------------------------------------|
+  # Sets the maximum number of lines displayed by the battle log simultaneously
+  MAX_LINE_NUMBER = 6
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this snippet works         |
+#------------------------------------------------------------------------------|
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  attr_writer :executing_action
+  attr_writer :last_line_number
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: max_line_number                                           |
+  #----------------------------------------------------------------------------|
+  def max_line_number
+    # Rewritten to use the constant set by the users
+    MAX_LINE_NUMBER
+    #
+  end # max_line_number
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: display_counter                                           |
+  #----------------------------------------------------------------------------|
+  def display_counter(target, item)
+    # Rewritten to show all logs until the max line number's reached
+    @last_line_number ||= line_number
+    Sound.play_evasion
+    add_text(sprintf(Vocab::CounterAttack, target.name))
+    process_max_line_number_breach(item) if line_number >= max_line_number
+    #
+  end # display_counter
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: display_reflection                                        |
+  #----------------------------------------------------------------------------|
+  def display_reflection(target, item)
+    # Rewritten to show all logs until the max line number's reached
+    @last_line_number ||= line_number
+    Sound.play_reflection
+    add_text(sprintf(Vocab::MagicReflection, target.name))
+    process_max_line_number_breach(item) if line_number >= max_line_number
+    #
+  end # display_reflection
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: display_substitute                                        |
+  #----------------------------------------------------------------------------|
+  def display_substitute(substitute, target)
+    # Rewritten to show all logs until the max line number's reached
+    @last_line_number ||= line_number
+    add_text(sprintf(Vocab::Substitute, substitute.name, target.name))
+    process_max_line_number_breach(item) if line_number >= max_line_number
+    #
+  end # display_substitute
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: display_action_results                                    |
+  #----------------------------------------------------------------------------|
+  def display_action_results(target, item)
+    # Rewritten to show all logs until the max line number's reached
+    @last_line_number ||= line_number
+    @wait = !item.for_all? && target.alive?
+    if target.result.used
+      [:display_critical, :display_damage, :display_affected_status,
+       :display_failure].each{ |method|
+        send(method, target,item)
+        process_max_line_number_breach(item) if line_number >= max_line_number
+      }
+    end
+    @wait = true
+    #
+  end # display_action_results
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: display_added_states                                      |
+  #----------------------------------------------------------------------------|
+  def display_added_states(target)
+    target.result.added_state_objects.each do |state|
+      state_msg = target.actor? ? state.message1 : state.message2
+      # Rewritten to stop collapsing targets while executing an action
+      unless @executing_action || state.id != target.death_state_id
+        target.perform_collapse_effect
+      end
+      #
+      next if state_msg.empty?
+      replace_text(target.name + state_msg)
+      wait
+      wait_for_effect
+    end
+  end # display_added_states
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: wait                                                        |
+  #----------------------------------------------------------------------------|
+  alias wait_log_window_display wait
+  def wait
+    # Rewritten to wait only when asked by this snippet
+    wait_log_window_display if @wait
+    #
+  end # wait
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: wait_for_effect                                             |
+  #----------------------------------------------------------------------------|
+  alias wait_for_effect_log_window_display wait
+  def wait_for_effect
+    # Rewritten to wait for effect only when asked by this snippet
+    wait_for_effect_log_window_display if @wait
+    #
+  end # wait_for_effect
+
+  #----------------------------------------------------------------------------|
+  #  New method: process_max_line_number_breach                                |
+  #  - Clears the displayed lines when the maximum line number's reached       |
+  #----------------------------------------------------------------------------|
+  def process_max_line_number_breach(item)
+    # Has a short wait before clearing the currently displayed lines
+    @wait = true
+    wait
+    wait if item.for_all?
+    @wait = !item.for_all?
+    back_to(@last_line_number)
+    @last_line_number = line_number
+    #
+  end # process_max_line_number_breach
+
+end # Window_BattleLog
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Scene_Battle                                                  |
+#------------------------------------------------------------------------------|
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: apply_item_effects                                        |
+  #----------------------------------------------------------------------------|
+  def apply_item_effects(target, item)
+    target.item_apply(@subject, item)
+    # Rewritten to refresh the status window only if the target's an actor
+    @status_window.refresh if target.actor? && target.index >= 0
+    #
+    @log_window.display_action_results(target, item)
+    # Added to have short waits between applications for single target items
+    @log_window.wait if item.for_one? && target.alive?
+    #
+  end # apply_item_effects
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: invoke_counter_attack                                     |
+  #----------------------------------------------------------------------------|
+  def invoke_counter_attack(target, item)
+    @log_window.display_counter(target, item)
+    attack_skill = $data_skills[target.attack_skill_id]
+    @subject.item_apply(target, attack_skill)
+    # Rewritten to refresh the status window only if the target's an actor
+    @status_window.refresh if @subject.actor? && @subject.index >= 0
+    #
+    @log_window.display_action_results(@subject, attack_skill)
+    # Added to have short waits between applications for single target items
+    @log_window.wait if item.for_one? && @subject.alive?
+    #
+  end # invoke_counter_attack
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: use_item                                                    |
+  #----------------------------------------------------------------------------|
+  alias use_item_log_window_display use_item
+  def use_item
+    # Added to store all alive battlers
+    alive_battle_members = $game_party.alive_members + $game_troop.alive_members
+    #
+    # Added to tell the log window that an action begins to execute
+    @log_window.executing_action = true
+    @log_window.last_line_number = nil
+    #
+    use_item_log_window_display
+    # Added to tell the log window that an action finishes its execution
+    @log_window.executing_action = false
+    @log_window.last_line_number = nil
+    #
+    # Added to collapse all previously alive battlers that are now dead
+    return unless alive_battle_members.any? { |member| member.dead? }
+    @log_window.wait_log_window_display
+    alive_battle_members.each { |m| m.perform_collapse_effect if m.dead? }
+    3.times { @log_window.wait_log_window_display }
+    #
+  end # use_item
+
+end # Scene_Battle
+
+#==============================================================================|

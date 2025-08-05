@@ -1,0 +1,10 @@
+class Scene_Battle < Scene_Base
+
+  alias use_item_auto_life_follow_up_skill use_item
+  def use_item
+    # This part is rewritten by this snippet to stop using item when at least 1 side is all dead
+    use_item_auto_life_follow_up_skill if !$game_party.all_dead? && !$game_troop.all_dead?
+    #
+  end # use_item
+
+end # Scene_Battle

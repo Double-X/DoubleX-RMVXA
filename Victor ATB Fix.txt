@@ -1,0 +1,93 @@
+class << BattleManager
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: setup_atb_turn_speed                                      |
+  #----------------------------------------------------------------------------|
+  def setup_atb_turn_speed
+    case VE_ATB_TURN_COUNT
+      # This part is rewritten by this snippet to fix :battlers issue
+      when :battlers then all_alive_members.size
+      #
+      when :actions  then VE_ATB_ACTION_COUNT
+      when :time     then VE_ATB_TIME_COUNT
+    end
+  end # setup_atb_turn_speed
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: setup_selection                                             |
+  #----------------------------------------------------------------------------|
+  alias setup_selection_common_event setup_selection
+  def setup_selection(battler)
+    # This part is rewritten by this snippet to stop atb sound play and actor command selection when they shouldn't
+    if SceneManager.scene.executing_action? || $game_temp.common_event_reserved?
+      @actor_index = battler.index
+      battler.make_actions
+    else
+      setup_selection_common_event(battler)
+    end
+    #
+  end # setup_selection
+
+  #----------------------------------------------------------------------------|
+  #  New method: all_alive_members                                             |
+  #----------------------------------------------------------------------------|
+  def all_alive_members
+    $game_party.alive_members + $game_troop.alive_members
+  end # all_alive_members
+
+  #----------------------------------------------------------------------------|
+  #  New method: action_battlers?                                              |
+  #----------------------------------------------------------------------------|
+  def action_battlers?(battler)
+    @action_battlers.include?(battler)
+  end # action_battlers?
+  
+end # BattleManager
+
+class Game_Actor < Game_Battler
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: prior_command                                               |
+  #----------------------------------------------------------------------------|
+  alias prior_command_battle_symphony prior_command
+  def prior_command
+    # This part is added by this snippet to fix nil @action_input_index issue
+    @action_input_index ||= 0
+    #
+    prior_command_battle_symphony 
+  end # prior_command
+
+end # Game_Actor
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: use_item                                                    |
+  #----------------------------------------------------------------------------|
+  alias use_item_auto_life_follow_up_skill use_item
+  def use_item
+    # This part is rewritten by this snippet to stop using item if at least 1 side is all dead
+    use_item_auto_life_follow_up_skill if !$game_party.all_dead? && !$game_troop.all_dead?
+    #
+  end # use_item
+
+  #----------------------------------------------------------------------------|
+  #  New method: executing_action?                                             |
+  #----------------------------------------------------------------------------|
+  def executing_action?
+    return false if $game_party.all_dead? || $game_troop.all_dead?
+    battler = nil
+    $game_party.alive_members.each { |member|
+      if BattleManager.action_battlers?(member)
+        battler = member
+        break
+      end
+    }
+    return false if !battler
+    action = battler.current_action
+    return false if !action
+    item = action.item
+    return !item.nil?
+  end # executing_action?
+
+end # Scene_Battle

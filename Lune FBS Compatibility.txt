@@ -1,0 +1,31 @@
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: show_normal_animation                                     |
+  #----------------------------------------------------------------------------|
+  def show_normal_animation(targets, animation_id, mirror = false)
+    animation = $data_animations[animation_id]
+    if animation
+      onecast = true
+      targets.each do |target|
+        @target = target unless from_distance?
+        if !Lune_Frontal_Battle::Nocast.include?(@subject.current_action.item.id) and onecast
+          abs_wait(Lune_Frontal_Battle::Casttime)
+          @subject.animation_id = Lune_Frontal_Battle::Castid 
+          # This part is added by this snippet to make all unison actors have cast animations
+          @subject.current_action.item.unison_actor_id.each { |actor_id| $game_actors[actor_id].animation_id = Lune_Frontal_Battle::Castid if $game_actors[actor_id] != @subject } if $imported["DoubleX RMVXA Unison Item"] && @subject.current_action.item.unison_item
+          #
+          onecast = false
+          abs_wait(30)
+        end
+        @bitmap[target.index].opacity = 0 if target.actor?
+        target.animation_id = animation_id
+        target.animation_mirror = mirror
+        abs_wait_short unless animation.to_screen?
+      end
+      abs_wait_short if animation.to_screen?
+    end
+    @target = nil
+  end
+
+end # Scene_Battle

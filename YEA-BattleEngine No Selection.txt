@@ -1,0 +1,49 @@
+#------------------------------------------------------------------------------|
+#  * Edit class: Scene_Battle                                                  |
+#------------------------------------------------------------------------------|
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: on_skill_ok                                               |
+  #----------------------------------------------------------------------------|
+  def on_skill_ok
+    @skill = @skill_window.item
+    $game_temp.battle_aid = @skill
+    BattleManager.actor.input.set_skill(@skill.id)
+    BattleManager.actor.last_skill.object = @skill
+    # Rewritten to stop showing target selection windows when they're not needed
+    if @skill.for_opponent?
+      @skill.need_selection? ? select_enemy_selection : on_enemy_ok
+    elsif @skill.for_friend?
+      @skill.need_selection? ? select_actor_selection : on_actor_ok
+    else
+      @skill_window.hide
+      next_command
+      $game_temp.battle_aid = nil
+    end
+    #
+  end # on_skill_ok
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: on_item_ok                                                |
+  #----------------------------------------------------------------------------|
+  def on_item_ok
+    @item = @item_window.item
+    $game_temp.battle_aid = @item
+    BattleManager.actor.input.set_item(@item.id)
+    # Rewritten to stop showing target selection windows when they're not needed
+    if @item.for_opponent?
+      @item.need_selection? ? select_enemy_selection : on_enemy_ok
+    elsif @item.for_friend?
+      @item.need_selection? ? select_actor_selection : on_actor_ok
+    else
+      @item_window.hide
+      next_command
+      $game_temp.battle_aid = nil
+    end
+    #
+    $game_party.last_item.object = @item
+  end # on_item_ok
+
+end # Scene_Battle

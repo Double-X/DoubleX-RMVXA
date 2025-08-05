@@ -1,0 +1,18 @@
+if $imported["DoubleX RMVXA Unison Item"]
+class Game_Actors
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: []                                                        |
+  #----------------------------------------------------------------------------|
+  def [](actor_id)
+    return nil unless $data_actors[actor_id]
+    # This part is added by this snippet to return game pets instead of game actors
+    if !@data[actor_id] && SceneManager.scene_is?(Scene_Battle) && $game_party && $game_party.pets
+      $game_party.pets.each { |pet| return pet if pet.id == actor_id }
+    end
+    #
+    @data[actor_id] ||= Game_Actor.new(actor_id)
+  end # []
+
+end # Game_Actors
+end # $imported["DoubleX RMVXA Unison Item"]

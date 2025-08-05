@@ -1,0 +1,77 @@
+class Window_ItemDescription < Window_Base
+  def clear
+  self.contents.clear
+  end # clear
+  def set_item(item)
+  refresh(item)
+  end # set_item
+end # Window_ItemDescription
+
+class Scene_PawnShop < Scene_MenuBase
+
+  def start
+    super
+    create_description_window
+    create_gold_window
+    create_rate_window
+    create_command_window
+    create_dummy_window
+    create_number_window
+    create_status_window
+    create_sell_window
+  end
+
+  def create_description_window
+	  @description = Window_ItemDescription.new
+	  @description.viewport = @viewport
+	  @description.y = 288
+  end
+
+  def create_gold_window
+    @gold_window = Window_Gold.new
+    @gold_window.viewport = @viewport
+    @gold_window.x = Graphics.width - @gold_window.width
+  end
+ 
+  def create_rate_window
+    @rate_window = Window_Rate.new
+    @rate_window.viewport = @viewport
+    @rate_window.x = Graphics.width - @gold_window.width - @rate_window.width
+  end
+ 
+  def create_command_window
+    @command_window = Window_PawnCommand.new(@gold_window.x, @purchase_only)
+    @command_window.viewport = @viewport
+    @command_window.width = Graphics.width - @gold_window.width - @rate_window.width
+    @command_window.set_handler(:sell,   method(:command_sell))
+    @command_window.set_handler(:cancel, method(:return_scene))
+  end
+ 
+  def create_dummy_window
+    wy = @command_window.height
+    wh = 288 - wy
+    @dummy_window = Window_Base.new(0, wy, Graphics.width, wh)
+    @dummy_window.viewport = @viewport
+  end
+
+  def create_sell_window
+    wy = @dummy_window.y
+    wh = 288 - wy
+    @sell_window = Window_PawnShopSell.new(0, wy, Graphics.width, wh, @goods)
+    @sell_window.viewport = @viewport
+    @sell_window.help_window = @description
+    @sell_window.hide
+    @sell_window.set_handler(:ok,     method(:on_sell_ok))
+    @sell_window.set_handler(:cancel, method(:on_sell_cancel))
+  end
+
+  def on_sell_cancel
+    @command_window.activate
+    @dummy_window.show
+    @sell_window.hide
+    @sell_window.unselect
+    @status_window.item = nil
+    @description.clear
+  end
+ 
+end # Scene_PawnShop < Scene_MenuBase

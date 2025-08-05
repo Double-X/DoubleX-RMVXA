@@ -1,0 +1,68 @@
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this snippet does     |
+#------------------------------------------------------------------------------|
+
+module Update_Actor_Skill
+
+  ACTOR_LEARN_SKILL = { # Learn skills if actors' levels' >= skills' required level
+    actor_id => { # actor with id actor_id
+      level => [skill_id, skill_id], # skills with id skill_id learnt by this actor at level level
+      level => [skill_id, skill_id], # skills with id skill_id learnt by this actor at level level
+    } # actor_id
+
+     actor_id => { # actor with id actor_id
+       level => [skill_id, skill_id], # skills with id skill_id learnt by this actor at level level
+       level => [skill_id, skill_id], # skills with id skill_id learnt by this actor at level level
+     } # actor_id
+  } # ACTOR_LEARN_SKILL
+
+  ACTOR_FORGET_SKILL = { # Forget skills if actors' levels' < skills' required level
+    actor_id => { # actor with id actor_id
+      level => [skill_id, skill_id], # skills with id skill_id forgot by this actor at level level
+      level => [skill_id, skill_id], # skills with id skill_id forgot by this actor at level level
+    } # actor_id
+    actor_id => { # actor with id actor_id
+      level => [skill_id, skill_id], # skills with id skill_id forgot by this actor at level level
+      level => [skill_id, skill_id], # skills with id skill_id forgot by this actor at level level
+    } # actor_id
+  } # ACTOR_FORGET_SKILL
+
+end # Update_Actor_Skill
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this snippet works         |
+#------------------------------------------------------------------------------|
+
+class Scene_Load < Scene_File
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: on_load_success                                             |
+  #----------------------------------------------------------------------------|
+  alias on_load_success_update_actor_skill on_load_success
+  def on_load_success
+    update_actor_skill
+    # This part is added by this snippet to update actors' skills
+    on_load_success_update_actor_skill
+    #
+  end # on_load_success
+
+  #----------------------------------------------------------------------------|
+  #  New method: update_actor_skill                                            |
+  #----------------------------------------------------------------------------|
+  def update_actor_skill
+    ["learn", "forget"].each { |update|
+      update_actor_skill = eval("Update_Actor_Skill::ACTOR_" + update.upcase + "_SKILL")
+      update_actor_skill.each_key { |actor_id|
+        update_actor_skill[actor_id].each_key { |level|
+          actor = $game_actors[actor_id]
+          eval("level " + (update == "learn" ? ">" : "<=") + " actor.level") ? break : update_actor_skill[actor_id][level].each { |skill_id| eval("actor." + update + "_skill(skill_id)") }
+        }
+      }
+    }
+  end # update_actor_skill
+
+end # Scene_Load
+
+#==============================================================================|

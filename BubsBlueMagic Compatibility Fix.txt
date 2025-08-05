@@ -1,0 +1,59 @@
+class Game_Temp
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  attr_accessor :blue_magic_skill_to_learn
+
+end # Game_Temp
+
+class Game_ActionResult
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: clear_bubs_bluemagic_compatibility_fix                      |
+  #----------------------------------------------------------------------------|
+  alias clear_bubs_bluemagic_compatibility_fix clear
+  def clear
+    # This part is added by this script to store @blue_magic_skill_to_learn temporarily
+    $game_temp.blue_magic_skill_to_learn = @blue_magic_skill_to_learn if @blue_magic_skill_to_learn && @blue_magic_skill_to_learn > 0
+    #
+    clear_bubs_bluemagic_compatibility_fix
+  end # clear
+
+end # Game_ActionResult
+
+class Game_Actor < Game_Battler
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: new_blue_magic_skill_learned?                             |
+  #----------------------------------------------------------------------------|
+  def new_blue_magic_skill_learned?
+    # This part is rewritten by this script to use the temporarily stored @blue_magic_skill_to_learn if the original one is cleared before this method is called
+    skill_id = $game_temp.blue_magic_skill_to_learn ? $game_temp.blue_magic_skill_to_learn : @result.blue_magic_skill_to_learn
+    #
+    return false unless blue_magic_learning?
+    return false unless skill_id > 0
+    return false if skill_learn?($data_skills[skill_id])
+    learn_skill(skill_id)
+    return true
+  end # new_blue_magic_skill_learned?
+
+end # Game_Actor
+
+class Window_BattleLog < Window_Selectable
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: display_learned_blue_magic                                |
+  #----------------------------------------------------------------------------|
+  def display_learned_blue_magic(actor)
+    # This part is rewritten by this script to use the temporarily stored @blue_magic_skill_to_learn if the original one is cleared before this method is called
+    id = $game_temp.blue_magic_skill_to_learn ? $game_temp.blue_magic_skill_to_learn : actor.result.blue_magic_skill_to_learn
+    #
+    fmt = Bubs::BlueMagic::BLUE_MAGIC_LEARNED_MESSAGE
+    add_text( sprintf(fmt, actor.name, $data_skills[id].name) )
+    Sound.play_blue_magic_learned
+    Bubs::BlueMagic::BLUE_MAGIC_LEARNED_MESSAGE_WAIT.times do wait end
+    wait_for_effect
+  end # display_learned_blue_magic
+
+end # Window_BattleLog
