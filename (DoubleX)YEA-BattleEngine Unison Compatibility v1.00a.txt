@@ -1,0 +1,143 @@
+#==============================================================================|
+#  ** Script Info                                                              |
+#------------------------------------------------------------------------------|
+#  * Script Name                                                               |
+#    DoubleX RMVXA YEA-BattleEngine Unison Addon Compatibility                 |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    Fixes compatibility issue with DoubleX RMVXA YEA-BattleEngine Unison Addon|
+#    Scripts Addressed:                                                        |
+#    1. Yanfly Engine Ace - Cast Animations                                    |
+#------------------------------------------------------------------------------|
+#  * Terms Of Use                                                              |
+#    You shall:                                                                |
+#    1. Follow the terms of use of Yanfly Engine Ace - Ace Battle Engine       |
+#    2. Keep this script's Script Info part's contents intact                  |
+#    You shalln't claim that this script's written by anyone other than        |
+#    DoubleX, his aliases, Yanfly, or his/her aliases                          |
+#    None of the above applies to Yanfly or his/her aliases                    |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    1. Yanfly Engine Ace - Ace Battle Engine                                  |
+#    2. DoubleX RMVXA Clear Addon to Yanfly Engine Ace - Ace Battle Engine     |
+#    3. DoubleX RMVXA Unison Addon to Yanfly Engine Ace - Ace Battle Engine    |
+#    Abilities:                                                                |
+#    1. Nothing special                                                        |
+#------------------------------------------------------------------------------|
+#  * Instructions                                                              |
+#    1. Open the script editor and put this script into an open slot between   |
+#       DoubleX RMVXA Clear Addon to Yanfly Engine Ace - Ace Battle Engine and |
+#       Main, save to take effect.                                             |
+#    2. This script can't be used with DoubleX RMVXA Unison Item.              |
+#------------------------------------------------------------------------------|
+#  * Links                                                                     |
+#    Script Usage 101:                                                         |
+#    1. forums.rpgmakerweb.com/index.php?/topic/32752-rmvxa-script-usage-101/  |
+#    2. rpgmakervxace.net/topic/27475-rmvxa-script-usage-101/                  |
+#    This script:                                                              |
+#    1.                                            |
+#------------------------------------------------------------------------------|
+#  * Authors                                                                   |
+#    DoubleX:                                                                  |
+#    1. This script                                                            |
+#    Yanfly:                                                                   |
+#    1. Yanfly Engine Ace - Ace Battle Engine                                  |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00a(GMT 0400 13-2-2016):                                               |
+#    1. 1st version of this script finished                                    |
+#==============================================================================|
+
+($doublex_rmvxa ||= {})[:YEA_BattleEngine_Unison_Compatibility] = "v1.00a"
+
+#==============================================================================|
+#  ** Script Implementations                                                   |
+#     You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+#  * Script Support Info:                                                      |
+#    1. Prerequisites                                                          |
+#       - Basic knowledge of implementations of all addressed scripts          |
+#    2. Method documentation                                                   |
+#       - The 1st part describes why this method's rewritten/aliased for       |
+#         rewritten/aliased methods or what the method does for new methods    |
+#       - The 2nd part describes what the arguments of the method are          |
+#       - The 3rd part informs which version rewritten, aliased or created this|
+#         method                                                               |
+#       - The 4th part informs whether the method's rewritten or new           |
+#       - The 5th part informs whether the method's a real or potential hotspot|
+#       - The 6th part describes how this method works for new methods only,   |
+#         and describes the parts added, removed or rewritten for rewritten or |
+#         aliased methods only                                                 |
+#       Example:                                                               |
+# #--------------------------------------------------------------------------| |
+# #  Why rewrite/alias/What this method does                                 | |
+# #--------------------------------------------------------------------------| |
+# # *argv: What these variables are                                            |
+# # &argb: What this block is                                                  |
+# def def_name(*argv, &argb) # Version X+; Rewrite/New; Hotspot                |
+#   # Added/Removed/Rewritten to do something/How this method works            |
+#   def_name_code                                                              |
+#   #                                                                          |
+# end # def_name                                                               |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-BattleEngine"]
+
+if $doublex_rmvxa[:YEA_BattleEngine_Clear]
+
+if $doublex_rmvxa[:YEA_BattleEngine_Unison] 
+
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-CastAnimations"]
+  
+class Scene_Battle < Scene_Base # Edit
+
+  alias process_casting_animation_unison_compatibility process_casting_animation
+  def process_casting_animation(*argv, &argb)
+    process_casting_animation_unison_compatibility(*argv, &argb)
+    # Added to play cast animation for all unison invokees of unison skill/item
+    return unless @subject.actor?
+    return if (item = @subject.current_action.item).unison_actor_ids.empty?
+    return if (cast_ani = item.cast_ani) <= 0
+    (item.unison_actor_ids - [@subject.id]).each { |actor_id|
+        show_animation([$game_actors[actor_id]], cast_ani)
+    }
+    #
+  end # process_casting_animation
+  
+end # Scene_Battle
+
+end # if $imported["YEA-CastAnimations"]
+
+#------------------------------------------------------------------------------|
+
+else
+
+  # Informs users that they didn't put YEA_BattleEngine_Unison above this script
+  msgbox("To use DoubleX RMVXA YEA-BattleEngine Unison Addon Compatibility, " + 
+         "put it below:\nDoubleX RMVXA Unison Addon to Yanfly " + 
+         "Engine Ace - Ace Battle Engine\nbut above Main")
+
+end # if $doublex_rmvxa[:YEA_BattleEngine_Unison] 
+
+else
+
+  # Informs users that they didn't put YEA_BattleEngine_Clear above this script
+  msgbox("To use DoubleX RMVXA Unison Addon to Yanfly Engine Ace - Ace " + 
+         "Battle Engine, put it below:\nDoubleX RMVXA Clear Addon to Yanfly " + 
+         "Engine Ace - Ace Battle Engine\nbut above Main")
+
+end # if $doublex_rmvxa[:YEA_BattleEngine_Clear]
+
+else
+
+  # Informs users that they didn't put YEA-BattleEngine above this script
+  msgbox("To use DoubleX RMVXA Unison Addon to Yanfly Engine Ace - Ace " + 
+         "Battle Engine, put it below:\n" + 
+         "Yanfly Engine Ace - Ace Battle Engine\nbut above Main")
+
+end # if $imported["YEA-BattleEngine"]
+
+#==============================================================================|

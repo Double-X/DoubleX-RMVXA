@@ -1,0 +1,991 @@
+#==============================================================================|
+#  ** Script Info                                                              |
+#------------------------------------------------------------------------------|
+#  * Script Name                                                               |
+#    DoubleX RMVXA Enhanced YSA Battle System: Classical ATB Compatibility     |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    Fixes compatibility issues in                                             |
+#    DoubleX RMVXA Enhanced YSA Battle System: Classical ATB                   |
+#    Scripts Addressed:                                                        |
+#    1. Yanfly Engine Ace - Party System Add-On: Command Party                 |
+#    2. (v0.06a+)Yanfly Engine Ace - Battle Command List                       |
+#       USE_CONFIRM_WINDOW as true won't be supported                          |
+#    3. Yanfly Engine Ace - Combat Log Display                                 |
+#    4. (v0.03a+)Yanfly Engine Ace - Command Equip                             |
+#    5. Yanfly Engine Ace - Lunatic States                                     |
+#    6. Yanfly Engine Ace - Victory Aftermath                                  |
+#       It must be placed above ECATB to be compatible with ECATB              |
+#    7. Yanfly Engine Ace - Ace Equip Engine                                   |
+#    8. Yanfly Engine Ace - Follow-Up Skill                                    |
+#       Unison skills/items aren't compatible with that script yet             |
+#    9. Yanfly Engine Ace - Passive States                                     |
+#    10. (v0.01a+)Yanfly Engine Ace - Skill Cost Manager                       |
+#        <custom cost: string> is changed to <custom cost: "string">           |
+#    11. Yanfly Engine Ace - Skill Restrictions                                |
+#    12. (v0.09a+)Yanfly Engine Ace - Target Manager                           |
+#    13. (v0.02a+)Yami Engine Symphony - Equipment Learning                    |
+#    14. (v0.08a+)Yami Engine Ace - Guardian Summon                            |
+#    15. DoubleX RMVXA Confusion Edit                                          |
+#    16. DoubleX RMVXA Constants Edit                                          |
+#    17. (v0.01a+)DoubleX RMVXA State Counters                                 |
+#    18. (v0.01a+)DoubleX RMVXA State Triggers                                 |
+#    19. (v0.05a+)Mr.Bubble's Tactics Ogre PSP Crafting System                 |
+#    20. Actor Personal Hotkeys by Riff                                        |
+#    21. (v0.04a+)Theolized Sideview Battle System                             |
+#    22. (v0.04a+)Tsukihime's Core - Inventory                                 |
+#    23. Tsukihime's Battle Reactions                                          |
+#    24. (v0.07a+)Victor Engine - Custom Slip Effect                           |
+#------------------------------------------------------------------------------|
+#  * Terms Of Use                                                              |
+#    You shall:                                                                |
+#    1. Follow the terms of use of YSA Battle System: Classical ATB            |
+#    2. Let your published edits of this script be integrated as parts of it   |
+#    3. Keep this script's Script Info part's contents intact                  |
+#    You shalln't:                                                             |
+#    1. Claim that this script is written by anyone other than DoubleX, his    |
+#       aliases, Yami, or his/her aliases                                      |
+#    2. Make an edit of this script while saying it isn't                      |
+#    3. Make a RMVXA project based on this script's demo while saying it isn't |
+#    None of the above applies to Yami or his/her alias                        |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    1. Yanfly Engine Ace - Ace Battle Engine                                  |
+#    2. DoubleX RMVXA Enhanced YSA Battle System: Classical ATB                |
+#------------------------------------------------------------------------------|
+#  * Instructions                                                              |
+#    1. Open the script editor and put this script into an open slot below     |
+#       DoubleX RMVXA Enhanced YSA Battle System: Classical ATB and the        |
+#       addressed scripts but above Main. Save to take effect.                 |
+#------------------------------------------------------------------------------|
+#  * Links                                                                     |
+#    Script Usage 101:                                                         |
+#    1. forums.rpgmakerweb.com/index.php?/topic/32752-rmvxa-script-usage-101/  |
+#    2. rpgmakervxace.net/topic/27475-rmvxa-script-usage-101/                  |
+#    DoubleX RMVXA Enhanced YSA Battle System: Classical ATB:                  |
+#    1. http://rpgmaker.net/scripts/549/                                       |
+#    This script:                                                              |
+#    1. http://rpgmaker.net/scripts/551/                                       |
+#    Video:                                                                    |
+#    - Coming Soon                                                             |
+#    Demo:                                                                     |
+#    - Coming Soon                                                             |
+#    Mentioned Patreon Supporters:                                             |
+#    https://www.patreon.com/posts/71738797                                    |
+#------------------------------------------------------------------------------|
+#  * Authors                                                                   |
+#    DoubleX:                                                                  |
+#    1. This script                                                            |
+#    Yami:                                                                     |
+#    1. YSA Battle System: Classical ATB                                       |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v0.09a(GMT 1300 4-4-2016):                                                |
+#    1. Addressed compatibility with Yami Engine Ace - Guardian Summon         |
+#    2. In sync with the latest ECATB version                                  |
+#    v0.08g(GMT 0200 7-11-2015):                                               |
+#    1. Removed the below compatibility fixes:                                 |
+#       - DoubleX RMVXA Dynamic Data                                           |
+#       - Kread-EX's Grathnode Install                                         |
+#       - Tsukihime's Instance Items                                           |
+#       They're still compatible with ECATB                                    |
+#    2. In sync with the latest ECATB version                                  |
+#    v0.08f(GMT 0400 21-10-2015):                                              |
+#    1. Fixed more compatibility bugs with Yanfly Engine Ace - Follow-Up Skill |
+#    2. In sync with the latest ECATB version                                  |
+#    v0.08e(GMT 0400 12-9-2015):                                               |
+#    1. Fixed compatibility bugs with Theolized Sideview Battle System and     |
+#       Victor Engine - Custom Slip Effect                                     |
+#    v0.08d(GMT 0900 12-8-2015):                                               |
+#    1. Fixed compatibility bugs with Yanfly Engine Ace - Ace Equip Engine     |
+#    v0.08c(GMT 0900 1-8-2015):                                                |
+#    1. In sync with the latest ECATB version                                  |
+#    2. Increased this script's compactness, efficiency and readability        |
+#    v0.08b(GMT 1600 5-7-2015):                                                |
+#    1. Fixed compatibility bugs with Yanfly Engine Ace - Follow-Up Skill      |
+#    v0.08a(GMT 1600 29-6-2015):                                               |
+#    1. Addressed compatibility with Yami Engine Ace - Guardian Summon         |
+#    2. Removed some redundant compatibility socket methods                    |
+#    v0.07a(GMT 0800 24-6-2015):                                               |
+#    1. Addressed compatibility with                                           |
+#       - Kread-EX's Grathnode Install                                         |
+#       - Victor Engine - Custom Slip Effect                                   |
+#    2. Fixed compatibility bugs with Theolized Sideview Battle System         |
+#    v0.06b(GMT 0300 31-5-2015):                                               |
+#    1. USE_CONFIRM_WINDOW as true in Yanfly Engine Ace - Battle Command List  |
+#       won't be supported                                                     |
+#    2. Instance items created via Tsukihime's Instance Items now can use      |
+#       DoubleX RMVXA Enhanced YSA Battle System: Classical ATB notetags       |
+#    v0.06a(GMT 1500 30-5-2015):                                               |
+#    1. Addressed compatibility with Yanfly Engine Ace - Battle Command List   |
+#    2. Fixed compatibility bugs between the below compatibilities             |
+#       - DoubleX RMVXA Dynamic Data                                           |
+#       - Mr.Bubble's Tactics Ogre PSP Crafting System                         |
+#       - Theolized Sideview Battle System                                     |
+#       - Tsukihime's Instance Items                                           |
+#    3. Instance items created via Tsukihime's Instance Items now can't use    |
+#       DoubleX RMVXA Enhanced YSA Battle System: Classical ATB notetags       |
+#    v0.05a(GMT 1000 27-5-2015):                                               |
+#    1. Addressed compatibility with                                           |
+#       - Mr.Bubble's Tactics Ogre PSP Crafting System                         |
+#       - Tsukihime's Instance Items                                           |
+#    v0.04a(GMT 0700 23-5-2015):                                               |
+#    1. Fixed stack level too deep bug in Yanfly Engine Ace - Ace Equip Engine |
+#       compatibility fix                                                      |
+#    2. Addressed compatibility with                                           |
+#       - DoubleX RMVXA Dynamic Data                                           |
+#       - Theolized Sideview Battle System                                     |
+#       - Tsukihime's Core - Inventory                                         |
+#    v0.03c(GMT 1400 14-5-2015):                                               |
+#    1. Fixed not clearing battlers' lambdas before calling Marshal bug        |
+#    v0.03b(GMT 1400 12-5-2015):                                               |
+#    1. Updated the DoubleX RMVXA State Triggers compatibility fix             |
+#    v0.03a(GMT 0400 6-5-2015):                                                |
+#    1. Removed the Yanfly Engine Ace - Battle Engine Add-On: Enemy HP Bars    |
+#       and DoubleX RMVXA Percentage Addon to Yanfly Engine Ace - Battle Engine|
+#       Add-On: Enemy HP Bars compatibility fixes                              |
+#       - They're still compatible with                                        |
+#         DoubleX RMVXA Enhanced YSA Battle System: Classical ATB              |
+#    2. Addressed compatibility with Yanfly Engine Ace - Command Equip         |
+#    v0.02a(GMT 0800 22-4-2015):                                               |
+#    1. Removed the Yanfly Engine Ace - Command Autobattle compatibility fix   |
+#       - It's still compatible with                                           |
+#         DoubleX RMVXA Enhanced YSA Battle System: Classical ATB              |
+#    2. Addressed compatibility with Yami Engine Symphony - Equipment Learning |
+#    3. Fixed no method error in DoubleX RMVXA Confusion Edit compatibility fix|
+#    4. Fixed not hiding hotkey bar in Actor Personal Hotkeys compatibility fix|
+#    v0.01a(GMT 1300 15-4-2015):                                               |
+#    1. Addressed compatibility with                                           |
+#       - Yanfly Engine Ace - Skill Cost Manager                               |
+#       - DoubleX RMVXA State Counters                                         |
+#       - DoubleX RMVXA State Triggers                                         |
+#    v0.01a(GMT 1400 8-4-2015):                                                |
+#    1. 1st testing version of this script finished                            |
+#==============================================================================|
+
+($doublex_rmvxa ||= {})[:ECATB_Compatibility] = "v0.09a"
+
+#==============================================================================|
+#  ** Script Implementations                                                   |
+#     You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+#  * Script Support Info:                                                      |
+#    1. Prerequisites                                                          |
+#       - Basic knowledge of how the addressed scripts work                    |
+#    2. Method documentation                                                   |
+#       - The 1st part describes why this method's rewritten/aliased for       |
+#         rewritten/aliased methods or what the method does for new methods    |
+#       - The 2nd part describes what the arguments of the method are          |
+#       - The 3rd part informs which version rewritten, aliased or created this|
+#         method                                                               |
+#       - The 4th part informs whether the method's rewritten or new           |
+#       - The 5th part informs whether the method's a real or potential hotspot|
+#       - The 6th part describes how this method works for new methods only,   |
+#         and describes the parts added, removed or rewritten for rewritten or |
+#         aliased methods only                                                 |
+#       Example:                                                               |
+# #--------------------------------------------------------------------------| |
+# #  Why rewrite/alias/What this method does                                 | |
+# #--------------------------------------------------------------------------| |
+# # *argv: What these variables are                                            |
+# # &argb: What this block is                                                  |
+# def def_name(*argv, &argb) # Version X+; Rewrite/New; Hotspot                |
+#   # Added/Removed/Rewritten to do something/How this method works            |
+#   def_name_code                                                              |
+#   #                                                                          |
+# end # def_name                                                               |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-BattleEngine"] && !$imported["YSA-CATB"]
+
+if $doublex_rmvxa[:ECATB]
+
+if $imported["DoubleX RMVXA Confusion Edit"] || $imported[:TSBS]
+
+  # (v0.07a+)Stores the added temporary cached block storages and copying method
+  ECATB_GAME_TEMP = %Q(
+  #{$imported[:TSBS] ? "attr_accessor :ecatb_item_in_use" : ""}
+  #{$imported[:ve_custom_slip_effect] ? "attr_accessor :ecatb_state_user" : ""}
+
+  alias init_ecatb_vars_compatibility init_ecatb_vars
+  def init_ecatb_vars
+    init_ecatb_vars_compatibility
+    #{$imported[:TSBS] ? "@ecatb_item_in_use = {}" : ""}
+    #{$imported[:ve_custom_slip_effect] ? "@ecatb_state_user = {}" : ""}
+  end
+
+  alias clear_ecatb_vars_compatibility clear_ecatb_vars
+  def clear_ecatb_vars
+    clear_ecatb_vars_compatibility
+    #{$imported[:TSBS] ? "@ecatb_item_in_use = nil" : ""}
+    #{$imported[:ve_custom_slip_effect] ? "@ecatb_state_user = nil" : ""}
+  end
+
+  def ecatb_copy(battler, clone)
+    [@ecatb_unison_actors, @last_ecatb_item#{
+    ($imported[:TSBS] ? ", @ecatb_item_in_use" : "") + 
+    ($imported[:ve_custom_slip_effect] ? ", @ecatb_state_user" : "")}].
+    each { |temp| temp[clone] = temp[battler] if temp[battler] }
+  end
+  )
+
+#------------------------------------------------------------------------------|
+#  * Temporarily stores battler data for clearing and resetting the blocks     |
+#------------------------------------------------------------------------------|
+class Game_Temp # v0.07a+
+
+  module_eval(ECATB_GAME_TEMP) # Alias; New
+
+end # Game_Temp
+
+end # $imported["DoubleX RMVXA Confusion Edit"] || if $imported[:TSBS]
+
+if $imported[:TSBS]
+
+  # Clears and resets the added temprary cached block storages as well
+  ECATB_GAME_BATTLER = %Q(
+  alias clear_ecatb_blocks_compatibility_2 clear_ecatb_blocks
+  def clear_ecatb_blocks
+    clear_ecatb_blocks_compatibility_2
+    $game_temp.ecatb_item_in_use[self] ||= @item_in_use
+    @item_in_use = nil
+    #{$imported[:ve_custom_slip_effect] ? "
+    $game_temp.ecatb_state_user[self] ||= @state_user
+    @state_user = {}" : ""}
+  end
+
+  alias reset_ecatb_blocks_compatibility_2 reset_ecatb_blocks
+  def reset_ecatb_blocks
+    reset_ecatb_blocks_compatibility_2
+    if $game_temp.ecatb_item_in_use[self]
+      @item_in_use = $game_temp.ecatb_item_in_use.delete(self)
+    end
+    #{$imported[:ve_custom_slip_effect] ? "
+    if $game_temp.ecatb_state_user[self]
+      @state_user = $game_temp.ecatb_state_user.delete(self)
+    end" : ""}
+  end
+  )
+
+#------------------------------------------------------------------------------|
+#  Clears and resets all object's blocks right before and after using marshal  |
+#------------------------------------------------------------------------------|
+alias copy_ecatb copy
+def copy(obj, &argb) # v0.04a+
+  obj.clear_ecatb_blocks if battler = obj.is_a?(Game_Battler) # Added
+  clone = copy_ecatb(obj, &argb) # Rewritten
+  # Added
+  if battler
+    $game_temp.ecatb_copy(obj, clone) 
+    obj.reset_ecatb_blocks
+    clone.reset_ecatb_blocks
+  end
+  clone
+  #
+end # copy
+
+class Game_Battler < Game_BattlerBase # v0.07a+
+
+  #----------------------------------------------------------------------------|
+  #  Clears and resets the added temprary cached block storages as well        |
+  #----------------------------------------------------------------------------|
+  module_eval(ECATB_GAME_BATTLER) # Alias
+
+end # Game_Battler
+
+end # $imported[:TSBS]
+
+class << BattleManager
+
+  if $imported["DoubleX RMVXA Constants Edit"]
+
+  #----------------------------------------------------------------------------|
+  #  Uses the escape ratio in DoubleX RMVXA Constants Edit                     |
+  #----------------------------------------------------------------------------|
+  def set_ecatb_esc_cost_compatibility # Rewrite
+    DoubleX_RMVXA::Constants_Edit::Escape_Ratio # Rewritten
+  end # set_ecatb_esc_cost_compatibility
+
+  end # if $imported["DoubleX RMVXA Constants Edit"]
+
+  if $imported["YEA-VictoryAftermath"] || $imported["YES-EquipmentLearning"]
+
+  #----------------------------------------------------------------------------|
+  #  Clears all battlers' blocks right before using Marshal                    |
+  #----------------------------------------------------------------------------|
+  alias process_victory_ecatb_compatibility process_victory
+  def process_victory(*argv, &argb)
+    DataManager.clear_ecatb_blocks # Added
+    process_victory_ecatb_compatibility(*argv, &argb)
+  end # pprocess_victory
+
+  end # if $imported["YEA-VictoryAftermath"] || 
+  # $imported["YES-EquipmentLearning"]
+
+end # BattleManager
+
+if $imported["DoubleX RMVXA Confusion Edit"]
+
+class Game_Action
+
+  #----------------------------------------------------------------------------|
+  #  Temporarily clear all blocks right before using Marshal as well           |
+  #----------------------------------------------------------------------------|
+  def evaluate_item_with_target(target) # Rewrite
+    target.result.clear
+    # Rewritten
+    target.clear_ecatb_blocks
+    subject.clear_ecatb_blocks
+    eval_target = Marshal.load( Marshal.dump(target) )
+    eval_subject = Marshal.load( Marshal.dump(subject) )
+    reset_ecatb_blocks(target, eval_target, eval_subject)
+    #
+    eval_target.make_damage_value(eval_subject, item)
+    if item.for_opponent?
+      eval_target.result.hp_damage.to_f / [eval_target.hp, 1].max
+    else
+      [-eval_target.result.hp_damage, eval_target.mhp - eval_target.hp].min / 
+      eval_target.mhp.to_f
+    end
+  end # evaluate_item_with_target
+
+  # eval_target: The temporary item target
+  # eval_subject: The temporary item subject
+  def reset_ecatb_blocks(target, eval_target, eval_subject) # v0.03c+; New
+    $game_temp.ecatb_copy(subject, eval_subject)
+    $game_temp.ecatb_copy(target, eval_target)
+    [target, subject, eval_target, eval_subject].each { |battler|
+      battler.reset_ecatb_blocks
+    }
+  end # reset_ecatb_blocks
+
+end # Game_Action
+
+end # $imported["DoubleX RMVXA Confusion Edit"]
+
+if $imported["YEA-PassiveStates"]
+
+class Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Sets the countdown for all passive states as well                         |
+  #----------------------------------------------------------------------------|
+  alias create_passive_state_array_ecatb create_passive_state_array
+  def create_passive_state_array(array, &argb)
+    create_passive_state_array_ecatb(array, &argb)
+    # Added
+    @passive_states.each { |state_id|
+      @ecatb_countdown_clock[state_id] = 0
+      @ecatb_countdown_freeze[state_id] = false
+    }
+    #
+  end # create_passive_state_array
+
+end # Game_BattlerBase
+
+end # if $imported["YEA-PassiveStates"]
+
+if $imported["YEA-FollowUpSkill"]
+
+class Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Checks if the current action's an usable follow up one                    |
+  #----------------------------------------------------------------------------|
+  def ecatb_reset_compatibility? # Rewrite
+    # Rewritten
+    current_action && current_action.follow_up && usable?(current_action.item)
+    #
+  end # ecatb_reset_compatibility?
+
+end # Game_Battler
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Confirms the follow up action and executes it after finishing cooldown    |
+  #----------------------------------------------------------------------------|
+  def ecatb_val_reset_compatibility(reset) # Rewrite
+    # Added
+    @ecatb_val[:cooldown] = 0.0 if dead?
+    @ecatb_act_times_change = true
+    @ecatb_val[:cooldown] = 100.0 unless @ecatb_val[:charge] < 100.0 || reset
+    @ecatb_val[:charge] = 0.0
+    @ecatb_reset_val = 0.0 unless index && restriction <= 0
+    current_action.ecatb_confirm = current_action.last_ecatb_confirm = true
+    post_ecatb_reset
+    set_ecatb_battler_change
+    #
+  end # ecatb_val_reset_compatibility
+
+end # Game_Battler
+
+end # if $imported["YEA-FollowUpSkill"]
+
+class Game_Battler < Game_BattlerBase
+
+  if $doublex_rmvxa[:State_Counters]
+
+  #----------------------------------------------------------------------------|
+  #  Returns the current battler sprite set                                    |
+  #----------------------------------------------------------------------------|
+  def ecatb_countdown_update_compatibility_1 # v0.01a+; Rewrite; Hotspot
+    state_counters_battler_sprite # Rewritten
+  end # ecatb_countdown_update_compatibility_1
+
+  #----------------------------------------------------------------------------|
+  #  Updates the remaining turn of the state icon                              |
+  #----------------------------------------------------------------------------|
+  def ecatb_countdown_update_compatibility_2(battler_sprite, state_id) # v0.01a+
+  # Potential Hotspot
+    # Added
+    return unless counters = battler_sprite.state_counters
+    return unless counters[$data_states[state_id]]
+    counters[$data_states[state_id]].update_turn(@state_turns[state_id])
+    #
+  end # ecatb_countdown_update_compatibility_2
+
+  end # if $doublex_rmvxa[:State_Counters]
+
+  if $doublex_rmvxa[:State_Triggers]
+
+  #----------------------------------------------------------------------------|
+  #  Triggers the turn actions when the turn conditions are met                |
+  #----------------------------------------------------------------------------|
+  def ecatb_countdown_update_compatibility_3(state_id) # v0.01a+; Rewrite;
+  # Potential Hotspot
+    exec_state_triggers(state_id, :turn) # Added
+  end # ecatb_countdown_update_compatibility_3
+
+  end # if $doublex_rmvxa[:State_Triggers]
+
+end # Game_Battler
+
+if $imported["TH_CoreInventory"]
+
+class Game_Party < Game_Unit # v0.04a+
+
+  #----------------------------------------------------------------------------|
+  #  Initializes all new variables as well                                     |
+  #----------------------------------------------------------------------------|
+  alias init_all_items_ecatb_compatibility init_all_items
+  def init_all_items(*argv, &argb)
+    init_all_items_ecatb_compatibility(*argv, &argb)
+    @ecatb_dead_enemies = [] # Added
+  end # init_all_items
+
+end # Game_Party
+
+end # if $imported["TH_CoreInventory"]
+
+if $imported["YEA-SkillCostManager"]
+
+class Window_SkillList < Window_Selectable # v0.01a+
+
+  #----------------------------------------------------------------------------|
+  #  Supports variable but not random action point requirements as well        |
+  #----------------------------------------------------------------------------|
+  def draw_custom_skill_cost(rect, skill)
+    return unless skill.use_custom_cost
+    change_color(text_color(skill.custom_cost_colour), enable?(skill))
+    icon = skill.custom_cost_icon
+    if icon > 0
+      draw_icon(icon, rect.x + rect.width-24, rect.y, enable?(skill))
+      rect.width -= 24
+    end
+    contents.font.size = skill.custom_cost_size
+    text = eval(skill.custom_cost_text).to_s # Rewritten
+    draw_text(rect, text, 2)
+    cx = text_size(text).width + 4
+    rect.width -= cx
+    reset_font_settings
+  end # draw_custom_skill_cost
+
+end # Window_SkillList
+
+end # if $imported["YEA-SkillCostManager"]
+
+if $imported["YEA-AceEquipEngine"]
+
+class Window_EquipItem < Window_ItemList # v0.04a+
+
+  #----------------------------------------------------------------------------|
+  #  Clears and resets all blocks of the actor before and after serialization  |
+  #----------------------------------------------------------------------------|
+  alias update_help_ecatb_compatibility update_help
+  def update_help
+    @actor.clear_ecatb_blocks # Added
+    update_help_ecatb_compatibility
+    @actor.reset_ecatb_blocks if SceneManager.scene_is?(Scene_Battle) # Added
+  end # update_help
+
+end # Window_EquipItem
+
+end # if $imported["YEA-AceEquipEngine"]
+
+class Scene_Battle < Scene_Base
+
+  if $imported["YEA-BattleCommandList"]
+
+  #----------------------------------------------------------------------------|
+  #  Refreshes all active command, item and target selection windows as well   |
+  #----------------------------------------------------------------------------|
+  alias status_redraw_target_ecatb_compatibility status_redraw_target
+  def status_redraw_target(target, &argb) # v0.06a+
+    # Added
+    return if $game_party.all_dead? || $game_troop.all_dead?
+    return unless BattleManager.phase
+    #
+    status_redraw_target_ecatb_compatibility(target, &argb)
+    # Added
+    return unless BattleManager.btype?(:ecatb) && target.actor?
+    refresh_ecatb_windows
+    #
+  end # status_redraw_target
+
+  end # if $imported["YEA-BattleCommandList"]
+
+  if $imported["YEA-CombatLogDisplay"]
+
+  #----------------------------------------------------------------------------|
+  #  Checks if the combat log window exists and is visible                     |
+  #----------------------------------------------------------------------------|
+  def update_msg_open_ecatb_compatibility? # Rewrite; Hotspot
+    @combatlog_window && @combatlog_window.visible # Rewritten
+  end # update_msg_open_ecatb_compatibility?
+
+  end # if $imported["YEA-CombatLogDisplay"]
+
+  if $imported["YEA-CommandEquip"] && YEA::COMMAND_EQUIP::EQUIP_SKIPTURN
+
+  #----------------------------------------------------------------------------|
+  #  Setups an inputable actor after processing the equip command as well      |
+  #----------------------------------------------------------------------------|
+  alias command_equip_ecatb command_equip # v0.03a+
+  def command_equip(*argv, &argb)
+    command_equip_ecatb(*argv, &argb)
+    start_actor_command_selection # Added
+  end # command_equip
+
+  end # if $imported["YEA-CommandEquip"] && YEA::COMMAND_EQUIP::EQUIP_SKIPTURN
+
+  if $imported["YEA-LunaticStates"]
+
+  #----------------------------------------------------------------------------|
+  #  Triggers all battlers' states' begin effects                              |
+  #----------------------------------------------------------------------------|
+  def ecatb_turn_add_compatibility # Rewrite
+    # Added
+    $game_party.battle_members.each { |mem| mem.run_lunatic_states(:begin) }
+    $game_troop.members.each { |mem| mem.run_lunatic_states(:begin) }
+    #
+  end # ecatb_turn_add_compatibility
+
+  end # if $imported["YEA-LunaticStates"]
+
+  if $imported["YEA-FollowUpSkill"]
+
+  #----------------------------------------------------------------------------|
+  #  Checks if there's usable follow up actions of the current one             |
+  #----------------------------------------------------------------------------|
+  def exec_ecatb_act_loop_compatibility?(forced) # Rewrite
+    # Rewritten
+    return true if forced
+    return true unless @subject.current_action
+    return false unless @subject.current_action.follow_up
+    @subject.usable?(@subject.current_action.item)
+    #
+  end # exec_ecatb_act_loop_compatibility?
+
+  end # if $imported["YEA-FollowUpSkill"]
+
+  if $imported["YEA-SkillRestrictions"]
+
+  #----------------------------------------------------------------------------|
+  #  Updates all battlers' restrictions as well                                |
+  #----------------------------------------------------------------------------|
+  alias ecatb_turn_add_compatibility_2 ecatb_turn_add_compatibility
+  def ecatb_turn_add_compatibility # v0.04c+
+    ecatb_turn_add_compatibility_2
+    # Added
+    $game_party.update_restrictions
+    $game_troop.update_restrictions
+    #
+  end # ecatb_turn_add_compatibility
+
+  end # if $imported["YEA-SkillRestrictions"]
+
+  if $imported["YEA-TargetManager"]
+
+  #----------------------------------------------------------------------------|
+  #  Confirms the skill if it doesn't show the target selection window         |
+  #----------------------------------------------------------------------------|
+  alias on_skill_ok_ecatb on_skill_ok
+  def on_skill_ok(*argv, &argb) # v0.09a+
+    # Added
+    return unless actor = BattleManager.actor
+    on_ecatb_skill_item_ok(actor, skill) if BattleManager.btype?(:ecatb) && 
+    !(skill = @skill_window.item).for_opponent? && !skill.for_friend?
+    #
+    on_skill_ok_ecatb(*argv, &argb)
+  end # on_skill_ok
+
+  #----------------------------------------------------------------------------|
+  #  Confirms the item if it doesn't show the target selection window          |
+  #----------------------------------------------------------------------------|
+  alias on_item_ok_ecatb on_item_ok
+  def on_item_ok(*argv, &argb) # v0.09a+
+    # Added
+    return unless actor = BattleManager.actor
+    on_ecatb_skill_item_ok(actor, item) if BattleManager.btype?(:ecatb) && 
+    !(item = @item_window.item).for_opponent? && !item.for_friend?
+    #
+    on_item_ok_ecatb(*argv, &argb)
+  end # on_item_ok
+
+  #----------------------------------------------------------------------------|
+  #  Confirms the skill/item for the user or all unison actors if it's unison  |
+  #----------------------------------------------------------------------------|
+  def on_ecatb_skill_item_ok(actor, item) # v0.09a+; New
+    actors = ecatb.send(
+    actor.input.item.ecatb_unison_actor, actor, actor.input.item)
+    actors.collect!(&ecatb::BLOCKS[:usable?])
+    if actors.size < 2
+      actor.confirm_ecatb_item
+      return @status_window.draw_item(actor.index)
+    end
+    actors.each { |a|
+      a.ecatb_unison_invoker = a == actor
+      a.confirm_ecatb_item
+      @status_window.draw_item(a.index)
+    }
+  end
+
+  end # if $imported["YEA-TargetManager"]
+  
+  if $imported["YSE-GuardianSummon"]
+
+  #----------------------------------------------------------------------------|
+  #  Checks if the actor's valid and confirm the inputted summon if so as well |
+  #----------------------------------------------------------------------------|
+  alias on_summon_ok_ecatb on_summon_ok
+  def on_summon_ok(*argv, &argb) # v0.08a+
+    # Added
+    return unless actor = BattleManager.actor
+    if BattleManager.btype?(:ecatb)
+      actors = actor.input.item.ecatb_unison_actor.call(
+      actor).collect!(&DoubleX_RMVXA::ECATB::BLOCKS[:usable?])
+      return confirm_ecatb_unison_item(actors) if actors.size > 1
+      actor.confirm_ecatb_item
+      @status_window.draw_item(actor.index)
+    end
+    #
+    on_summon_ok_ecatb(*argv, &argb)
+  end # on_summon_ok
+
+  #----------------------------------------------------------------------------|
+  #  Hides, deactivates and closes the summon window upon battle end as well   |
+  #----------------------------------------------------------------------------|
+  alias close_ecatb_windows_compatibility_1 close_ecatb_windows
+  def close_ecatb_windows # v0.08a+
+    close_ecatb_windows_compatibility_1
+    @summon_window.hide.deactivate.close # Added
+  end # close_ecatb_windows
+
+  end # $imported["YSE-GuardianSummon"]
+
+  if $imported['RIFF_HOTKEYS']
+
+  #----------------------------------------------------------------------------|
+  #  Fixes bugs and edge cases                                                 |
+  #----------------------------------------------------------------------------|
+  def on_actor_cancel_ecatb # Rewrite
+    BattleManager.actor.input.clear
+    @status_aid_window.refresh
+    $game_temp.battle_aid = nil
+    @actor_window.hide
+    ecatb_actor_cancel_windows # Rewritten
+    @hotkey_action = false # Added to mark that the hotkey action's cancelled
+  end # on_actor_cancel_ecatb
+
+  #----------------------------------------------------------------------------|
+  #  Fixes bugs and edge cases                                                 |
+  #----------------------------------------------------------------------------|
+  def call_hotkeys(hotkey_index) # Rewrite
+    if @party_command_window.close? && @hotkeys_bar_window.visible
+      @actor_command_window.deactivate
+      # Rewritten to ensure both the actor and item are valid
+      if actor = BattleManager.actor
+        item = actor.hotkeys[hotkey_index]
+        if item && @hotkeys_bar_window.item_valid?(item)
+          return set_hotkey_action(item)
+        end
+      end
+      #
+      return @actor_command_window.activate
+    end
+    # Rewritten
+    @party_command_window.activate unless BattleManager.btype?(:ecatb)
+    #
+  end # call_hotkeys
+
+  #----------------------------------------------------------------------------|
+  #  Supports calling unison skills/items via hotkeys as well                  |
+  #----------------------------------------------------------------------------|
+  def set_hotkey_action(item) # Rewrite
+    @hotkey_action = true # Added to mark that the action's called by a hotkey
+    # Rewritten
+    actors = DoubleX_RMVXA::ECATB.send(item.ecatb_unison_actor, actor = 
+    BattleManager.actor, item).collect! { |actor_id| $game_actors[actor_id] }
+    act_actors = BattleManager.ecatb_actor_act_list.select { |actor| 
+    actor.ecatb_inputable? }
+    if item.is_a?(RPG::Skill)
+      $game_temp.battle_aid = @skill = item
+      if actors.size > 1 && (actors - act_actors).empty?
+        actors.each { |actor|
+          actor.input.set_skill(@skill.id)
+          actor.last_skill.object = @skill
+          @status_window.draw_item(actor.index)
+        }
+      else
+        actor.input.set_skill(@skill.id)
+        actor.last_skill.object = @skill
+      end
+      if @skill.for_opponent?
+        select_enemy_selection
+      elsif @skill.for_friend?
+        select_actor_selection
+      else
+        next_command
+        $game_temp.battle_aid = nil
+      end
+      @status_window.draw_item(actor.index)
+    elsif item.is_a?(RPG::Item)
+      $game_party.last_item.object = $game_temp.battle_aid = @item = item
+      if actors.size > 1 && (actors - act_actors).empty?
+        @item.catb_unison_actor_id.each { |actor|
+          actor.input.set_item(@item.id)
+          @status_window.draw_item(actor.index)
+        }
+      else
+        actor.input.set_item(@item.id)
+      end
+      if @item.for_opponent?
+        select_enemy_selection
+      elsif @item.for_friend?
+        select_actor_selection
+      else
+        next_command
+        $game_temp.battle_aid = nil
+      end
+      @status_window.draw_item(actor.index)
+    end
+    #
+  end # set_hotkey_action
+
+  #----------------------------------------------------------------------------|
+  #  Shows the last active window right after cancelling                       |
+  #----------------------------------------------------------------------------|
+  def scene_battle_on_enemy_cancel_abe # Rewrite
+    @enemy_window.hide
+    on_ecatb_unison_target_cancel_compatibility # Rewritten
+  end # scene_battle_on_enemy_cancel_abe
+
+  #----------------------------------------------------------------------------|
+  #  Refreshs the hotkey window if it's visible as well                        |
+  #----------------------------------------------------------------------------|
+  def refresh_ecatb_windows_compatibility # Rewrite; Potential Hotspot
+    @hotkeys_bar_window.refresh if @hotkeys_bar_window.visible # Added
+  end # refresh_ecatb_windows_compatibility
+
+  #----------------------------------------------------------------------------|
+  #  Goes back to the last active window                                       |
+  #----------------------------------------------------------------------------|
+  def on_ecatb_unison_target_cancel_compatibility # Rewrite
+    # Rewritten
+    if !@hotkey_action && @actor_command_window.current_symbol == :skill
+      @skill_window.activate.show
+    elsif !@hotkey_action && @actor_command_window.current_symbol == :item
+      @item_window.activate.show
+    else
+      @actor_command_window.activate.show
+    end
+    #
+    @hotkey_action = false # Added to mark that the hotkey action's cancelled
+  end # on_ecatb_unison_target_cancel_compatibility
+
+  #----------------------------------------------------------------------------|
+  #  Hides the hotkey bar window if it's visible as well                       |
+  #----------------------------------------------------------------------------|
+  alias ecatb_turn_start_compatibility ecatb_turn_start
+  def ecatb_turn_start # v0.08a+
+    ecatb_turn_start_compatibility
+    @hotkeys_bar_window.hide if @hotkeys_bar_window.visible # Added
+  end # ecatb_turn_start
+
+  #----------------------------------------------------------------------------|
+  #  Setups the hotkey bar window as well                                      |
+  #----------------------------------------------------------------------------|
+  alias start_actor_command_selection_ecatb_compatibility 
+  start_actor_command_selection
+  def start_actor_command_selection # v0.08a+; Potential Hotspot
+    start_actor_command_selection_ecatb_compatibility
+    @hotkeys_bar_window.setup(BattleManager.actor) # Added
+  end # start_actor_command_selection
+
+  #----------------------------------------------------------------------------|
+  #  Hides the hotkey bar window if it's visible as well                       |
+  #----------------------------------------------------------------------------|
+  alias ecatb_update_windows_compatibility ecatb_update_windows
+  def ecatb_update_windows # v0.08a+; Hotspot
+    ecatb_update_windows_compatibility
+    @hotkeys_bar_window.hide if @hotkeys_bar_window.visible # Added
+  end # ecatb_update_windows
+
+  #----------------------------------------------------------------------------|
+  #  Hides, deactivate and closes the hotkey window as well                    |
+  #----------------------------------------------------------------------------|
+  alias close_ecatb_windows_compatibility_2 close_ecatb_windows
+  def close_ecatb_windows # v0.08a+
+    close_ecatb_windows_compatibility_2
+    @hotkeys_bar_window.hide.deactivate.close # Added
+  end # close_ecatb_windows
+
+  #----------------------------------------------------------------------------|
+  #  Hides the hotkey bar when showing the party command window                |
+  #----------------------------------------------------------------------------|
+  alias start_party_command_selection_ecatb start_party_command_selection
+  def start_party_command_selection(*argv, &argb)
+    @hotkeys_bar_window.hide # Added
+    start_party_command_selection_ecatb(*argv, &argb)
+  end # start_party_command_selection
+
+  #----------------------------------------------------------------------------|
+  #  Places the hotkey bar at the top of the screen as well                    |
+  #----------------------------------------------------------------------------|
+  alias create_hotkeys_bar_window_ecatb create_hotkeys_bar_window
+  def create_hotkeys_bar_window(*argv, &argb)
+    create_hotkeys_bar_window_ecatb(*argv, &argb)
+    @hotkeys_bar_window.z = 500 # Added
+  end # create_hotkeys_bar_window
+
+  #----------------------------------------------------------------------------|
+  #  Shows the last active window right after cancelling target selections     |
+  #----------------------------------------------------------------------------|
+  def ecatb_actor_cancel_windows # New
+    unless @hotkey_action
+      if @actor_command_window.current_symbol == :skill
+        return @skill_window.activate.show
+      elsif @actor_command_window.current_symbol == :item
+        return @item_window.activate.show
+      end
+    end
+    @actor_command_window.activate.show
+    @status_window.show
+    @help_window.hide
+  end # ecatb_actor_cancel_windows
+
+  end # if $imported['RIFF_HOTKEYS']
+
+  if $imported["TH_BattleReactions"]
+
+  #----------------------------------------------------------------------------|
+  #  Calls the aliased process_action method instead to prevent infinite loop  |
+  #----------------------------------------------------------------------------|
+  def perform_reactions(target, item) # Rewrite
+    @log_window.display_reaction(target, item)
+    BattleManager.reaction_processing = true
+    last_subject = @subject
+    @subject = target
+    process_action_ecatb while @subject.current_action # Rewritten
+    @subject = last_subject
+    BattleManager.clear_reaction_processing
+  end # perform_reactions
+
+  end # if $imported["TH_BattleReactions"]
+
+  if $imported["YEA-CommandParty"]
+
+  #----------------------------------------------------------------------------|
+  #  Stops making actions after changing party members in ecatb battle system  |
+  #----------------------------------------------------------------------------|
+  def command_party # Rewrite
+    Graphics.freeze
+    @info_viewport.visible = false
+    hide_extra_gauges
+    SceneManager.snapshot_for_background
+    previous_party = $game_party.battle_members.clone
+    index = @party_command_window.index
+    oy = @party_command_window.oy
+    SceneManager.call(Scene_Party)
+    SceneManager.scene.main
+    SceneManager.force_recall(self)
+    show_extra_gauges
+    if previous_party != $game_party.battle_members
+      $game_party.make_actions unless BattleManager.btype?(:ecatb) # Rewritten
+      $game_party.set_party_cooldown
+    end
+    @info_viewport.visible = true
+    @status_window.refresh
+    @party_command_window.setup.select(index)
+    @party_command_window.oy = oy
+    perform_transition
+  end # command_party
+
+  end # if $imported["YEA-CommandParty"]
+
+end # Scene_Battle
+
+if $imported['RIFF_HOTKEYS']
+
+class Window_Hotkeys_Bar < Window_Selectable
+
+  #----------------------------------------------------------------------------|
+  #  Fixes bugs and edge cases                                                 |
+  #----------------------------------------------------------------------------|
+  def item_valid?(item) # Rewrite
+    if item.is_a?(RPG::Item)
+      if item.ecatb_unison_actor.call(@actor).size > 1
+        return @actor.usable?(item)
+      end
+      return $game_party.usable?(item)
+    end
+    # Rewritten to let actors use usable skills that aren't learnt
+    return unless item.is_a?(RPG::Skill)
+    return @actor.usable?(item) unless SceneManager.scene_is?(Scene_Battle)
+    (actor = BattleManager.actor) && actor.usable?(item)
+    #
+  end # item_valid?
+
+end # Window_Hotkeys_Bar
+
+end # if $imported['RIFF_HOTKEYS']
+
+else
+
+  # Informs users that they didn't place ECATB above this script
+  msgbox("To use DoubleX RMVXA ECATB Compatibility, put it below:\n" +
+         "DoubleX RMVXA Enhanced YSA Battle System: Classical ATB\n" +
+         "but above Main") unless $doublex_rmvxa[:ECATB]
+
+end # if $doublex_rmvxa[:ECATB]
+
+#------------------------------------------------------------------------------|
+
+else
+
+  # Informs users that they didn't place YEA-BattleEngine above this script
+  msgbox("To use DoubleX RMVXA Enhanced YSA Battle System: Classical ATB, put it
+          below:\n" + 
+         "Yanfly Engine Ace - Ace Battle Engine\n" +
+         "but above Main") unless $imported["YEA-BattleEngine"]
+
+  # Informs users that they used YSA-CATB with this script
+  msgbox("DoubleX RMVXA Enhanced YSA Battle System: Classical ATB can't be used
+          with:\n" + 
+         "YSA Battle System: Classical ATB") if $imported["YSA-CATB"]
+
+end # if $imported["YEA-BattleEngine"] && !$imported["YSA-CATB"]
+
+#==============================================================================|

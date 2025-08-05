@@ -1,0 +1,127 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Addon v1.00a to Yanfly Engine Ace - Party System Add-On: Command Party|
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00a(GMT 0100 30-1-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yanfly:                                                                   |
+#    - Yanfly Engine Ace - Party System Add-On: Command Party                  |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of Yanfly Engine Ace - Party System Add-On: Command Party    |
+#    except that you must also Yanfly credit(you should do this anyway) if you |
+#    give DoubleX or his alias credit                                          |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - Yanfly Engine Ace - Party System Add-On: Command Party                  |
+#    Knowledge:                                                                |
+#    - That of using the script Yanfly Engine Ace - Party System Add-On: Command Party|
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Opens the command party window when all active but not all reserve      |
+#      actors are dead                                                         |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between Yanfly Engine Ace - Party System Add-On: Command Party  |
+#    and ¡¿ Main. Save to take effect.                                          |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of Yanfly Engine Ace - Party System Add-On: Command Party  |
+#==============================================================================|
+
+$imported = {} if $imported.nil?
+$imported["DoubleX RMVXA Addon to YEA-CommandParty"] = true
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+module BattleManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: self.process_defeat                                         |
+  #----------------------------------------------------------------------------|
+  class <<self; alias process_defeat_commandparty_addon process_defeat; end
+  def self.process_defeat
+    # This part is rewritten by this script to open command party window upon defeat
+    if $imported["YEA-PartySystem"] && $imported["YEA-CommandParty"] && $game_party.reserve_members.size > 0
+      @commandparty_addon = true
+      return false
+    else
+      process_defeat_commandparty_addon
+    end
+  end # self.process_defeat
+
+  #----------------------------------------------------------------------------|
+  #  New method: self.commandparty_addon=                                      |
+  #----------------------------------------------------------------------------|
+  def self.commandparty_addon=(commandparty_addon)
+    @commandparty_addon = commandparty_addon
+  end # self.commandparty_addon=
+
+  #----------------------------------------------------------------------------|
+  #  New method: self.commandparty_addon                                       |
+  #----------------------------------------------------------------------------|
+  def self.commandparty_addon
+    @commandparty_addon
+  end # self.commandparty_addon
+
+end # BattleManager
+
+class Game_Party < Game_Unit
+
+  #----------------------------------------------------------------------------|
+  #  New method: reserve_members                                               |
+  #----------------------------------------------------------------------------|
+  def reserve_members
+    all_members.select {|member| !member.death_state? }
+  end # reserve_members
+
+end # Game_Party
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: update                                                      |
+  #----------------------------------------------------------------------------|
+  alias update_commandparty_addon update
+  def update
+    update_commandparty_addon
+    # This part is added by this script to open command party window upon defeat
+    if BattleManager.commandparty_addon
+      command_party_addon
+      BattleManager.commandparty_addon = false
+      BattleManager.process_defeat_commandparty_addon if $game_party.all_dead?
+    end
+  end # update
+
+  #----------------------------------------------------------------------------|
+  #  New method: command_party_addon                                           |
+  #----------------------------------------------------------------------------|
+  def command_party_addon
+    Graphics.freeze
+    @info_viewport.visible = false
+    hide_extra_gauges if $imported["YEA-BattleEngine"]
+    SceneManager.snapshot_for_background
+    previous_party = $game_party.battle_members.clone
+    index = @party_command_window.index
+    oy = @party_command_window.oy
+    SceneManager.call(Scene_Party)
+    SceneManager.scene.main
+    SceneManager.force_recall(self)
+    show_extra_gauges if $imported["YEA-BattleEngine"]
+    $game_party.set_party_cooldown if previous_party != $game_party.battle_members
+    @info_viewport.visible = true
+    @status_window.refresh
+    perform_transition
+  end # command_party_addon
+
+end # Scene_Battle
+
+#==============================================================================|

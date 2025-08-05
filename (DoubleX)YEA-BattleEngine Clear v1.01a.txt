@@ -1,0 +1,220 @@
+#==============================================================================|
+#  ** Script Info                                                              |
+#------------------------------------------------------------------------------|
+#  * Script Name                                                               |
+#    DoubleX RMVXA Clear Addon to Yanfly Engine Ace - Ace Battle Engine        |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    Lets users clear previously inputted skills/items when inputting actions  |
+#------------------------------------------------------------------------------|
+#  * Terms Of Use                                                              |
+#    You shall:                                                                |
+#    1. Follow the terms of use of Yanfly Engine Ace - Ace Battle Engine       |
+#    2. Keep this script's Script Info part's contents intact                  |
+#    You shalln't claim that this script's written by anyone other than        |
+#    DoubleX, his aliases, Yanfly, or his/her aliases                          |
+#    None of the above applies to Yanfly or his/her aliases                    |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    1. Yanfly Engine Ace - Ace Battle Engine                                  |
+#    Abilities:                                                                |
+#    1. Little RGSS3 scripting proficiency to fully utilize this script        |
+#------------------------------------------------------------------------------|
+#  * Instructions                                                              |
+#    1. Open the script editor and put this script into an open slot between   |
+#       Yanfly Engine Ace - Ace Battle Engine and Main, save to take effect.   |
+#------------------------------------------------------------------------------|
+#  * Links                                                                     |
+#    Script Usage 101:                                                         |
+#    1. forums.rpgmakerweb.com/index.php?/topic/32752-rmvxa-script-usage-101/  |
+#    2. rpgmakervxace.net/topic/27475-rmvxa-script-usage-101/                  |
+#    This script:                                                              |
+#    1. http://pastebin.com/CbL0KMrd                                           |
+#    Mentioned Patreon Supporters:                                             |
+#    https://www.patreon.com/posts/71738797                                    |
+#------------------------------------------------------------------------------|
+#  * Authors                                                                   |
+#    DoubleX:                                                                  |
+#    1. This script                                                            |
+#    Yanfly:                                                                   |
+#    1. Yanfly Engine Ace - Ace Battle Engine                                  |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.01a(GMT 0800 26-7-2015):                                               |
+#    1. Added CLEAR_NIL_SE and CLEAR_NIL_SE_VAR_ID                             |
+#    v1.00a(GMT 1300 22-7-2015):                                               |
+#    1. 1st version of this script finished                                    |
+#==============================================================================|
+
+($doublex_rmvxa ||= {})[:YEA_BattleEngine_Clear] = "v1.01a"
+
+#==============================================================================|
+#  ** Script Configurations                                                    |
+#     You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+
+  module YEA_BattleEngine_Clear
+
+    # Sets the key triggering the skill/item clearance command
+    # It must return a symbol and should return an existing keymap symbol
+    # A custom keymap binding script might help here
+    # If CLEAR_KEY_VAR_ID is a natural number, the value of variable with id
+    # CLEAR_KEY_VAR_ID will be used instead
+    CLEAR_KEY = :SHIFT
+    CLEAR_KEY_VAR_ID = 0
+
+    # Sets the se played when triggering the skill/item clearance command
+    # "file", volume and pitch is its filename, volume and pitch respectively
+    # It must return a RPG::AudioFile and should return a RPG::SE
+    # If CLEAR_SE_VAR_ID is a natural number, the value of variable with id
+    # CLEAR_SE_VAR_ID will be used instead
+    CLEAR_SE = RPG::SE.new("file", volume, pitch)
+    CLEAR_SE_VAR_ID = 0
+
+    # Sets the se played when trying to clear an empty action slot
+    # "file", volume and pitch is its filename, volume and pitch respectively
+    # It must return a RPG::AudioFile and should return a RPG::SE
+    # If CLEAR_NIL_SE_VAR_ID is a natural number, the value of variable with id
+    # CLEAR_NIL_SE_VAR_ID will be used instead
+    CLEAR_NIL_SE = RPG::SE.new("file", volume, pitch)
+    CLEAR_NIL_SE_VAR_ID = 0
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** Script Implementations                                                   |
+#     You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+#  * Script Support Info:                                                      |
+#    1. Prerequisites                                                          |
+#       - Basic knowledge to Yanfly Engine Ace - Ace Battle Engine             |
+#       - Some RGSS3 scripting proficiency to fully comprehend this script     |
+#    2. Method documentation                                                   |
+#       - The 1st part informs which version rewritten, aliased or created this|
+#         method                                                               |
+#       - The 2nd part informs whether the method's rewritten, aliased or new  |
+#       - The 3rd part describes why this method's rewritten/aliased for       |
+#         rewritten/aliased methods or what the method does for new methods    |
+#       - The 4th part describes what the arguments of the method are          |
+#       - The 5th part describes how this method works for new methods only,   |
+#         and describes the parts added, removed or rewritten for rewritten or |
+#         aliased methods only                                                 |
+#       Example:                                                               |
+# #--------------------------------------------------------------------------| |
+# #  (Version X+; Rewrite/Alias/New)Why rewrite/alias/What this method does  | |
+# #--------------------------------------------------------------------------| |
+# # *argv: What these variables are                                            |
+# # &argb: What this block is                                                  |
+# def def_name(*argv, &argb)                                                   |
+#   # Added/Removed/Rewritten to does something/How this method works          |
+#   def_name_code                                                              |
+#   #                                                                          |
+# end # def_name                                                               |
+#------------------------------------------------------------------------------|
+
+    #--------------------------------------------------------------------------|
+    #  Returns the current keymap of the key triggering the clear command      |
+    #--------------------------------------------------------------------------|
+    def self.clear_key
+      # Checks if the selected variable's used instead of a fixed value
+      CLEAR_KEY_VAR_ID > 0 ? $game_variables[CLEAR_KEY_VAR_ID] : CLEAR_KEY
+      #
+    end # clear_key
+
+    #--------------------------------------------------------------------------|
+    #  Returns the current se played when triggering the clear command         |
+    #--------------------------------------------------------------------------|
+    def self.clear_se
+      # Checks if the selected variable's used instead of a fixed value
+      CLEAR_SE_VAR_ID > 0 ? $game_variables[CLEAR_SE_VAR_ID] : CLEAR_SE
+      #
+    end # clear_se
+
+    #--------------------------------------------------------------------------|
+    #  (v1.01a+)Returns the current se played when clearing empty action slots |
+    #--------------------------------------------------------------------------|
+    def self.clear_nil_se
+      # Checks if the selected variable's used instead of a fixed value
+      return $game_variables[CLEAR_NIL_SE_VAR_ID] if CLEAR_NIL_SE_VAR_ID > 0
+      CLEAR_NIL_SE      
+      #
+    end # clear_nil_se
+
+  end # YEA_BattleEngine_Clear
+
+end # DoubleX_RMVXA
+
+if $imported["YEA-BattleEngine"]
+
+#------------------------------------------------------------------------------|
+#  * (Edit)Adds the clear command handler                                      |
+#------------------------------------------------------------------------------|
+class Window_ActorCommand < Window_Command
+
+  #----------------------------------------------------------------------------|
+  #  (Alias)Processes the new clear command handler                            |
+  #----------------------------------------------------------------------------|
+  alias process_handling_clear process_handling
+  def process_handling
+    # Calls clear_cur_act upon pressing the key with keymap clear_key
+    if open? && active
+      if Input.trigger?(DoubleX_RMVXA::YEA_BattleEngine_Clear.clear_key)
+        return call_handler(:clear)
+      end
+    end
+    #
+    process_handling_clear
+  end # process_handling
+
+end # Window_ActorCommand
+
+#------------------------------------------------------------------------------|
+#  * (Edit)Adds the clear command handler and handling method                  |
+#------------------------------------------------------------------------------|
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  (Alias)Adds the new command that clears the currently selected action slot|
+  #----------------------------------------------------------------------------|
+  alias create_actor_command_window_clear create_actor_command_window
+  def create_actor_command_window
+    create_actor_command_window_clear
+    # Added to call clear_cur_act upon pressing the key with keymap clear_key
+    @actor_command_window.set_handler(:clear, method(:clear_cur_act))
+    #
+  end # create_actor_command_window
+
+  #----------------------------------------------------------------------------|
+  #  (New)Clears the currently selected actor's currently selected action slot |
+  #----------------------------------------------------------------------------|
+  def clear_cur_act
+    # Redraws the currently selected actor's part of the status window as well
+    return unless (actor = BattleManager.actor) && actor.input
+    item = actor.input.item
+    actor.input.clear
+    if item
+      DoubleX_RMVXA::YEA_BattleEngine_Clear.clear_se.play
+    else
+      DoubleX_RMVXA::YEA_BattleEngine_Clear.clear_nil_se.play
+    end
+    @status_window.draw_item(actor.index)
+    #
+  end # clear_cur_act
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+else
+
+  # Informs users that they didn't place YEA-BattleEngine above this script
+  msgbox("To use DoubleX RMVXA Unison Addon to Yanfly Engine Ace - Ace " + 
+         "Battle Engine, put it below:\n" + 
+         "Yanfly Engine Ace - Ace Battle Engine\nbut above Main")
+
+end
+
+#==============================================================================|

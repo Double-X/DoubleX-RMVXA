@@ -1,0 +1,772 @@
+#==============================================================================|
+#  ** Script Info                                                              |
+#------------------------------------------------------------------------------|
+#  * Script Name                                                               |
+#    DoubleX RMVXA Unison Addon to Yanfly Engine Ace - Ace Battle Engine       |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    Lets users make actor unison skills/items needing multiple actors to use  |
+#------------------------------------------------------------------------------|
+#  * Terms Of Use                                                              |
+#    You shall:                                                                |
+#    1. Follow the terms of use of Yanfly Engine Ace - Ace Battle Engine       |
+#    2. Keep this script's Script Info part's contents intact                  |
+#    You shalln't claim that this script's written by anyone other than        |
+#    DoubleX, his aliases, Yanfly, or his/her aliases                          |
+#    None of the above applies to Yanfly or his/her aliases                    |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    1. Yanfly Engine Ace - Ace Battle Engine                                  |
+#    2. DoubleX RMVXA Clear Addon to Yanfly Engine Ace - Ace Battle Engine     |
+#    Abilities:                                                                |
+#    1. Some RGSS3 scripting proficiency to fully utilize this script          |
+#------------------------------------------------------------------------------|
+#  * Instructions                                                              |
+#    1. Open the script editor and put this script into an open slot between   |
+#       DoubleX RMVXA Clear Addon to Yanfly Engine Ace - Ace Battle Engine and |
+#       Main, save to take effect.                                             |
+#    2. This script can't be used with DoubleX RMVXA Unison Item.              |
+#------------------------------------------------------------------------------|
+#  * Links                                                                     |
+#    Script Usage 101:                                                         |
+#    1. forums.rpgmakerweb.com/index.php?/topic/32752-rmvxa-script-usage-101/  |
+#    2. rpgmakervxace.net/topic/27475-rmvxa-script-usage-101/                  |
+#    This script:                                                              |
+#    1. http://pastebin.com/uPjXtgXn                                           |
+#    Video:                                                                    |
+#    1. https://www.youtube.com/watch?v=S-d6geAoYsM&feature=youtu.be           |
+#    Mentioned Patreon Supporters:                                             |
+#    https://www.patreon.com/posts/71738797                                    |
+#------------------------------------------------------------------------------|
+#  * Authors                                                                   |
+#    DoubleX:                                                                  |
+#    1. This script                                                            |
+#    Yanfly:                                                                   |
+#    1. Yanfly Engine Ace - Ace Battle Engine                                  |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00c(GMT 0000 25-2-2016):                                               |
+#    1. Fixed nil actor in unison_item_usable? due to missing code bug         |
+#    2. Fixed not restroing the unison usable lock for the currently selected  |
+#       unison skill/item right before processing the prior command            |
+#    3. Fixed not clearing the unison usable lock for the currently selected   |
+#       unison skill/item right after processing the next command              |
+#    4. Fixed not clearing unison inputable/usable locks upon clearing unison  |
+#       action slot                                                            |
+#    v1.00b(GMT 1100 26-7-2015):                                               |
+#    1. Fixed reserving nonempty action slots and selecting reserved ones bug  |
+#    v1.00a(GMT 1200 22-7-2015):                                               |
+#    1. 1st version of this script finished                                    |
+#==============================================================================|
+
+#==============================================================================|
+#  ** Notetag Info                                                             |
+#     Notetag settings override their corresponding configuration settings     |
+#------------------------------------------------------------------------------|
+#  * Skill/Item Notetags:                                                      |
+#    1. <unison actors: ids>                                                   |
+#       - Sets the list of id of actors needed for the skill/item as ids.      |
+#         For example:                                                         |
+#         <unison actors: 1> means actor with id 1 is required to use it       |
+#         <unison actors: 4, 2> means actors with id 4 and 2 are needed        |
+#       - All actors in list ids needs to be in the battle, inputable, able to |
+#         use it and pay its cost. They'll all pay the cost after using it.    |
+#         Only actors in list x can select it.                                 |
+#    2. <unison def rule: rule                                                 |
+#       - Sets the rule of setting user's def in the skill/item's damage       |
+#         formula as rule, whose symbol is one of those in UNISON_RULES.       |
+#       - The symbol of def must be included in UNISON_DEFS                    |
+#       - This notetag needs to be written below <unison item: ids> to work.   |
+#    3. <unison def actors: ids>                                               |
+#       - Sets user's method def in the skill/item's damage formula to use its |
+#         unison rule to combine those of actors with id includedin the list   |
+#         ids. def needs to be able to take no arguments and return a Numeric  |
+#         to work.                                                             |
+#         For example:                                                         |
+#         <unison atk actors: 1> means the user's atk in its damage formula    |
+#         uses thatof actor with id 1                                          |
+#         <unison mat actors: 4, 2> means the user's mat in its damage formula |
+#         uses mat of actors with id 4 and 2 under the skill/item's unison rule|
+#       - The symbol of def must be included in UNISON_DEFS                    |
+#       - This notetag needs to be written below <unison item: ids> to work.   |
+#------------------------------------------------------------------------------|
+
+($doublex_rmvxa ||= {})[:YEA_BattleEngine_Unison] = "v1.00c"
+
+#==============================================================================|
+#  ** Script Configurations                                                    |
+#     You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+
+  module YEA_BattleEngine_Unison
+
+    # Sets if the battlelog will show all actors involved in the unison skills
+    # or items instead of only the one invoking them
+    # If SHOW_UNISON_ACTOR_SWITCH_ID is a natural number, the state of switch
+    # with id SHOW_UNISON_ACTOR_SWITCH_ID will be used instead
+    SHOW_UNISON_ACTOR = true
+    SHOW_UNISON_ACTOR_SWITCH_ID = 0
+
+    # Sets the symbol of the rule used for setting the user's methods in the
+    # damage formula by using those of the included unison actors
+    # or items instead of only the one invoking them
+    # It must return a symbol included in UNISON_RULES
+    # If UNISON_DEF_RULE_VAR_ID is a natural number, the value of variable
+    # with id UNISON_DEF_RULE_VAR_ID will be used instead
+    UNISON_DEF_RULE = :avg
+    UNISON_DEF_RULE_VAR_ID = 0
+
+    # Implements the unison method rules
+    # The unison method value of all unison battlers can be referneced by vals
+    # The unison method rule symbol can be referenced by rule
+    # It's a method under Game_BattlerBase
+    # It must return a real number 
+    UNISON_RULES = %Q(
+  def unison_rules(vals, rule) # This line shalln't be changed
+    if rule == :min
+      vals.min
+    elsif rule == :avg
+      vals.inject(:+) / vals.size
+    elsif rule == :max
+      vals.max
+    else
+      0
+    end
+  end
+    )
+
+    # Sets the battler methods to use the unison method rules
+    # Its keys must be the battler method name symbols
+    # Methods with name method_name will be aliased to method_name_unison
+    UNISON_DEFS = {
+
+      # General Form:
+      # [:method_class, :super_class] => [
+      #   :method_name
+      # ]
+
+      [:Game_BattlerBase] => [
+        :hp,
+        :mp,
+        :tp,
+        :mhp,
+        :mmp,
+        :atk,
+        :def,
+        :mat,
+        :mdf,
+        :agi
+        # Adds new methods here
+        
+      ],
+
+      [:Game_Actor, :Game_Battler] => [
+        :level
+        # Adds new methods here
+        
+      ]
+
+      # Adds new classes here
+      
+
+    }
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** Script Implementations                                                   |
+#     You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+#  * Script Support Info:                                                      |
+#    1. Prerequisites                                                          |
+#       - Thorough comprehension of the relations between unison skills/items  |
+#         and the Yanfly Engine Ace - Ace Battle Engine action input mechanisms|
+#       - Advanced RGSS3 scripting proficiency to fully comprehend this script |
+#    2. Method documentation                                                   |
+#       - The 1st part informs which version rewritten, aliased or created this|
+#         method                                                               |
+#       - The 2nd part informs whether the method's rewritten, aliased or new  |
+#       - The 3rd part describes why this method's rewritten/aliased for       |
+#         rewritten/aliased methods or what the method does for new methods    |
+#       - The 4th part describes what the arguments of the method are          |
+#       - The 5th part describes how this method works for new methods only,   |
+#         and describes the parts added, removed or rewritten for rewritten or |
+#         aliased methods only                                                 |
+#       Example:                                                               |
+# #--------------------------------------------------------------------------| |
+# #  (Version X+; Rewrite/Alias/New)Why rewrite/alias/What this method does  | |
+# #--------------------------------------------------------------------------| |
+# # *argv: What these variables are                                            |
+# # &argb: What this block is                                                  |
+# def def_name(*argv, &argb)                                                   |
+#   # Added/Removed/Rewritten to does something/How this method works          |
+#   def_name_code                                                              |
+#   #                                                                          |
+# end # def_name                                                               |
+#------------------------------------------------------------------------------|
+
+    #--------------------------------------------------------------------------|
+    #  Returns if all unison actors should be displayed                        |
+    #--------------------------------------------------------------------------|
+    def self.show_unison_actor?
+      # Checks if the value of a selected switch's used instead of a fixed value
+      (i = SHOW_UNISON_ACTOR_SWITCH_ID) > 0 ? $game_switches[i] : 
+      SHOW_UNISON_ACTOR
+      #
+    end # show_unison_actor?
+
+    #--------------------------------------------------------------------------|
+    #  Returns the current unison user method rule                             |
+    #--------------------------------------------------------------------------|
+    def self.unison_def_rule
+      # Checks if the value of a selected var's used instead of a fixed value
+      (id = UNISON_DEF_RULE_VAR_ID) > 0 ? $game_variables[id] : UNISON_DEF_RULE
+      #
+    end # unison_def_rule
+
+  end # YEA_BattleEngine_Unison
+
+end # DoubleX_RMVXA
+
+if $imported["YEA-BattleEngine"]
+
+if $doublex_rmvxa[:YEA_BattleEngine_Clear]
+
+if $imported["DoubleX RMVXA Unison Item"]
+
+  # Informs users that they used DoubleX RMVXA Unison Item with this script
+  msgbox("DoubleX RMVXA Unison Addon to Yanfly Engine Ace - Ace Battle " +  
+         "Engine can't be used with:\nDoubleX RMVXA Unison Item")
+
+else
+
+#------------------------------------------------------------------------------|
+#  * Loads this script's notetags                                              |
+#------------------------------------------------------------------------------|
+class << DataManager # Edit
+
+  #----------------------------------------------------------------------------|
+  #  Loads all of this script's notetags from all skills/items as well         |
+  #----------------------------------------------------------------------------|
+  alias load_database_unison load_database
+  def load_database
+    load_database_unison
+    # Added to load all of this script's notetags from all skills/items
+    load_notetags_unison
+    #
+  end # load_database
+
+  #----------------------------------------------------------------------------|
+  #  Loads all of this script's notetags from all skills/items                 |
+  #----------------------------------------------------------------------------|
+  def load_notetags_unison # New
+    # Loads each notetag from each skill/item sequentially
+    [$data_skills, $data_items].each { |data|
+      data.each { |obj| obj.load_notetags_unison if obj }
+    }
+    #
+  end # load_notetags_unison
+
+end # DataManager
+
+#------------------------------------------------------------------------------|
+#  * Reads this script's notetags from this item                               |
+#------------------------------------------------------------------------------|
+class RPG::UsableItem < RPG::BaseItem # Edit
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  attr_accessor :unison_actor_ids # The list of id of all unison actors
+  attr_accessor :unison_rules # The mapping of which user's def uses which rule
+  attr_accessor :unison_def_actor_ids # The unison actors' def used by the user
+
+  #----------------------------------------------------------------------------|
+  #  Reads all of this script's notetags from the notebox                      |
+  #----------------------------------------------------------------------------|
+  def load_notetags_unison # New
+    @unison_actor_ids = []
+    @unison_rules = {}
+    @unison_def_actor_ids = {}
+    # Reads each line to check against each of this script's notetag
+    @note.split(/[\r\n]+/).each { |line|
+      case line
+      when /<unison actors:\s*(\d+(?:\s*,\s*\d+)*)>/i
+        $1.scan(/\d+/).each { |n| @unison_actor_ids << n.to_i if n.to_i > 0 }
+      when /<unison (\w+) rule:\s*(\w+)>/i
+        @unison_rules[$1.to_sym] = $2.to_sym unless @unison_actor_ids.empty?
+      when /<unison (\w+) actors:\s*(\d+(?:\s*,\s*\d+)*)>/i
+        @unison_def_actor_ids[sym = $1.to_sym] ||= []
+        $2.scan(/\d+/).each { |num|
+          @unison_def_actor_ids[sym] << num.to_i if num.to_i > 0
+        }
+      end
+    }
+    #
+  end # load_notetags_unison_addon
+
+end # RPG::UsableItem
+
+#------------------------------------------------------------------------------|
+#  * Changes actor inputability and unison skill/item usability checks         |
+#------------------------------------------------------------------------------|
+class Game_BattlerBase # Edit
+
+  #----------------------------------------------------------------------------|
+  #  Checks if at least 1 action slot isn't reserved as well                   |
+  #----------------------------------------------------------------------------|
+  alias inputable_unison? inputable?
+  def inputable?
+    # Rewritten to only check the new condition against actors in battles
+    return false unless inputable_unison?
+    return true unless $game_party.in_battle && @unison_inputs
+    @unison_inputs.size < @actions.size
+    #
+  end # inputable?
+
+  #----------------------------------------------------------------------------|
+  #  Checks if unison skills/items are usable as well                          |
+  #----------------------------------------------------------------------------|
+  alias usable_unison? usable?
+  def usable?(item)
+    # Rewritten to check if all unison actors can use the unison skill/item
+    return usable_unison?(item) unless actor? && item && 
+    item.is_a?(RPG::UsableItem) && !item.unison_actor_ids.empty?
+    return false unless item.unison_actor_ids.include?(id)
+    return false unless usable_unison?(item)
+    return unison_skill_usable?(item) if item.is_a?(RPG::Skill)
+    return false unless item.is_a?(RPG::Item) && item_conditions_met?(item)
+    unison_item_usable?(item)
+    #
+  end # usable?
+
+  #----------------------------------------------------------------------------|
+  #  Checks if all unison invokees can use the unison skill                    |
+  #----------------------------------------------------------------------------|
+  def unison_skill_usable?(item) # New
+    # Checks if all unison invokees are inputable and has the unison skill
+    (item.unison_actor_ids - [id]).each { |actor_id|
+      actor = $game_actors[actor_id]
+      return false unless actor.battle_member? && actor.inputable_unison?
+      return false if $game_party.in_battle && actor.actions.select { |a| 
+      a.item }.size >= actor.actions.size - actor.temp_unison_inputs
+      return false unless actor.skill_conditions_met?(item)
+      return false unless actor.skills.any? { |s| s == $data_skills[item.id] }
+    }
+    true
+    #
+  end # unison_skill_usable?
+
+  #----------------------------------------------------------------------------|
+  #  Checks if all unison invokees can use the unison item                     |
+  #----------------------------------------------------------------------------|
+  def unison_item_usable?(item) # New
+    # Checks if all unison invokees are inputable
+    (item.unison_actor_ids - [id]).each { |actor_id|
+      actor = $game_actors[actor_id]
+      return false unless actor.battle_member? && actor.inputable?
+    }
+    true
+    #
+  end # unison_item_usable?
+
+end # Game_BattlerBase
+
+#------------------------------------------------------------------------------|
+#  * Changes unison skill/item's user's defs and unison cost payments          |
+#------------------------------------------------------------------------------|
+class Game_Battler < Game_BattlerBase # Edit
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_writer :unison_item # The unison skill/item for setting user's defs
+
+  #----------------------------------------------------------------------------|
+  #  Changes all user's defs to their unison versions                          |
+  #----------------------------------------------------------------------------|
+  alias make_damage_value_unison make_damage_value
+  def make_damage_value(user, item)
+    # Added to set all user's defs to use their unison rules
+    user.unison_item = item if user.actor? && item.unison_actor_ids.size > 1
+    #
+    make_damage_value_unison(user, item)
+    # Added to reset all user's defs to their defaults
+    user.unison_item = nil
+    #
+  end # make_damage_value
+
+  #----------------------------------------------------------------------------|
+  #  Asks all unison actors to pay the unison skill cost                       |
+  #----------------------------------------------------------------------------|
+  alias use_item_unison use_item
+  def use_item(item)
+    # Rewritten to asks all unison invokees to pay the unison skill cost only
+    unless item.is_a?(RPG::Skill) && !item.unison_actor_ids.empty?
+      return use_item_unison(item)
+    end
+    item.unison_actor_ids.each { |id| $game_actors[id].pay_skill_cost(item) }
+    item.effects.each { |effect| item_global_effect_apply(effect) }
+    #
+  end # use_item
+
+  #----------------------------------------------------------------------------|
+  #  Returns the result of the user's defs after using their unison rules      |
+  #----------------------------------------------------------------------------|
+  module_eval(DoubleX_RMVXA::YEA_BattleEngine_Unison::UNISON_RULES) # New
+
+end # Game_Battler
+
+#------------------------------------------------------------------------------|
+#  * Changes action slot inputability check                                    |
+#------------------------------------------------------------------------------|
+class Game_Actor < Game_Battler # Edit
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_accessor :temp_unison_inputs # The number of temporarily reserved ones
+  attr_accessor :unison_inputs # The list of reserved action slots' indices
+
+  #----------------------------------------------------------------------------|
+  #  Initializes the number and list of reserved action slots                  |
+  #----------------------------------------------------------------------------|
+  alias setup_unison setup
+  def setup(actor_id)
+    setup_unison(actor_id)
+    # Added to initialize both the pretended and real ones as 0 and empty
+    @temp_unison_inputs = 0
+    @unison_inputs = []
+    #
+  end # setup
+
+  #----------------------------------------------------------------------------|
+  #  Resets the number and list of reserved action slots                       |
+  #----------------------------------------------------------------------------|
+  alias clear_actions_unison clear_actions
+  def clear_actions
+    clear_actions_unison
+    # Added to reset both the pretended and real ones as 0 as empty
+    @temp_unison_inputs = 0
+    @unison_inputs = []
+    #
+  end # clear_actions
+
+  #----------------------------------------------------------------------------|
+  #  Prevents reserved action slots from being selected                        |
+  #----------------------------------------------------------------------------|
+  alias next_command_unison next_command
+  def next_command
+    # Rewritten to skip the next action slot if it's reserved for unison skills
+    last_act_input_index = @action_input_index
+    begin
+      inputable = next_command_unison
+    end while inputable && @unison_inputs.include?(@action_input_index)
+    @action_input_index = last_act_input_index unless inputable
+    inputable
+    #
+  end # next_command
+
+  #----------------------------------------------------------------------------|
+  #  Prevents reserved action slots from being selected                        |
+  #----------------------------------------------------------------------------|
+  alias prior_command_unison prior_command
+  def prior_command # v1.00b+
+    # Rewritten to skip the prior action slot if it's reserved for unison skills
+    last_act_input_index = @action_input_index
+    begin
+      inputable = prior_command_unison
+    end while inputable && @unison_inputs.include?(@action_input_index)
+    @action_input_index = last_act_input_index unless inputable
+    inputable
+    #
+  end # prior_command
+
+  #----------------------------------------------------------------------------|
+  #  Ensures the action input index won't point to reserved ones               |
+  #----------------------------------------------------------------------------|
+  # i: The reserved action slot's index
+  # prior: Whether this actor's a prior actor to the unison invoker
+  def set_unison_input_index(i, prior) # v1.00b+; New
+    # Points to the prior or next action slot according to the prior flag
+    return unless (@unison_inputs << i).include?(@action_input_index)
+    prior ? prior_command : next_command
+    #
+  end # set_unison_input_index
+
+end # Game_Actor
+
+#------------------------------------------------------------------------------|
+#  * Changes unison item usability check                                       |
+#------------------------------------------------------------------------------|
+class Window_ItemList < Window_Selectable # Edit
+
+  #----------------------------------------------------------------------------|
+  #  Checks if an unison item's enabled in battles                             |
+  #----------------------------------------------------------------------------|
+  alias enable_unison? enable?
+  def enable?(item)
+    # Rewritten to set disable unison items when unison conditions aren't met
+    return enable_unison?(item) unless $game_party.in_battle && item && 
+    item.is_a?(RPG::Item) && !item.unison_actor_ids.empty?
+    BattleManager.actor.usable?(item)
+    #
+  end # enable?
+
+end # Window_ItemList
+
+#------------------------------------------------------------------------------|
+#  * Shows all unison actors' names when using unison skills/items             |
+#------------------------------------------------------------------------------|
+class Window_BattleLog < Window_Selectable # Edit
+
+  #----------------------------------------------------------------------------|
+  #  Displays all unison actors' names if their names are to be shown          |
+  #----------------------------------------------------------------------------|
+  alias display_use_item_unison display_use_item
+  def display_use_item(subject, item)
+    # Rewritten to display all unison actors while using unison skills/items
+    return display_use_unison(item) if !item.unison_actor_ids.empty? && 
+    DoubleX_RMVXA::YEA_BattleEngine_Unison.show_unison_actor?
+    display_use_item_unison(subject, item)
+    #
+  end # display_use_item
+
+  #----------------------------------------------------------------------------|
+  #  Shows all unison actor names when using the unison skill/item             |
+  #----------------------------------------------------------------------------|
+  def display_use_unison(item) # New
+    # Shows the unison skill/item usage messages according to the item class
+    names = unison_actor_names(item.unison_actor_ids)
+    unless item.is_a?(RPG::Skill)
+      return add_text(sprintf(Vocab::UseItem, names, item.name))
+    end
+    add_text(names + item.message1)
+    return if item.message2.empty?
+    wait
+    add_text(item.message2)
+    #
+  end # display_use_unison
+
+  #----------------------------------------------------------------------------|
+  #  Collects all unison actors' names into the same string                    |
+  #----------------------------------------------------------------------------|
+  def unison_actor_names(ids) # New
+    # Separates the names with comma, and "and" for the last unison actor's one
+    names = ""
+    size = ids.size
+    ids.each_with_index { |actor_id, index|
+      if index > 0 && index < size - 1
+        names += ", "
+      elsif size > 1 && index == size - 1
+        names += " and "
+      end
+      names += $game_actors[actor_id].name
+    }
+    names
+    #
+  end # unison_actor_names
+
+end # Window_BattleLog
+
+#------------------------------------------------------------------------------|
+#  * Reserves unison invokees' action slots for unison skills/items            |
+#------------------------------------------------------------------------------|
+class Scene_Battle < Scene_Base # Edit
+
+  #----------------------------------------------------------------------------|
+  #  Initializes the unison action linkage tracker                             |
+  #----------------------------------------------------------------------------|
+  alias start_unison start
+  def start
+    start_unison
+    # Added to use a hash to track the unison action linkages
+    @unison_actor_ids = {}
+    #
+  end # start
+
+  #----------------------------------------------------------------------------|
+  #  Ensures the correctness of actor inputable and skill/item usable check    |
+  #----------------------------------------------------------------------------|
+  alias next_command_unison next_command
+  def next_command
+    # Added to update the unison linkage of the currently selected action
+    if (actor = BattleManager.actor) && actor.input && actor.input.item
+      clear_unison_actor_ids
+      add_unison_actor_ids unless actor.input.item.unison_actor_ids.empty?
+    end
+    #
+    next_command_unison
+    # Added to unlock the next action's unison usable locks
+    toggle_unison_usable_locks(-1)
+    #
+  end # next_command
+
+  #----------------------------------------------------------------------------|
+  #  Ensures the correctness of unison skills/items' usability check           |
+  #----------------------------------------------------------------------------|
+  alias prior_command_unison prior_command
+  def prior_command
+    # Added to relock the previously selected action's unison usable locks
+    toggle_unison_usable_locks(1)
+    #
+    prior_command_unison
+    # Added to unlock the currently selected action's unison usable locks
+    toggle_unison_usable_locks(-1)
+    #
+  end # prior_command
+
+  #----------------------------------------------------------------------------|
+  #  Relocks/Unlocks the currently selected action's unison usable locks       |
+  #----------------------------------------------------------------------------|
+  # sign: The relock/unlock flag
+  def toggle_unison_usable_locks(sign) # v1.00c+; New
+    return unless a = BattleManager.actor
+    return unless act_slots = @unison_actor_ids[[a.index, a.action_input_index]]
+    act_slots.each { |a_s| $game_actors[a_s[0]].temp_unison_inputs += sign }
+  end # toggle_unison_usable_locks
+
+  #----------------------------------------------------------------------------|
+  #  Clears the currently selected action's unison linkage as well             |
+  #----------------------------------------------------------------------------|
+  alias on_actor_cancel_unison on_actor_cancel
+  def on_actor_cancel # v1.00c+
+    on_actor_cancel_unison
+    # Added to free all reserved action slots of the unison skill/item if any
+    clear_unison_actor_ids
+    #
+  end # on_actor_cancel
+
+  #----------------------------------------------------------------------------|
+  #  Clears the currently selected action's unison linkage as well             |
+  #----------------------------------------------------------------------------|
+  alias on_enemy_cancel_unison on_enemy_cancel
+  def on_enemy_cancel # v1.00c+
+    on_enemy_cancel_unison
+    # Added to free all reserved action slots of the unison skill/item if any
+    clear_unison_actor_ids
+    #
+  end # on_enemy_cancel
+ 
+  #----------------------------------------------------------------------------|
+  #  Ensures supposedly valid actions will be indeed valid as well             |
+  #----------------------------------------------------------------------------|
+  alias turn_start_unison turn_start
+  def turn_start
+    # Added to reset the links of the unison action slots to the unison invokees
+    @unison_actor_ids = {}
+    $game_party.alive_members.each { |mem|
+      mem.temp_unison_inputs = -1
+      mem.unison_inputs = nil
+    }
+    #
+    turn_start_unison
+  end # turn_start
+
+  #----------------------------------------------------------------------------|
+  #  Clears the currently selected action's unison linkage as well             |
+  #----------------------------------------------------------------------------|
+  alias clear_cur_act_unison clear_cur_act
+  def clear_cur_act
+    clear_cur_act_unison
+    # Added to free all reserved action slots of the unison skill/item if any
+    clear_unison_actor_ids
+    #
+  end # clear_cur_act
+
+  #----------------------------------------------------------------------------|
+  #  Sets the link of the unison action slots to the unison invokees           |
+  #----------------------------------------------------------------------------|
+  def add_unison_actor_ids # New
+    # Reserves an inputable action slot from each unison invokee
+    ids = (actor = BattleManager.actor).input.item.unison_actor_ids - [actor.id]
+    act_slots = []
+    index = actor.index
+    ids.each { |id| act_slots << add_unison_actor_id(index, id) }
+    @unison_actor_ids[[index, actor.action_input_index]] = act_slots
+    #
+  end # add_unison_actor_ids
+
+  #----------------------------------------------------------------------------|
+  #  Tries not to reserve a selected inputable action slot                     |
+  #----------------------------------------------------------------------------|
+  # actor_index: The index of the unison invoker of the unison skill/item
+  # id: The id of the unison invokee to be added
+  def add_unison_actor_id(actor_index, id) # v1.00b+; New
+    # Reserves the 1st/last empty one if the unison invokee's prior/next actor
+    (a = $game_actors[id]).temp_unison_inputs += 1
+    index = 0
+    prior = a.index < actor_index
+    a.actions.each_with_index { |act, i|
+      next if act.item || (a.unison_inputs ||= []).include?(i)
+      prior ? (break index = i) : (next index = i)
+    }
+    a.set_unison_input_index(index, prior)
+    [id, index]
+    #
+  end # add_unison_actor_id
+
+  #----------------------------------------------------------------------------|
+  #  Clears the link of the unison action slots with the unison invokees       |
+  #----------------------------------------------------------------------------|
+  def clear_unison_actor_ids # New
+    # Frees the linked reserved action slot from each unison invokee
+    a = BattleManager.actor
+    return unless act_slots = @unison_actor_ids[[a.index, a.action_input_index]]
+    @unison_actor_ids.delete([a.index, a.action_input_index])
+    act_slots.each { |a_s| $game_actors[a_s[0]].unison_inputs.delete(a_s[1]) }
+    #
+  end # clear_unison_actor_ids
+
+end # Scene_Battle
+
+# Aliases methods using unison method rules
+DoubleX_RMVXA::YEA_BattleEngine_Unison::UNISON_DEFS.each { |klass, defs|
+  defs.each { |name|
+    name = name.id2name
+    eval(%Q(
+class #{klass[0].id2name}#{klass[1] ? " < #{klass[1].id2name}" : ""}
+
+  alias #{name}_unison #{name}
+  def #{name}(*argv, &argb)
+    return #{name}_unison(*argv, &argb) unless @unison_item
+    defs = @unison_item.unison_def_actor_ids[:#{name}]
+    return #{name}_unison(*argv, &argb) unless defs
+    defs = [#{name}_unison(*argv, &argb)] + (defs - [id]).collect! { |i| 
+    $game_actors[i].#{name}(*argv, &argb) }
+    rule = @unison_item.unison_rules[:#{name}]
+    rule ||= DoubleX_RMVXA::YEA_BattleEngine_Unison.unison_def_rule
+    unison_rules(defs, rule)
+  end
+
+end
+    ))
+  }
+}
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["DoubleX RMVXA Unison Item"]
+
+else
+
+  # Informs users that they didn't put YEA_BattleEngine_Clear above this script
+  msgbox("To use DoubleX RMVXA Unison Addon to Yanfly Engine Ace - Ace " + 
+         "Battle Engine, put it below:\nDoubleX RMVXA Clear Addon to Yanfly " + 
+         "Engine Ace - Ace Battle Engine\nbut above Main")
+
+end
+
+else
+
+  # Informs users that they didn't put YEA-BattleEngine above this script
+  msgbox("To use DoubleX RMVXA Unison Addon to Yanfly Engine Ace - Ace " + 
+         "Battle Engine, put it below:\n" + 
+         "Yanfly Engine Ace - Ace Battle Engine\nbut above Main")
+
+end
+
+#==============================================================================|

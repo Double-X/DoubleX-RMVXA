@@ -1,0 +1,35 @@
+#------------------------------------------------------------------------------|
+#  * Lets you set an atb rate modifier applied to all battlers                 |
+#------------------------------------------------------------------------------|
+class Game_BattlerBase # Edit
+
+  #----------------------------------------------------------------------------|
+  #  Uses your own base atb rate formula modifier as well                      |
+  #----------------------------------------------------------------------------|
+  # base: The base atb gain rate
+  def set_ecatb_gain_rate(base) # Rewrite; Potential Hotspot
+    base[:val] = ecatb_base_formula(base) # Added
+    ecatb = DoubleX_RMVXA::ECATB
+    ecatb_rate_ord.each { |data|
+      next unless send(@ecatb_item[data][0])
+      send(@ecatb_item[data][1]).each { |item|
+        (0..(item.ecatb_notes[:rate].size - 1)).each { |index|
+          next unless note = item.ecatb_notes[:rate][index]
+          base[:val] = ecatb.send(note, self, base, item)
+        }
+      }
+    }
+    base[:val]
+  end # set_ecatb_gain_rate
+
+  #----------------------------------------------------------------------------|
+  #  Lets you set your own base atb rate formula modifier                      |
+  #----------------------------------------------------------------------------|
+  # base: The base atb rate determinators
+  def ecatb_base_formula(base) # New; Potential Hotspot
+    # Writes your own base atb rate formula modifier here
+    base[:val] * agi * base[:size] / base[:sum][:agi]
+    #
+  end # ecatb_base_formula
+
+end # Game_BattlerBase

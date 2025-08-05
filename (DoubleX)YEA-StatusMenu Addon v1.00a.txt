@@ -1,0 +1,59 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Addon v1.00a for Yanfly Engine Ace - Ace Status Menu       |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00a (GMT 0400 9-1-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    This script: DoubleX                                                      |
+#    Yanfly Engine Ace - Ace Status Menu: Yanfly                               |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of Yanfly Engine Ace - Ace Status Menu except that you must  |
+#    also give Yanfly credit(you should do this anyway) if you give DoubleX or |
+#    his alias credit                                                          |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - Yanfly Engine Ace - Ace Status Menu                                     |
+#    Knowledge:                                                                |
+#    - That of using the script Yanfly Engine Ace - Ace Status Menu            |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Adds element rate, debuff rate, state rate and more to the status menu  |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script Yanfly Engine Ace - Ace Status Menu and ¡¿ Main.|
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of Yanfly Engine Ace - Ace Status Menu                     |
+#==============================================================================|
+
+$imported = {} if $imported.nil?
+$imported["DoubleX RMVXA YEA-StatusMenu Addon"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module YEA_StatusMenu_Addon
+
+  end # YEA_StatusMenu_Addon
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-StatusMenu"]
+
+#==============================================================================|
+
+end # if $imported["YEA-StatusMenu"]
+
+#==============================================================================|

@@ -1,0 +1,75 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Bug Fixes v1.00a to Yanfly Engine Ace - Learn Skill Engine |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00a(GMT 0400 14-2-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Authors                                                                   |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yanfly:                                                                   |
+#    - Yanfly Engine Ace - Learn Skill Engine                                  |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of Yanfly Engine Ace - Learn Skill Engine except that you    |
+#    must also give Yanfly credit(you should do this anyway) if you give       |
+#    DoubleX or his alias credit                                               |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - Yanfly Engine Ace - Learn Skill Engine                                  |
+#    Knowledge:                                                                |
+#    - That of using script Yanfly Engine Ace - Learn Skill Engine             |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Tries to fix bugs I've found in Yanfly Engine Ace - Learn Skill Engine  |
+#    - Fixing compatibility issues isn't this script's aim                     |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script Yanfly Engine Ace - Learn Skill Engine and   |
+#    ¡¿ Main. Save to take effect.                                              |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of Yanfly Engine Ace - Learn Skill Engine                  |
+#==============================================================================|
+
+#==============================================================================|
+#  ** Fixes                                                                    |
+#------------------------------------------------------------------------------|
+#  * Actor selection bug(Fix_PGUP_PGDN_Bug):                                   |
+#    - Aliased method make_learn_skills_list under class Window_LearnSkillList |
+#==============================================================================|
+
+$imported = {} if $imported.nil?
+$imported["DoubleX RMVXA Bug Fixes to YEA-LearnSkillEngine"] = true
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-LearnSkillEngine"]
+
+#------------------------------------------------------------------------------|
+#  * Fixes:                                                                    |
+#    - Actor selection bug                                                     |
+#------------------------------------------------------------------------------|
+class Window_LearnSkillList < Window_SkillList
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_learn_skills_list                                      |
+  #----------------------------------------------------------------------------|
+  alias fix_make_learn_skills_list make_learn_skills_list
+  def make_learn_skills_list
+    fix_make_learn_skills_list
+    # This part is added by this script to refresh the skill list window
+    refresh
+    # Fix_PGUP_PGDN_Bug
+  end
+
+end
+
+end # if $imported["YSA-InvertTargets"]
+
+#==============================================================================|

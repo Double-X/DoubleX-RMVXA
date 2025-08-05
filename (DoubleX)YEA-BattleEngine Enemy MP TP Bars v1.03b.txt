@@ -1,0 +1,866 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Enemy MP/TP Bars Addon v1.03b to Yanfly Engine Ace - Ace   |
+#     Battle Engine                                                            |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.03b(GMT 1000 21-5-2023):                                               |
+#    - Fixed not updating the enemy mp and tp bars when their mp and tp becomes|
+#      0 respectively                                                          |
+#    v1.03a(GMT 1000 10-10-2022):                                              |
+#    - Added MP_PERCENTAGE_DECIMAL_DIGHT_NUMBER and                            |
+#      MP_PERCENTAGE_DECIMAL_DIGHT_NUMBER                                      |
+#    v1.02b(GMT 1000 21-5-2016):                                               |
+#    - Fixed not updating mp/tp bar fill ratio for mp/tp change on battle start|
+#    - If mmp is 0, the mp bar will be fully filled to show the mmp is 0       |
+#    v1.02a(GMT 0200 6-4-2015):                                                |
+#    - Added MP_CRISIS_TEXT_COLOR                                              |
+#    v1.01e(GMT 0900 14-2-2014):                                               |
+#    - Fixed the mp and tp bars of the hidden enemies being shown bug          |
+#    - Further increased efficiency and reduced lag                            |
+#    v1.01d(GMT 0400 4-10-2014):                                               |
+#    - Further increased efficiency and reduced lag                            |
+#    v1.01c(GMT 0300 4-9-2014):                                                |
+#    - Updated compatibility with DoubleX RMVXA Percentage Addon to Yanfly     |
+#      Engine Ace - Battle Engine Add-On: Enemy HP Bars                        |
+#    v1.01b(GMT 0500 2-9-2014):                                                |
+#    - Further increased efficiency and reduced size of this script            |
+#    - Reduced lag induced from v1.00b efficiency upgrade                      |
+#    v1.01a(GMT 1700 1-9-2014):                                                |
+#    - Added mp and tp texts x and y offsets relative to respective bars       |
+#    - Added MP_TEXT_COLOR and TP_TEXT_COLOR                                   |
+#    v1.00b(GMT 1600 1-9-2014):                                                |
+#    - Fixed undesirable results when text size > bar height                   |
+#    - Increased efficiency and reduced size of this script                    |
+#    v1.00a(GMT 0500 29-8-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yanfly:                                                                   |
+#    - Yanfly Engine Ace - Ace Battle Engine                                   |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of Yanfly Engine Ace - Ace Battle Engine except that you're  |
+#    not allowed to give DoubleX or his alias credit                           |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - Yanfly Engine Ace - Ace Battle Engine                                   |
+#    Knowledge:                                                                |
+#    - That of using the script Yanfly Engine Ace - Ace Battle Engine          |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Displays the enemy mp or/and tp bars                                    |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script Yanfly Engine Ace - Ace Battle Engine and    |
+#    ¡¿ Main. Save to take effect.                                              |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of Yanfly Engine Ace - Ace Battle Engine                   |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Enemy MP/TP Bars Addon to YEA-BattleEngine"] =
+true
+
+#==============================================================================|
+# ** Mp bar notetags                                                           |
+#------------------------------------------------------------------------------|
+# * Notetag <hide mp gauge>, <show mp gauge>                                   |
+#   Hides or shows mp gauge for that enemy in battle. The guage appear whenever|
+#   that enemy is targeted for battle or taking mp damage. Using the latter    |
+#   will bypass the requirement for needing to defeat that enemy once.         |
+#------------------------------------------------------------------------------|
+# * Notetag: <back mp gauge: x>                                                |
+#   Sets the colour of that enemy's mp back gauge of to text color x.          |
+#------------------------------------------------------------------------------|
+# * Notetag <mp gauge 1: x>, <mp gauge 2: x>                                   |
+#   Sets the colour 1 and 2 of that enemy's mp gauge to text color x.          |
+#------------------------------------------------------------------------------|
+# * Notetag <mp display: x>                                                    |
+#   Displays that enemy's mp in the form of:                                   |
+#   Don't display if x is 0                                                    |
+#   Percentage if x is 1                                                       |
+#   Actual number if x is 2                                                    |
+#==============================================================================|
+# ** Tp bar notetags                                                           |
+#------------------------------------------------------------------------------|
+# * Notetag <hide tp gauge>, <show tp gauge>                                   |
+#   Hides or shows tp gauge for that enemy in battle. The guage appear whenever|
+#   that enemy is targeted for battle or taking tp damage. Using the latter    |
+#   will bypass the requirement for needing to defeat that enemy once.         |
+#------------------------------------------------------------------------------|
+# * Notetag: <back tp gauge: x>                                                |
+#   Sets the colour of that enemy's tp back gauge of to text color x.          |
+#------------------------------------------------------------------------------|
+# * Notetag <tp gauge 1: x>, <tp gauge 2: x>                                   |
+#   Sets the colour 1 and 2 of that enemy's tp gauge to text color x.          |
+#------------------------------------------------------------------------------|
+# * Notetag <tp display: x>                                                    |
+#   Displays that enemy's tp in the form of:                                   |
+#   Don't display if x is 0                                                    |
+#   Percentage if x is 1                                                       |
+#   Actual number if x is 2                                                    |
+#------------------------------------------------------------------------------|
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module YEA_BattleEngine_Enemy_MP_TP_Bars_Addon
+
+#------------------------------------------------------------------------------|
+#  * MP Bars                                                                   |
+#------------------------------------------------------------------------------|
+
+    # SHOW_ENEMY_MP_GAUGE, default = true
+    # Show the enemy mp gauge if SHOW_ENEMY_MP_GAUGE is true
+    SHOW_ENEMY_MP_GAUGE = true
+
+    # ANIMATE_MP_GAUGE, default = true
+    # Animate the enemy mp gauge if ANIMATE_MP_GAUGE is true
+    ANIMATE_MP_GAUGE = true
+
+    # MP_DEFEAT_ENEMIES_FIRST, default = false
+    # Show the enemy mp gauge only if it's been defeated before
+    MP_DEFEAT_ENEMIES_FIRST = false
+
+    # ENEMY_MP_GAUGE_WIDTH, ENEMY_MP_GAUGE_HEIGHT, default = 80, 20
+    # Sets the enemy mp gauge width and height as ENEMY_MP_GAUGE_WIDTH and
+    # ENEMY_MP_GAUGE_HEIGHT respectively
+    ENEMY_MP_GAUGE_WIDTH = 48
+    ENEMY_MP_GAUGE_HEIGHT = 12
+
+    # ENEMY_MP_GAUGE_COLOUR1, ENEMY_MP_GAUGE_COLOUR2, default = 22, 23
+    # Sets the colour 1 and colour 2 of the enemy mp gauge as
+    # ENEMY_MP_GAUGE_COLOUR1 and ENEMY_MP_GAUGE_COLOUR2 respectively
+    ENEMY_MP_GAUGE_COLOUR1 = 22
+    ENEMY_MP_GAUGE_COLOUR2 = 23
+
+    # ENEMY_MP_BACKGAUGE_COLOUR, default = 15
+    # Sets the enemy mp back gauge colour as ENEMY_MP_BACK_GAUGE_COLOUR
+    ENEMY_MP_BACKGAUGE_COLOUR = 15
+
+    # ENEMY_MP_DISPLAY, default = 2
+    # Display the enemy's mp in the form of:
+    # Don't display if 0
+    # Percentage if 1
+    # Actual number if 2
+    ENEMY_MP_DISPLAY = 2
+
+    # (v1.03a+)MP_PERCENTAGE_DECIMAL_DIGHT_NUMBER, default = 0
+    # Sets the number of decimal digits when showing mp percentages
+    MP_PERCENTAGE_DECIMAL_DIGHT_NUMBER = 1
+
+    # MP_TEXT_SIZE, default = ENEMY_MP_GAUGE_HEIGHT
+    # Sets the size of the text shown on enemy mp bars as MP_TEXT_SIZE
+    MP_TEXT_SIZE = ENEMY_MP_GAUGE_HEIGHT + 4
+
+    # (v1.00b+)FIX_LARGE_MP_TEXT, default = false
+    # Fixes issues when MP_TEXT_SIZE is much larger than ENEMY_MP_GAUGE_HEIGHT
+    FIX_LARGE_MP_TEXT = false
+
+    # (v1.02a+)MP_CRISIS_TEXT_COLOR, default = 17
+    # Sets the mp text color with mp crisis as MP_CRISIS_TEXT_COLOR
+    MP_CRISIS_TEXT_COLOR = 17
+
+    # (v1.01a+)MP_TEXT_COLOR, default = 16
+    # Sets the mp text color as MP_TEXT_COLOR
+    MP_TEXT_COLOR = 0
+
+    # (v1.01a+)MP_TEXT_X_OFFSET, MP_TEXT_Y_OFFSET, default = 0, 0
+    # Sets the x and y offsets of the mp text relative to the mp bar
+    MP_TEXT_X_OFFSET = 0
+    MP_TEXT_Y_OFFSET = 0
+
+#------------------------------------------------------------------------------|
+#  * TP Bars                                                                   |
+#------------------------------------------------------------------------------|
+
+    # SHOW_ENEMY_TP_GAUGE, default = true
+    # Show the enemy tp gauge if SHOW_ENEMY_TP_GAUGE is true
+    SHOW_ENEMY_TP_GAUGE = true
+
+    # ANIMATE_TP_GAUGE, default = true
+    # Animate the enemy mp gauge if ANIMATE_TP_GAUGE is true
+    ANIMATE_TP_GAUGE = true
+
+    # TP_DEFEAT_ENEMIES_FIRST, default = false
+    # Show the enemy tp gauge only if it's been defeated before
+    TP_DEFEAT_ENEMIES_FIRST = false
+
+    # ENEMY_TP_GAUGE_WIDTH, ENEMY_TP_GAUGE_HEIGHT, default = 80, 20
+    # Sets the enemy tp gauge width and height as ENEMY_TP_GAUGE_WIDTH and
+    # ENEMY_TP_GAUGE_HEIGHT respectively
+    ENEMY_TP_GAUGE_WIDTH = 48
+    ENEMY_TP_GAUGE_HEIGHT = 12
+
+    # ENEMY_TP_GAUGE_COLOUR1, ENEMY_TP_GAUGE_COLOUR2, default = 20, 21
+    # Sets the colour 1 and colour 2 of the enemy tp gauge as
+    # ENEMY_TP_GAUGE_COLOUR1 and ENEMY_TP_GAUGE_COLOUR2 respectively
+    ENEMY_TP_GAUGE_COLOUR1 = 20
+    ENEMY_TP_GAUGE_COLOUR2 = 21
+
+    # ENEMY_TP_BACKGAUGE_COLOUR, default = 15
+    # Sets the enemy tp back gauge colour as ENEMY_TP_BACK_GAUGE_COLOUR
+    ENEMY_TP_BACKGAUGE_COLOUR = 15
+
+    # ENEMY_TP_DISPLAY, default = 2
+    # Display the enemy's tp in the form of:
+    # Don't display if 0
+    # Percentage if 1
+    # Actual number if 2
+    ENEMY_TP_DISPLAY = 2
+
+    # (v1.03a+)TP_PERCENTAGE_DECIMAL_DIGHT_NUMBER, default = 0
+    # Sets the number of decimal digits when showing tp percentages
+    TP_PERCENTAGE_DECIMAL_DIGHT_NUMBER = 1
+
+    # TP_TEXT_SIZE, default = ENEMY_TP_GAUGE_HEIGHT
+    # Sets the size of the text shown on enemy mp bars as TP_TEXT_SIZE
+    TP_TEXT_SIZE = ENEMY_TP_GAUGE_HEIGHT + 4
+
+    # (v1.00b+)FIX_LARGE_MP_TEXT, default = false
+    # Fixes issues when MP_TEXT_SIZE is much larger than ENEMY_MP_GAUGE_HEIGHT
+    FIX_LARGE_TP_TEXT = false
+
+    # (v1.01a+)TP_TEXT_COLOR, default = 16
+    # Sets the tp text color as TP_TEXT_COLOR
+    TP_TEXT_COLOR = 0
+
+    # (v1.01a+)TP_TEXT_X_OFFSET, TP_TEXT_Y_OFFSET, default = 0, 0
+    # Sets the x and y offsets of the tp text relative to the tp bar
+    TP_TEXT_X_OFFSET = 0
+    TP_TEXT_Y_OFFSET = 0
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+
+    DATA = ["mp", "tp"]
+    GAUGE = ["back", "", "percent"]
+    METHODS = {}
+
+    DISPOSE_UPDATE = {}
+    [:dispose, :update].each { |key|
+      DISPOSE_UPDATE[key] = %Q(
+    def #{key.id2name}_enemy_gauges
+      #{key.id2name}_enemy_gauges_mp_tp_addon
+      [@mp_back_gauge_viewport, @mp_gauge_viewport, @mp_percent_gauge_viewport, 
+       @tp_back_gauge_viewport, @tp_gauge_viewport, 
+       @tp_percent_gauge_viewport].each { |gauge|
+         gauge.#{key.id2name} if gauge
+      }
+    end
+      )
+    }
+
+    def fix_large_text(data)
+      "FIX_LARGE_#{data}_TEXT ? [ENEMY_#{data}_GAUGE_HEIGHT, " + 
+      "#{data}_TEXT_SIZE].max : ENEMY_#{data}_GAUGE_HEIGHT"
+    end # fix_large_text
+
+    [0, 1].each { |index|
+      data = DATA[index]
+      max = ["m", "max_"][index]
+      METHODS[data] = %Q(
+  def initialize(battler, sprite, type)
+    @battler = battler
+    @base_sprite = sprite
+    @type = type
+    @outline = @type == :back || @type == :percent
+    dw = ENEMY_#{data.upcase}_GAUGE_WIDTH
+    eval("dh = @type == :percent && " + fix_large_text("#{data.upcase}"))
+    if @outline
+      dw += 2
+      dh += 2
+    end
+    @start_width = dw
+    rect = Rect.new(0, 0, dw, dh)
+    @current_#{data} = @battler.#{data}
+    @current_#{max}#{data} = @battler.#{max}#{data}
+    @target_gauge_width = target_gauge_width
+    @gauge_rate = target_gauge_rate
+    setup_original_hide_gauge
+    super(rect)
+    self.z = 125
+    create_gauge_sprites
+    self.visible = false
+    if "#{data}" == "mp"
+      eval(%Q(
+  def position_update
+    rect.y -= ) + fix_large_text("TP") + %Q(
+  end
+      ))
+    end
+    update_position
+    rect.width = @gauge_width if @type == :#{data}
+  end
+
+  def dispose
+    return if @sprite.disposed?
+    @sprite.bitmap.dispose if @sprite.bitmap
+    @sprite.dispose
+    super
+    end
+
+  def update
+    super
+    self.visible = gauge_visible?
+    @sprite.ox += 4 if ANIMATE_#{data.upcase}_GAUGE && !@one_colour
+    update_position
+    update_gauge
+    @visible_counter -= 1
+    update_percentage if @type == :percent
+  end
+
+  def setup_original_hide_gauge
+    @original_hide = @battler.enemy.#{data}_require_death_show_gauge
+    return unless @original_hide && #{data.upcase}_DEFEAT_ENEMIES_FIRST
+    @original_hide = !$game_party.defeated_enemies.include?(
+    @battler.enemy_id)
+  end
+
+  def create_gauge_sprites
+    @sprite = Plane.new(self)
+    @sprite.bitmap = Bitmap.new(self.rect.width * 2, self.rect.height)
+    enemy = @battler.enemy
+    if @type == :back
+      colour1 = colour2 = Colour.text_colour(enemy.#{data}_back_gauge_colour)
+    elsif @type == :#{data}
+      colour1 = Colour.text_colour(enemy.#{data}_gauge_colour1)
+      colour2 = Colour.text_colour(enemy.#{data}_gauge_colour2)
+    elsif @type == :percent
+      colour1 = colour2 = Color.new(0, 0, 0, 0)
+    end
+    @one_colour = colour1 == colour2
+    dw = rect.width
+    dh = rect.height
+    @gauge_width = target_gauge_width
+    @sprite.bitmap.gradient_fill_rect(0, 0, dw, dh, colour1, colour2)
+    @sprite.bitmap.gradient_fill_rect(dw, 0, dw, dh, colour2, colour1)
+    @visible_counter = 0
+  end
+
+  def gauge_visible?
+    update_original_hide
+    return false if @original_hide || @battler.hidden?
+    return false if case_original_hide?
+    return true if @visible_counter > 0
+    return true if @gauge_width != @target_gauge_width
+    return false unless $game_party.in_battle
+    enemy_window = SceneManager.scene.enemy_window
+    return false unless enemy_window && !@battler.death_state?
+    return false unless enemy_window.active
+    return true if enemy_window.enemy == @battler
+    enemy_window.select_all? || highlight_aoe?
+  end
+
+  if $imported["YEA-AreaofEffect"]
+
+  def highlight_aoe?
+    SceneManager.scene.enemy_window.hightlight_aoe?(@battler)
+  end
+
+  else
+
+  def highlight_aoe?
+    false
+  end
+
+  end
+
+  def new_#{data}_updates
+    return if @current_#{data} == @battler.#{data} && 
+    @current_#{max}#{data} == @battler.#{max}#{data}
+    @current_#{data} = @battler.#{data}
+    @current_#{max}#{data} = @battler.#{max}#{data}
+    return if @gauge_rate == target_gauge_rate
+    @gauge_rate = target_gauge_rate
+    @target_gauge_width = target_gauge_width
+    @visible_counter = 60
+  end
+
+  def case_original_hide?
+    return false unless @battler.enemy.#{data}_require_death_show_gauge
+    return false unless #{data.upcase}_DEFEAT_ENEMIES_FIRST
+    !$game_party.defeated_enemies.include?(@battler.enemy_id)
+  end
+
+  def update_original_hide
+    return if !@original_hide || @battler.dead?
+    return unless $game_party.defeated_enemies.include?(@battler.enemy_id)
+    @original_hide = false
+  end # update_original_hide
+
+  def update_position
+    dx = @battler.screen_x
+    dy = @battler.screen_y
+    return if @last_x == dx && @last_y == dy
+    @last_x = dx
+    @last_y = dy
+    dx -= @start_width / 2
+    if @type == :percent
+      dx += #{data.upcase}_TEXT_X_OFFSET
+      dy += #{data.upcase}_TEXT_Y_OFFSET
+    end
+    rect.x = dx
+    dh = rect.height + 1
+    dh += 2 unless @outline
+    dy = [dy, Graphics.height - dh - 120].min
+    dy += 1 unless @outline
+    rect.y = dy
+    position_update if "#{data}" == "mp"
+  end
+
+  def update_gauge
+    return if @gauge_width == @target_gauge_width
+    @target_gauge_width = target_gauge_width
+    if @gauge_width > @target_gauge_width
+      @gauge_width = [@gauge_width - 3, @target_gauge_width].max
+    elsif @gauge_width < @target_gauge_width
+      @gauge_width = [@gauge_width + 3, @target_gauge_width].min
+    end
+    @visible_counter = @gauge_width == 0 ? 10 : 60
+    return if @outline
+    rect.width = @gauge_width
+  end
+
+  def target_gauge_rate
+    return 0 unless @current_#{max}#{data} > 0
+    @current_#{data}.to_f / @current_#{max}#{data}.to_f
+  end # target_gauge_rate
+
+  def target_gauge_width
+    return 0 unless @current_#{max}#{data} > 0
+    [@current_#{data} * @start_width / @current_#{max}#{data}, @start_width].min
+  end
+
+  def set_percentage_font
+    crisis_percent = $imported["YEA-CoreEngine"] ? YEA::CORE::MP_CRISIS : 0.25
+    if "#{data}" == "mp"
+      if @current_mp < @current_mmp * crisis_percent
+      n = MP_CRISIS_TEXT_COLOR
+      else
+        n = MP_TEXT_COLOR
+      end
+    else
+      n = TP_TEXT_COLOR
+    end
+    @sprite.bitmap.font.color = Cache.system("Window").get_pixel(
+    64 + (n % 8) * 8, 96 + (n / 8) * 8)
+    @sprite.bitmap.font.size = #{data.upcase}_TEXT_SIZE
+  end
+
+  def update_percentage
+    return if @last_#{data} == @current_#{data}
+      @last_#{data} = @current_#{data}
+      set_percentage_font
+      if @battler.enemy.#{data}_display > 1
+        percent = @current_#{data}.to_i.to_s
+      else
+        percent = (target_gauge_rate * 100).round(
+        #{data.upcase}_PERCENTAGE_DECIMAL_DIGHT_NUMBER).to_s + "%"
+      end
+      dw = @sprite.bitmap.text_size(percent).width
+      @sprite.bitmap.clear
+      @sprite.bitmap.draw_text(ENEMY_#{data.upcase}_GAUGE_WIDTH + 2 - dw, 0, 
+      dw, @sprite.bitmap.text_size(percent).height, percent)
+    end
+      ) }
+
+  end # YEA_BattleEngine_Enemy_MP_TP_Bars_Addon
+end # DoubleX_RMVXA
+
+if $imported["YEA-BattleEngine"]
+
+module DoubleX_RMVXA
+  module REGEXP
+    module ENEMY
+
+      HIDE_MP_GAUGE = /<(?:HIDE_MP_GAUGE|hide mp gauge)>/i
+      SHOW_MP_GAUGE = /<(?:SHOW_MP_GAUGE|show mp gauge)>/i
+      BACK_MP_GAUGE = /<(?:BACK_MP_GAUGE|back mp gauge):[ ]*(\d+)>/i
+      MP_GAUGE_1 = /<(?:MP_GAUGE_1|mp gauge 1):[ ]*(\d+)>/i
+      MP_GAUGE_2 = /<(?:MP_GAUGE_2|mp gauge 2):[ ]*(\d+)>/i
+      MP_DISPLAY = /<(?:MP_DISPLAY|mp display):[ ]*(\d+)>/i
+      HIDE_TP_GAUGE = /<(?:HIDE_TP_GAUGE|hide tp gauge)>/i
+      SHOW_TP_GAUGE = /<(?:SHOW_TP_GAUGE|show tp gauge)>/i
+      BACK_TP_GAUGE = /<(?:BACK_TP_GAUGE|back tp gauge):[ ]*(\d+)>/i
+      TP_GAUGE_1 = /<(?:TP_GAUGE_1|tp gauge 1):[ ]*(\d+)>/i
+      TP_GAUGE_2 = /<(?:TP_GAUGE_2|tp gauge 2):[ ]*(\d+)>/i
+      TP_DISPLAY = /<(?:TP_DISPLAY|tp display):[ ]*(\d+)>/i
+
+    end # ENEMY
+  end # REGEXP
+end # YEA
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: load_database                                               |
+  #----------------------------------------------------------------------------|
+  alias load_database_mp_tp_addon load_database
+  def load_database
+    load_database_mp_tp_addon
+    # Added to load mp tp bard notetags
+    load_notetags_mp_tp_addon
+    #
+  end # load_database
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_mp_tp_addon                                     |
+  #----------------------------------------------------------------------------|
+  def load_notetags_mp_tp_addon
+    $data_enemies.each { |obj| obj.load_notetags_mp_tp_addon if obj }
+  end # load_notetags_mp_tp_addon
+
+end # DataManager
+
+class RPG::Enemy < RPG::BaseItem
+
+  include DoubleX_RMVXA::YEA_BattleEngine_Enemy_MP_TP_Bars_Addon
+  include DoubleX_RMVXA::REGEXP::ENEMY
+  #----------------------------------------------------------------------------|
+  #  New public_instance_variables                                             |
+  #----------------------------------------------------------------------------|
+  DATA.each { |data|
+    eval("attr_accessor :#{data}_show_gauge")
+    eval("attr_accessor :#{data}_require_death_show_gauge")
+    eval("attr_accessor :#{data}_back_gauge_colour")
+    eval("attr_accessor :#{data}_gauge_colour1")
+    eval("attr_accessor :#{data}_gauge_colour2")
+    eval("attr_accessor :#{data}_display")
+  }
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_mp_tp_addon                                     |
+  #----------------------------------------------------------------------------|
+  def load_notetags_mp_tp_addon
+    DATA.each { |data|
+      eval("@#{data}_show_gauge = SHOW_ENEMY_#{data.upcase}_GAUGE")
+      eval("@#{data}_require_death_show_gauge = #{data.upcase}" + 
+      "_DEFEAT_ENEMIES_FIRST")
+      eval("@#{data}_back_gauge_colour = ENEMY_#{data.upcase}_BACKGAUGE_COLOUR")
+      eval("@#{data}_gauge_colour1 = ENEMY_#{data.upcase}_GAUGE_COLOUR1")
+      eval("@#{data}_gauge_colour2 = ENEMY_#{data.upcase}_GAUGE_COLOUR2")
+      eval("@#{data}_display = ENEMY_#{data.upcase}_DISPLAY")
+    }
+    DATA.each { |data|
+      self.note.split(/[\r\n]+/).each { |line|
+        case line
+        when eval("HIDE_#{data.upcase}_GAUGE")
+          eval("@#{data}_show_gauge = false")
+        when eval("SHOW_#{data.upcase}_GAUGE")
+          eval("@#{data}_show_gauge = true")
+          eval("@#{data}_require_death_show_gauge = false")
+        when eval("BACK_#{data.upcase}_GAUGE")
+          eval("@#{data}_back_gauge_colour = [$1.to_i, 31].min")
+        when eval("#{data.upcase}_GAUGE_1")
+          eval("@#{data}_gauge_colour1 = [$1.to_i, 31].min")
+        when eval("#{data.upcase}_GAUGE_2")
+          eval("@#{data}_gauge_colour2 = [$1.to_i, 31].min")
+        when eval("#{data.upcase}_DISPLAY")
+          eval("@#{data}_display = [$1.to_i, 2].min")
+        end
+      }
+    }
+  end # load_notetags_mp_tp_addon
+  
+end # RPG::Enemy
+
+unless $imported["YEA-EnemyHPBars"]
+
+class Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  New public_instance_variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_accessor :hidden
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: refresh                                                     |
+  #----------------------------------------------------------------------------|
+  alias refresh_mp_tp_addon refresh
+  def refresh
+    refresh_mp_tp_addon
+    # Added to do what YEA-EnemyHPBars does
+    sprite.update_enemy_gauge_value if !actor? && $game_party.in_battle
+    #
+  end # refresh
+
+end # Game_BattlerBase
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: die                                                         |
+  #----------------------------------------------------------------------------|
+  alias die_mp_tp_addon die
+  def die
+    die_mp_tp_addon
+    # Added to do what YEA-EnemyHPBars does
+    $game_party.add_defeated_enemy(@enemy_id) unless actor?
+    #
+  end # die
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: hp=                                                         |
+  #----------------------------------------------------------------------------|
+  alias hpequals_mp_tp_addon hp=
+  def hp=(value)
+    hpequals_mp_tp_addon(value)
+    # Added to do what YEA-EnemyHPBars does
+    return if actor? || !$game_party.in_battle || value == 0
+    sprite.update_enemy_gauge_value
+    #
+  end # hp=
+
+end # Game_Battler
+
+class Game_Party < Game_Unit
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: init_all_items                                              |
+  #----------------------------------------------------------------------------|
+  alias init_all_items_mp_tp_addon init_all_items
+  def init_all_items
+    init_all_items_mp_tp_addon
+    # Added to do what YEA-EnemyHPBars does
+    @defeated_enemies = []
+    #
+  end # init_all_items
+
+  #----------------------------------------------------------------------------|
+  #  New method: defeated_enemies                                              |
+  #----------------------------------------------------------------------------|
+  def defeated_enemies
+    @defeated_enemies ||= []
+  end # defeated_enemies
+
+  #----------------------------------------------------------------------------|
+  #  New method: add_defeated_enemy                                            |
+  #----------------------------------------------------------------------------|
+  def add_defeated_enemy(id)
+    @defeated_enemies ||= []
+    @defeated_enemies.push(id) unless @defeated_enemies.include?(id)
+  end # add_defeated_enemy
+
+end # Game_Party
+
+end # unless $imported["YEA-EnemyHPBars"]
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02b+)Alias method: mp=                                                |
+  #----------------------------------------------------------------------------|
+  alias mpequals_mp_tp_addon mp=
+  def mp=(value)
+    mpequals_mp_tp_addon(value)
+    # Added to do what YEA-EnemyHPBars does
+    sprite.update_enemy_gauge_value if !actor? && $game_party.in_battle
+    #
+  end # mp=
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02b+)Alias method: tp=                                                |
+  #----------------------------------------------------------------------------|
+  alias tpequals_mp_tp_addon tp=
+  def tp=(value)
+    tpequals_mp_tp_addon(value)
+    # Added to do what YEA-EnemyHPBars does
+    sprite.update_enemy_gauge_value if !actor? && $game_party.in_battle
+    #
+  end # tp=
+
+end # Game_Battler
+
+class Sprite_Battler < Sprite_Base
+
+  include DoubleX_RMVXA::YEA_BattleEngine_Enemy_MP_TP_Bars_Addon
+
+  unless $imported["YEA-EnemyHPBars"]
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: create_enemy_gauges                                         |
+  #----------------------------------------------------------------------------|
+  alias initialize_mp_tp_addon initialize
+  def initialize(viewport, battler = nil)
+    initialize_mp_tp_addon(viewport, battler)
+    # Added to do what YEA-EnemyHPBars does
+    create_enemy_gauges
+    #
+  end # initialize
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: dispose                                                     |
+  #----------------------------------------------------------------------------|
+  alias dispose_mp_tp_addon dispose
+  def dispose
+    dispose_mp_tp_addon
+    # Added to do what YEA-EnemyHPBars does
+    dispose_enemy_gauges
+    #
+  end # dispose
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: update                                                      |
+  #----------------------------------------------------------------------------|
+  alias update_mp_tp_addon update
+  def update
+    update_mp_tp_addon
+    # Added to do what YEA-EnemyHPBars does
+    update_enemy_gauges
+    #
+  end # update
+
+  #----------------------------------------------------------------------------|
+  #  New method: create_enemy_gauges                                           |
+  #----------------------------------------------------------------------------|
+  def create_enemy_gauges
+  end # create_enemy_gauges
+
+  #----------------------------------------------------------------------------|
+  #  New method: dispose_enemy_gauges                                          |
+  #----------------------------------------------------------------------------|
+  def dispose_enemy_gauges
+  end # dispose_enemy_gauges
+
+  #----------------------------------------------------------------------------|
+  #  New method: update_enemy_gauges                                           |
+  #----------------------------------------------------------------------------|
+  def update_enemy_gauges
+  end # update_enemy_gauges
+
+  #----------------------------------------------------------------------------|
+  #  New method: update_enemy_gauge_value                                      |
+  #----------------------------------------------------------------------------|
+  def update_enemy_gauge_value
+  end # update_enemy_gauge_value
+
+  end # unless $imported["YEA-EnemyHPBars"]
+
+  #----------------------------------------------------------------------------|
+  #  Alias methods                                                             |
+  #----------------------------------------------------------------------------|
+  alias dispose_enemy_gauges_mp_tp_addon dispose_enemy_gauges
+  alias update_enemy_gauges_mp_tp_addon update_enemy_gauges
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: create_enemy_gauges                                         |
+  #----------------------------------------------------------------------------|
+  alias create_enemy_gauges_mp_tp_addon create_enemy_gauges
+  def create_enemy_gauges
+    create_enemy_gauges_mp_tp_addon
+    # Added to create MP and/or TP bars
+    return if !@battler || @battler.actor?
+    [:dispose, :update].each { |key| eval(DISPOSE_UPDATE[key]) }
+    DATA.each { |data|
+      GAUGE.each { |gauge|
+        gauge = gauge == "" ? "" : "_#{gauge}"
+        eval(%Q(
+    def update_battler_#{data}#{gauge}_gauge_value
+      return unless @#{data}#{gauge}_gauge_viewport
+      @#{data}#{gauge}_gauge_viewport.new_#{data}_updates
+    end
+        ))
+      }
+      next if eval("!@battler.enemy.#{data}_show_gauge")
+      GAUGE.each { |gauge|
+        eval("@#{data}#{gauge == "" ? "" : "_#{gauge}"}_gauge_viewport = " + 
+        "Enemy_#{data.upcase}_Gauge_Viewport.new(@battler, self, :" + 
+        (gauge == "" ? data : gauge) + ")" + (gauge == "percent" ? 
+        " if @battler.enemy.#{data}_display > 0": "")) }
+    }
+    #
+  end # create_enemy_gauges
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: update_enemy_gauge_value                                    |
+  #----------------------------------------------------------------------------|
+  alias update_enemy_gauge_value_mp_tp_addon update_enemy_gauge_value
+  def update_enemy_gauge_value
+    update_enemy_gauge_value_mp_tp_addon
+    # Added to update values of MP and/or TP bars
+    update_battler_mp_back_gauge_value
+    update_battler_mp_gauge_value
+    update_battler_mp_percent_gauge_value
+    update_battler_tp_back_gauge_value
+    update_battler_tp_gauge_value
+    update_battler_tp_percent_gauge_value
+    #
+  end # update_enemy_gauge_value
+
+end # Sprite_Battler
+
+if $imported["YEA-EnemyHPBars"]
+class Enemy_HP_Gauge_Viewport < Viewport
+
+  include DoubleX_RMVXA::YEA_BattleEngine_Enemy_MP_TP_Bars_Addon
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: initialize                                                  |
+  #----------------------------------------------------------------------------|
+  alias initialize_mp_tp_addon initialize
+  def initialize(battler, sprite, type)
+    # Added to create the position_update method
+    eval(%Q(
+  def position_update
+    rect.y -= (#{fix_large_text("MP")}) + (#{fix_large_text("TP")})
+  end
+    ))
+    initialize_mp_tp_addon(battler, sprite, type)
+    #
+  end # update_position
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: update_position                                             |
+  #----------------------------------------------------------------------------|
+  alias update_position_mp_tp_addon update_position
+  def update_position
+    update_position_mp_tp_addon
+    # Added to put hp bars above mp and tp bars
+    return if $imported["DoubleX RMVXA Percentage Addon to YEA-EnemyHPBars"] && 
+    !@update_position
+    position_update
+    #
+  end # update_position
+
+end # Enemy_HP_Gauge_Viewport
+end # $imported["YEA-EnemyHPBars"]
+
+class Enemy_MP_Gauge_Viewport < Viewport
+
+  include DoubleX_RMVXA::YEA_BattleEngine_Enemy_MP_TP_Bars_Addon
+
+  #----------------------------------------------------------------------------|
+  #  Mass new methods                                                          |
+  #----------------------------------------------------------------------------|
+  module_eval(METHODS["mp"])
+
+end # Enemy_MP_Gauge_Viewport
+
+class Enemy_TP_Gauge_Viewport < Viewport
+
+  include DoubleX_RMVXA::YEA_BattleEngine_Enemy_MP_TP_Bars_Addon
+
+  #----------------------------------------------------------------------------|
+  #  Mass new methods                                                          |
+  #----------------------------------------------------------------------------|
+  module_eval(METHODS["tp"])
+
+end # Enemy_TP_Gauge_Viewport
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["YEA-BattleEngine"]
+
+#==============================================================================|

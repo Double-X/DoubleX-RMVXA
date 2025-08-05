@@ -1,0 +1,332 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Percentage Addon v1.04a to Yanfly Engine Ace - Battle      |
+#     Engine Add-On: Enemy HP Bars                                             |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.04a(GMT 1000 7-10-2022):                                               |
+#    - Added PERCENTAGE_DECIMAL_DIGHT_NUMBER                                   |
+#    v1.03a(GMT 0200 6-4-2015):                                                |
+#    - Added CRISIS_TEXT_COLOR and KNOCKOUT_TEXT_COLOR                         |
+#    v1.02a(GMT 0300 4-9-2014):                                                |
+#    - Added hp texts x and y offsets relative to respective bars              |
+#    - Added TEXT_COLOR and FIX_LARGE_TEXT                                     |
+#    v1.01a(GMT 1400 21-7-2014):                                               |
+#    - Lets users shows actual hp numbers instead of percentages               |
+#    - Lets users sets the size of the text shown on enemy hp bars             |
+#    v1.00a(GMT 0400 1-7-2014):                                                |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yanfly:                                                                   |
+#    - Yanfly Engine Ace - Battle Engine Add-On: Enemy HP Bars                 |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of Yanfly Engine Ace - Battle Engine Add-On: Enemy HP Bars   |
+#    except that you're not allowed to give DoubleX or his alias credit        |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - Yanfly Engine Ace - Battle Engine Add-On: Enemy HP Bars                 |
+#    Knowledge:                                                                |
+#    - That of using the script                                                |
+#    Yanfly Engine Ace - Battle Engine Add-On: Enemy HP Bars                   |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Displays the current percentage of the hp bar filled                    |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script                                              |
+#    Yanfly Engine Ace - Battle Engine Add-On: Enemy HP Bars and ¡¿ Main.       |
+#    Save to take effect.                                                      |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of Yanfly Engine Ace - Battle Engine Add-On: Enemy HP Bars |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Percentage Addon to YEA-EnemyHPBars"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module YEA_EnemyHPBars_Percentage_Addon
+
+    # (v1.04a+)PERCENTAGE_DECIMAL_DIGHT_NUMBER, default = 0
+    # Sets the number of decimal digits when showing percentages
+    PERCENTAGE_DECIMAL_DIGHT_NUMBER = 0
+
+    # (v1.01a+)ACTUAL_NUMBER, default = false
+    # Shows the actual hp numbers instead of the percentages
+    ACTUAL_NUMBER = true
+
+    # (v1.01a+)TEXT_SIZE, default = YEA::BATTLE::ENEMY_GAUGE_HEIGHT
+    # Sets the size of the text shown on enemy hp bars as TEXT_SIZE
+    TEXT_SIZE = YEA::BATTLE::ENEMY_GAUGE_HEIGHT + 4
+
+    # (v1.03a+)CRISIS_TEXT_COLOR, default = 17
+    # Sets the text color of the text shown on enemy hp bars with hp crisis as
+    # CRISIS_TEXT_COLOR
+    CRISIS_TEXT_COLOR = 17
+
+    # (v1.03a+)KNOCKOUT_TEXT_COLOR, default = 17
+    # Sets the text color of the text shown on enemy hp bars with 0 hp as
+    # KNOCKOUT_TEXT_COLOR
+    KNOCKOUT_TEXT_COLOR = 18
+
+    # (v1.02a+)TEXT_COLOR, default = 16
+    # Sets the text color of the text shown on enemy hp bars as TEXT_COLOR
+    TEXT_COLOR = 0
+
+    # (v1.02a+)FIX_LARGE_TEXT, default = false
+    # Fixes issues when TEXT_SIZE is much larger than ENEMY_GAUGE_HEIGHT
+    FIX_LARGE_TEXT = false
+
+    # (v1.02a+)TEXT_X_OFFSET, TEXT_Y_OFFSET, default = 0, 0
+    # Sets the x and y offsets of the hp text relative to the hp bar
+    TEXT_X_OFFSET = 0
+    TEXT_Y_OFFSET = 0
+
+  end # YEA_EnemyHPBars_Percentage_Addon
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-BattleEngine"] && $imported["YEA-EnemyHPBars"]
+
+#------------------------------------------------------------------------------|
+
+class Sprite_Battler < Sprite_Base
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: create_enemy_gauges                                         |
+  #----------------------------------------------------------------------------|
+  alias create_enemy_gauges_percentage_addon create_enemy_gauges
+  def create_enemy_gauges
+    create_enemy_gauges_percentage_addon
+    # Added to create the percentage text
+    return unless @battler && !@battler.actor? && @battler.enemy.show_gauge
+    @percent_gauge_viewport = Enemy_HP_Gauge_Viewport.new(@battler, self, 
+    :percent)
+    #
+  end # create_enemy_gauges
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: dispose_enemy_gauges                                        |
+  #----------------------------------------------------------------------------|
+  alias dispose_enemy_gauges_percentage_addon dispose_enemy_gauges
+  def dispose_enemy_gauges
+    dispose_enemy_gauges_percentage_addon
+    # Added to dispose the percentage text
+    @percent_gauge_viewport.dispose if @percent_gauge_viewport
+    #
+  end # dispose_enemy_gauges
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: update_enemy_gauges                                         |
+  #----------------------------------------------------------------------------|
+  alias update_enemy_gauges_percentage_addon update_enemy_gauges
+  def update_enemy_gauges
+    update_enemy_gauges_percentage_addon
+    # Added to update the percentage text
+    @percent_gauge_viewport.update if @percent_gauge_viewport
+    #
+  end # update_enemy_gauges
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: update_enemy_gauge_value                                    |
+  #----------------------------------------------------------------------------|
+  alias update_enemy_gauge_value_percentage_addon update_enemy_gauge_value
+  def update_enemy_gauge_value
+    update_enemy_gauge_value_percentage_addon
+    # Added to update the percentage text
+    @percent_gauge_viewport.new_hp_updates if @percent_gauge_viewport
+    #
+  end # update_enemy_gauge_value
+
+end # Sprite_Battler
+
+class Enemy_HP_Gauge_Viewport < Viewport
+
+  include DoubleX_RMVXA::YEA_EnemyHPBars_Percentage_Addon
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: initialize                                                |
+  #----------------------------------------------------------------------------|
+  def initialize(battler, sprite, type)
+    @battler = battler
+    @base_sprite = sprite
+    @type = type
+    dw = YEA::BATTLE::ENEMY_GAUGE_WIDTH
+    # Rewritten to setup the percentage text
+    if @type == :percent && FIX_LARGE_TEXT
+      dh = [TEXT_SIZE, YEA::BATTLE::ENEMY_GAUGE_HEIGHT].max
+    else
+      dh = YEA::BATTLE::ENEMY_GAUGE_HEIGHT
+    end
+    if @type != :hp
+      dw += 2 
+      dh += 2
+    end
+    #
+    @start_width = dw
+    rect = Rect.new(0, 0, dw, dh)
+    @current_hp = @battler.hp
+    @current_mhp = @battler.mhp
+    @target_gauge_width = target_gauge_width
+    @gauge_rate = 1.0
+    setup_original_hide_gauge
+    super(rect)
+    self.z = 125
+    create_gauge_sprites
+    self.visible = false
+    update_position
+    self.rect.width = @gauge_width if @type == :hp
+  end # initialize
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: create_gauge_sprites                                      |
+  #----------------------------------------------------------------------------|
+  def create_gauge_sprites
+    @sprite = Plane.new(self)
+    @sprite.bitmap = Bitmap.new(rect.width * 2, rect.height)
+    enemy = @battler.enemy
+    if @type == :back
+      colour = Colour.text_colour(enemy.back_gauge_colour)
+      colour1 = colour2 = colour
+    elsif @type == :hp
+      colour1 = Colour.text_colour(enemy.hp_gauge_colour1)
+      colour2 = Colour.text_colour(enemy.hp_gauge_colour2)
+    # Added to create the percentage text
+    elsif @type == :percent
+      colour1 = colour2 = Color.new(0, 0, 0, 0)
+    end
+    #
+    dw = rect.width
+    dh = rect.height
+    @gauge_width = target_gauge_width
+    @sprite.bitmap.gradient_fill_rect(0, 0, dw, dh, colour1, colour2)
+    @sprite.bitmap.gradient_fill_rect(dw, 0, dw, dh, colour2, colour1)
+    @visible_counter = 0
+  end # create_gauge_sprites
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: update_position                                           |
+  #----------------------------------------------------------------------------|
+  def update_position
+    dx = @battler.screen_x
+    dy = @battler.screen_y
+    # Added to update the positions only if the battler positions change
+    @update_position = false
+    return if @last_x == dx && @last_y == dy
+    @last_x = dx
+    @last_y = dy
+    @update_position = true
+    #
+    dx -= @start_width / 2
+    # Added to set the x and y offset of percentage text
+    if @type == :percent
+      dx += TEXT_X_OFFSET
+      dy += TEXT_Y_OFFSET
+    end
+    #
+    rect.x = dx
+    rect.y = dy
+    dh = rect.height + 1
+    # Rewritten to ensure the percentage text won't overlap with the status
+    # window
+    dh += 2 if @type == :hp
+    dy = [dy, Graphics.height - dh - 120].min
+    dy += 1 if @type == :hp
+    #
+    rect.y = dy
+  end # update_position
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: update_gauge                                              |
+  #----------------------------------------------------------------------------|
+  def update_gauge
+    return if @gauge_width == @target_gauge_width
+    rate = 3
+    @target_gauge_width = target_gauge_width
+    if @gauge_width > @target_gauge_width
+      @gauge_width = [@gauge_width - rate, @target_gauge_width].max
+    elsif @gauge_width < @target_gauge_width
+      @gauge_width = [@gauge_width + rate, @target_gauge_width].min
+    end
+    @visible_counter = @gauge_width == 0 ? 10 : 60
+    rect.width = @gauge_width if @type == :hp
+  end # update_gauge
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02a+)Alias method: dispose                                            |
+  #----------------------------------------------------------------------------|
+  alias dispose_percentage_addon dispose
+  def dispose
+    # Rewritten to dispose sprite only if it's not disposed
+    dispose_percentage_addon unless @sprite.disposed?
+    #
+  end # dispose
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: update                                                      |
+  #----------------------------------------------------------------------------|
+  alias update_percentage_addon update
+  def update
+    update_percentage_addon
+    # Added to draw the percentage text
+    return if @type != :percent
+    @sprite.ox -= 4 if YEA::BATTLE::ANIMATE_HP_GAUGE
+    update_percentage
+    #
+  end # update
+
+  #----------------------------------------------------------------------------|
+  #  New method: set_percentage_font                                           |
+  #----------------------------------------------------------------------------|
+  def set_percentage_font
+    crisis_percent = $imported["YEA-CoreEngine"] ? YEA::CORE::HP_CRISIS : 0.25
+    if @current_hp <= 0
+      n = KNOCKOUT_TEXT_COLOR
+    elsif @current_hp < @current_mhp * crisis_percent
+      n = CRISIS_TEXT_COLOR
+    else
+      n = TEXT_COLOR
+    end
+    @sprite.bitmap.font.color = Cache.system("Window").get_pixel(
+    64 + (n % 8) * 8, 96 + (n / 8) * 8)
+    @sprite.bitmap.font.size = TEXT_SIZE
+  end # set_percentage_font
+
+  #----------------------------------------------------------------------------|
+  #  New method: update_percentage                                             |
+  #----------------------------------------------------------------------------|
+  def update_percentage
+    return if @last_hp == @current_hp
+    @last_hp = @current_hp
+    set_percentage_font
+    if ACTUAL_NUMBER
+      percent = @current_hp.to_i.to_s
+    else
+      percent = "#{(target_gauge_rate * 100).round(
+      PERCENTAGE_DECIMAL_DIGHT_NUMBER).to_s}%"
+    end
+    dw = @sprite.bitmap.text_size(percent).width
+    @sprite.bitmap.clear
+    @sprite.bitmap.draw_text(YEA::BATTLE::ENEMY_GAUGE_WIDTH + 2 - dw, 0, dw, 
+    @sprite.bitmap.text_size(percent).height, percent)
+  end # update_percentage
+
+end # Enemy_HP_Gauge_Viewport
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["YEA-BattleEngine"] && $imported["YEA-EnemyHPBars"]
+
+#==============================================================================|

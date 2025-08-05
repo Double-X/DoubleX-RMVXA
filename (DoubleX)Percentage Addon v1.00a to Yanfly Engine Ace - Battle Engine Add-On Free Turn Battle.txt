@@ -1,0 +1,138 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Percentage Addon v1.00a to Yanfly Engine Ace - Battle      |
+#     Engine Add-On: Free Turn Battle                                          |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00a(GMT 0400 1-7-2015):                                                |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#    Yanfly:                                                                   |
+#    - Yanfly Engine Ace - Battle Engine Add-On: Free Turn Battle              |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of Yanfly Engine Ace - Battle Engine Add-On: Free Turn Battle|
+#    except you're not allowed to give DoubleX or his alias credit             |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - Yanfly Engine Ace - Battle Engine Add-On: Free Turn Battle              |
+#    Knowledge:                                                                |
+#    - That of using the script                                                |
+#    Yanfly Engine Ace - Battle Engine Add-On: Free Turn Battle                |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Lets you modifies the maximum action points to an actor using percentages|
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between the script                                              |
+#    Yanfly Engine Ace - Battle Engine Add-On: Free Turn Battle and ¡¿ Main.    |
+#    Save to take effect.                                                      |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of Yanfly Engine Ace - Battle Engine Add-On: Free Turn Battle|
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Percentage Addon to YEA-BattleSystem-FTB"] = true
+
+#==============================================================================|
+#  ** Notetag Info                                                             |
+#------------------------------------------------------------------------------|
+#  * Actor/Class/Weapon/Armour/State Notetags:                                 |
+#    1. <ftb percent: +x%>                                                     |
+#       <ftb percent: -x%>                                                     |
+#       - Increases or decreases the maximum number of actions available to an |
+#         actor by x%                                                          |
+#       - The final result will always be between 1 and the party maximum      |
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["YEA-BattleEngine"] && $imported["YEA-BattleSystem-FTB"]
+
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#  * Edit class: RPG::BaseItem                                                 |
+#------------------------------------------------------------------------------|
+
+class RPG::BaseItem
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_accessor :ftb_percent # The action point percentage increment
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: load_notetags_ftb                                           |
+  #----------------------------------------------------------------------------|
+  alias load_notetags_ftb_percent load_notetags_ftb
+  def load_notetags_ftb
+    load_notetags_ftb_percent
+    # Added to read <ftb percent: +x%> and <ftb percent: -x%> as well
+    @ftb_percent = 0
+    @note.split(/[\r\n]+/).each { |line|
+      case line
+      when /<(?:FTB_PERCENT|ftb percent):[ ]([\+\-]\d+[%¢H])>/i
+        @ftb_percent = $1.to_i
+      end
+    }
+    #
+  end # load_notetags_ftb
+
+end # RPG::BaseItem
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_BattlerBase                                              |
+#------------------------------------------------------------------------------|
+
+class Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: max_ftb_actions                                             |
+  #----------------------------------------------------------------------------|
+  alias max_ftb_actions_percent max_ftb_actions
+  def max_ftb_actions
+    # Rewritten to multiply the maximum by the ftb percents as well
+    [(max_ftb_actions_percent * trait_bonus_max_ftb_percent).to_i, 1].max
+    #
+  end # max_ftb_actions
+
+  #----------------------------------------------------------------------------|
+  #  New method: trait_bonus_max_ftb_percent                                   |
+  #  - Returns the action point percentage increment from all such notetags    |
+  #----------------------------------------------------------------------------|
+  def trait_bonus_max_ftb_percent
+    # Reads actor, class, equip ones for actors and state ones for battlers
+    if actor?
+      percent = actor.ftb_actions * self.class.ftb_actions
+      equips.each { |equips| percent *= equip.ftb_actions if equip }
+    else
+      percent = 1
+    end
+    states.each { |state| percent *= state.ftb_actions if state }
+    percent
+    #
+  end # trait_bonus_max_ftb_percent
+
+end # Game_BattlerBase
+
+#------------------------------------------------------------------------------|
+
+else
+  msgbox("To use DoubleX Percentage Addon to Yanfly Engine Ace - Battle " +
+         "Engine Add-On: Free Turn Battle, put it below:\nYanfly Engine Ace " +
+         "- Ace Battle Engine\n but above Main") unless 
+         $imported["YEA-BattleEngine"]
+  msgbox("To use DoubleX Percentage Addon to Yanfly Engine Ace - Battle " +
+         "Engine Add-On: Free Turn Battle, put it below:\nYanfly Engine Ace " +
+         "- Battle Engine Add-On: Free Turn Battle\n but above Main") unless 
+         $imported["YEA-BattleSystem-FTB"]
+end # if $imported["YEA-BattleEngine"] && $imported["YEA-BattleSystem-FTB"]
+
+#==============================================================================|
