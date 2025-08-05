@@ -1,0 +1,438 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Counterattack Edit v1.05b                                  |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.05b(GMT 1500 14-7-2015):                                               |
+#    - Fixed class notetags not working bug                                    |
+#    - In sync with the latest DoubleX RMVXA Substitute Edit version           |
+#    - Improved this script's readibility                                      |
+#    v1.05a(GMT 0200 5-7-2014):                                                |
+#    - Allows users to keep counterattack skill's animations, scopes and times |
+#    - Compatible with DoubleX RMVXA Substitute Edit                           |
+#    v1.04a(GMT 2300 1-4-2014):                                                |
+#    - Allows users to set actor's counterattack skill needs to be learnt      |
+#    v1.03a(GMT 0900 18-3-2014):                                               |
+#    - Allows users to set whether counterattack negates hits                  |
+#    v1.02a(GMT 0000 14-2-2014):                                               |
+#    - Allows users to set whether counterattack messages will be shown        |
+#    v1.01b(GMT 0900 16-1-2014):                                               |
+#    - Fixed a & b bug in damage formula of counterattack skills               |
+#    v1.01a(GMT 1000 15-1-2014):                                               |
+#    - Allows users to set whether magic evasion invokes counterattack         |
+#    v1.00a(GMT 0400 5-1-2014):                                                |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    None other than not claiming this script as created by anyone except      |
+#    DoubleX or his alias                                                      |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - none                                                                    |
+#    Knowledge:                                                                |
+#    - Use of notetags                                                         |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Allows users to alter the skills used in counterattack                  |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between ¡¿ Materials and ¡¿ Main. Save to take effect.            |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Scripts rewriting Vocab CounterAttack or aliasing or rewriting method:    |
+#    - item_cnt or item_apply under class Game_Battler                         |
+#    - display_counter under class Window_BattleLog                            |
+#    - apply_item_effects and invoke_counter_attack under class Scene_Battle   |
+#    may have compatibility issues with this script                            |
+#    Place this script above those aliasing any of these method if possible    |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Counterattack Edit"] = true
+
+#------------------------------------------------------------------------------|
+#  * (v1.01a+)Notetag <mev invoke cnt> for actors, classes, equips, enemies and|
+#    states:                                                                   |
+#    To set a battler having chance based on his/her/its CNT to invoke         |
+#    counterattack upon successful magic evasion, put the above notetag into   |
+#    the related actor's, class's, equip's, enemy's or state's notebox in the  |
+#    database.                                                                 |
+#------------------------------------------------------------------------------|
+#  * Notetag <counterattack skill: x> for actors(1), classes(2), equips(3),    |
+#    enemies(1) and states(4):(the larger the number, the higher the priority) |
+#    To alter a battler's counterattack skill's id to x, put the above notetag |
+#    into the related actor's, class's, equip's, enemy's or state's notebox in |
+#    the database.                                                             |
+#------------------------------------------------------------------------------|
+
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module Counterattack_Edit
+
+#------------------------------------------------------------------------------|
+#  * (v1.05a+)Keep_Ani, default = false                                        |
+#    If Keep_Ani is true, the counterattack skill's animations will be played  |
+#    when the counterattack's invoked                                          |
+#------------------------------------------------------------------------------|
+    Keep_Ani = false
+
+#------------------------------------------------------------------------------|
+#  * (v1.05a+)Keep_Scope, default = false                                      |
+#    If Keep_Scope is true, the counterattack skill's scope will stay intact,  |
+#    otherwise it'll only target the one attacked that battler                 |
+#------------------------------------------------------------------------------|
+    Keep_Scope = false
+
+#------------------------------------------------------------------------------|
+#  * (v1.05a+)Keep_Times, default = false                                      |
+#    If Keep_Scope is true, the counterattack skill's repeats will stay intact,|
+#    otherwise it'll be 1                                                      |
+#------------------------------------------------------------------------------|
+    Keep_Times = false
+
+#------------------------------------------------------------------------------|
+#  * (v1.04a+)Actor_Learn_Counterattack_Skill, default = false                 |
+#    If Actor_Learn_Counterattack_Skill is true and an actor hasn't learnt the |
+#    counterattack skill, Default_Counterattack will be that actor's skill     |
+#------------------------------------------------------------------------------|
+    Actor_Learn_Counterattack_Skill = false
+
+#------------------------------------------------------------------------------|
+#  * (v1.03a+)CNT_Negate_Hit, default = true                                   |
+#    Normal physical hit and damage determinations will take place before that |
+#    of CNT if CNT_Negate_Hit is false                                         |
+#------------------------------------------------------------------------------|
+    CNT_Negate_Hit = true
+
+#------------------------------------------------------------------------------|
+#  * (v1.02a+)COUNTERATTACK_MESSAGE, default = true                            |
+#    Counterattack messages won't be shown if COUNTERATTACK_MESSAGE is false   |
+#------------------------------------------------------------------------------|
+    COUNTERATTACK_MESSAGE = true
+
+#------------------------------------------------------------------------------|
+#  * (v1.01a+)MEV_Invoke_CNT, default = false                                  |
+#    Successful magic evasion invokes counterattack with chance based on CNT if|
+#    MEV_Invoke_CNT is true, even when <mev invoke cnt> notetags are absent    |
+#------------------------------------------------------------------------------|
+    MEV_Invoke_CNT = false
+
+#------------------------------------------------------------------------------|
+#  * Default_Counterattack, default = 1                                        |
+#    The counterattack skill of a battler will be the one's id equal to        |
+#    Default_Counterattack if he/she/it doesn't have any notetag               | 
+#------------------------------------------------------------------------------|
+  Default_Counterattack = 1
+
+  end # Counterattack_Edit
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+module Vocab
+
+  CounterAttack = "%s countered with %s!"
+
+end # Vocab
+
+#------------------------------------------------------------------------------|
+#  * Edit module: DataManager                                                  |
+#------------------------------------------------------------------------------|
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: load_database                                               |
+  #----------------------------------------------------------------------------|
+  alias load_database_counterattack_edit load_database
+  def load_database
+    load_database_counterattack_edit
+    # Added to load notetags
+    load_notetags_counterattack_edit
+    #
+  end # load_database
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_counterattack_edit                              |
+  #----------------------------------------------------------------------------|
+  def load_notetags_counterattack_edit
+    [$data_actors, $data_classes, $data_enemies, $data_weapons, $data_armors, 
+    $data_states].each { |data|
+      data.each { |obj| obj.load_notetags_counterattack_edit if obj }
+    }
+  end # load_notetags_counterattack_edit
+
+end # DataManager
+
+#------------------------------------------------------------------------------|
+#  * Edit class: RPG::BaseItem                                                 |
+#------------------------------------------------------------------------------|
+
+class RPG::BaseItem
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  attr_accessor :counterattack_skill
+  attr_accessor :mev_invoke_cnt
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_counterattack_edit                              |
+  #----------------------------------------------------------------------------|
+  def load_notetags_counterattack_edit
+    @counterattack_skill = 
+    DoubleX_RMVXA::Counterattack_Edit::Default_Counterattack
+    @mev_invoke_cnt = DoubleX_RMVXA::Counterattack_Edit::MEV_Invoke_CNT
+    @note.split(/[\r\n]+/).each { |line|
+      case line
+      when /<(?:COUNTERATTACK_SKILL|counterattack skill):[ ]*(\d+)>/i
+        @counterattack_skill = $1.to_i
+      when /<(?:MEV_INVOKE_CNT|mev invoke cnt)>/i
+        @mev_invoke_cnt = true
+      end
+    }
+  end # load_notetags_counterattack_edit
+
+end # RPG::BaseItem
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_Battler                                                  |
+#------------------------------------------------------------------------------|
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_reader :invoke_counter_attack
+
+  #----------------------------------------------------------------------------|
+  #  (v1.03a+)Alias method: item_cnt                                           |
+  #----------------------------------------------------------------------------|
+  alias item_cnt_counterattack_edit item_cnt
+  def item_cnt(user, item)
+    # Rewritten to negate hit upon CNT if CNT_Negate_Hit is true
+    return 0 unless DoubleX_RMVXA::Counterattack_Edit::CNT_Negate_Hit
+    item_cnt_counterattack_edit(user, item)
+    #
+  end
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)Alias method: item_apply                                         |
+  #----------------------------------------------------------------------------|
+  alias item_apply_counterattack_edit item_apply
+  def item_apply(user, item)
+    item_apply_counterattack_edit(user, item)
+    # Added to invoke cnt upon mev if MEV_Invoke_CNT is true
+    @invoke_counter_attack = @result.evaded && item.magical? && rand < cnt
+    #
+  end # item_apply
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)New method: mev_invoke_cnt?                                      |
+  #----------------------------------------------------------------------------|
+  def mev_invoke_cnt?
+    states.each { |state| return true if state.mev_invoke_cnt }
+    if actor?
+      if equips
+        equips.each { |equip| return true if equip && equip.mev_invoke_cnt }
+      end
+      return self.class.mev_invoke_cnt || actor.mev_invoke_cnt
+    end
+    enemy? && enemy.mev_invoke_cnt
+  end # mev_invoke_cnt?
+
+  #----------------------------------------------------------------------------|
+  #  New method: counterattack_skill_id                                        |
+  #----------------------------------------------------------------------------|
+  def counterattack_skill_id
+    cnte = DoubleX_RMVXA::Counterattack_Edit
+    skill_cnt = cnte::Default_Counterattack
+    states.each { |state|
+      next unless actor? && (!cnte::Actor_Learn_Counterattack_Skill || 
+      skill_learn?($data_skills[state.counterattack_skill])) || enemy?
+      skill_cnt = state.counterattack_skill
+    }
+    return skill_cnt if skill_cnt != cnte::Default_Counterattack
+    return enemy.counterattack_skill if enemy?
+    if actor?
+      if equips
+        equips.each { |equip|
+          next unless equip && (!cnte::Actor_Learn_Counterattack_Skill || 
+          skill_learn?($data_skills[equip.counterattack_skill]))
+          skill_cnt = equip.counterattack_skill
+        }
+      end
+      return skill_cnt if skill_cnt != cnte::Default_Counterattack
+      if (!cnte::Actor_Learn_Counterattack_Skill || 
+      skill_learn?($data_skills[self.class.counterattack_skill])) && 
+      self.class.counterattack_skill != skill_cnt
+        return self.class.counterattack_skill
+      end
+      if !cnte::Actor_Learn_Counterattack_Skill || 
+      skill_learn?($data_skills[actor.counterattack_skill])
+        return actor.counterattack_skill
+      end
+    end
+    skill_cnt
+  end # counterattack_skill_id
+
+end # Game_Battler
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Window_BattleLog                                              |
+#------------------------------------------------------------------------------|
+
+class Window_BattleLog < Window_Selectable
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: display_counter                                           |
+  #----------------------------------------------------------------------------|
+  def display_counter(target, item)
+    Sound.play_evasion
+    # Rewritten to alter the vocab of counterattack
+    if DoubleX_RMVXA::Counterattack_Edit::COUNTERATTACK_MESSAGE
+      add_text(sprintf(Vocab::CounterAttack, target.name, 
+      $data_skills[target.counterattack_skill_id].name))
+    end
+    #
+    wait
+    back_one
+  end # display_counter
+
+end # Window_BattleLog
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Scene_Battle                                                  |
+#------------------------------------------------------------------------------|
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: invoke_counter_attack                                     |
+  #----------------------------------------------------------------------------|
+  def invoke_counter_attack(target, item)
+    @log_window.display_counter(target, item)
+    # Rewritten to alter the counterattack skill
+    cnte = DoubleX_RMVXA::Counterattack_Edit
+    @cnt_subject = target if cnte::Keep_Ani
+    attack_skill = $data_skills[target.counterattack_skill_id]
+    if attack_skill.for_opponent?
+      if cnte::Keep_Scope
+        scope = targets_for_opponents_counterattack_edit(target, attack_skill)
+      else
+        scope = [@subject]
+      end
+      apply_counterattack_edit(target, attack_skill, scope, 
+      $imported["DoubleX RMVXA Substitute Edit"])
+    elsif attack_skill.for_friend?
+      if cnte::Keep_Scope
+        scope = targets_for_friends_counterattack_edit(target, attack_skill)
+      else
+        scope = [target]
+      end
+      apply_counterattack_edit(target, attack_skill, scope)
+    end
+    @cnt_subject &&= !cnte::Keep_Ani
+    #
+    refresh_status
+  end # invoke_counter_attack
+
+  #----------------------------------------------------------------------------|
+  #  (v1.05a+)Alias method: show_attack_animation                              |
+  #----------------------------------------------------------------------------|
+  alias show_attack_animation_counterattack_edit show_attack_animation
+  def show_attack_animation(targets)
+    # Rewritten to handle the Keep_Ani case
+    if @cnt_subject && @cnt_subject.actor?
+      show_normal_animation(targets, @cnt_subject.atk_animation_id1, false)
+      show_normal_animation(targets, @cnt_subject.atk_animation_id2, true)
+    else
+      show_attack_animation_counterattack_edit(targets)
+    end
+    #
+  end # show_attack_animation
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)Alias method: apply_item_effects                                 |
+  #----------------------------------------------------------------------------|
+  alias apply_item_effects_counterattack_edit apply_item_effects
+  def apply_item_effects(target, item)
+    apply_item_effects_counterattack_edit(target, item)
+    # Added to invoke cnt upon mev or !CNT_Negate_Hit with chance cnt
+    return unless target.mev_invoke_cnt? && target.invoke_counter_attack || 
+    !DoubleX_RMVXA::Counterattack_Edit::CNT_Negate_Hit && 
+    rand < target.item_cnt_counterattack_edit(@subject, item)
+    invoke_counter_attack(target, item)
+    #
+  end # apply_item_effects
+
+  #----------------------------------------------------------------------------|
+  #  (v1.05b+)New method: apply_counterattack_edit                             |
+  #----------------------------------------------------------------------------|
+  def apply_counterattack_edit(target, attack_skill, scope, substitute = false)
+    cnte = DoubleX_RMVXA::Counterattack_Edit
+    se = DoubleX_RMVXA::Substitute_Edit if substitute
+    show_animation(scope, attack_skill.animation_id) if cnte::Keep_Ani
+    repeats = cnte::Keep_Times ? attack_skill.repeats : 1
+    scope.each { |s|
+      repeats.times {
+        unless substitute
+          s.item_apply(target, attack_skill)
+          next @log_window.display_action_results(s, attack_skill)
+        end
+        if se::Hit_Substitute
+          s.item_apply(target, attack_skill)
+          next @log_window.display_action_results(s, attack_skill)
+        end
+        sub = apply_substitute(s, attack_skill)
+        sub.item_apply(target, attack_skill)
+        @log_window.display_action_results(s, attack_skill) if sub == s
+      }
+    }
+  end # apply_counterattack_edit
+
+  #----------------------------------------------------------------------------|
+  #  New method: targets_for_opponents_counterattack_edit                      |
+  #----------------------------------------------------------------------------|
+  def targets_for_opponents_counterattack_edit(target, item)
+    if item.for_random?
+      Array.new(item.number_of_targets) { target.opponents_unit.random_target }
+    elsif item.for_one?
+      num = 1
+      if item == $data_skills[target.attack_skill_id]
+        num += target.atk_times_add.to_i
+      end
+      return [@subject] * num
+    end
+    target.opponents_unit.alive_members
+  end # targets_for_opponents_counterattack_edit
+
+  #----------------------------------------------------------------------------|
+  #  New method: targets_for_friends_counterattack_edit                        |
+  #----------------------------------------------------------------------------|
+  def targets_for_friends_counterattack_edit(target, item)
+    return [target] if item.for_user?
+    if item.for_dead_friend?
+      return [target.friends_unit.random_dead_target] if item.for_one?
+      target.friends_unit.dead_members
+    elsif item.for_friend?
+      return [target.friends_unit.random_target] if item.for_one?
+      target.friends_unit.alive_members
+    end
+  end # targets_for_friends_counterattack_edit
+
+end # Scene_Battle
+
+#==============================================================================|

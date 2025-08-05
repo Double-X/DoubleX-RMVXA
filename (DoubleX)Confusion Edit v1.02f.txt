@@ -1,0 +1,398 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Confusion Edit v1.02f                                      |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.02f(GMT 0200 6-6-2020):                                                |
+#    - Fixed actions having no targets not executing bug                       |
+#    v1.02e(GMT 0100 13-8-2015):                                               |
+#    - Fixed some syntax errors and typos                                      |
+#    v1.02d(GMT 1400 7-7-2015):                                                |
+#    - Improved this script's efficiency and readability                       |
+#    v1.02c(GMT 0000 2-6-2014):                                                |
+#    - Fixed bugs on adding stuff other than damage in custom damage formula   |
+#    v1.02b(GMT 0300 22-3-2014):                                               |
+#    - Fixed bugs on <exclude self> notetag implementations                    |
+#    v1.02a(GMT 0600 21-3-2014):                                               |
+#    - Added <exclude self> notetag                                            |
+#    v1.01b(GMT 0000 17-1-2014):                                               |
+#    - Methods are aliased rather than rewritten                               |
+#    v1.01a(GMT 0000 3-1-2014):                                                |
+#    - Added <confusion edit> notetag to enable confusion edit for states      |
+#    v1.00a(GMT 1600 1-1-2014):                                                |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    None other than not claiming this script as created by anyone except      |
+#    DoubleX or his alias                                                      |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - none                                                                    |
+#    Knowledge:                                                                |
+#    - Use of notetags(v1.01a+)                                                |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Alters the effect of restrictions Attack Enemy, Attack Anyone and Attack|
+#      Ally to be merely reversing the identification of allies and enemies    |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between ¡¿ Materials and ¡¿ Main. Save to take effect.            |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Scripts aliasing or rewriting method:                                     |
+#    - evaluate_item_with_target, friends_unit, opponents_unit, prepare,       |
+#      valid?, make_targets, confusion_target, targets_for_opponents or        |
+#      targets_for_friends under class Game_Action                             |
+#    - make_actions under class Game_Actor                                     |
+#    may have compatibility issues with this script                            |
+#    Place this script above those aliasing any of these methods if possible   |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Confusion Edit"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#  * (v1.01a+)Notetag <confusion edit> for states                              |
+#    To make a state with those restrictions have edited confusion effects, put|
+#    the above notetag into that state's notebox in the database.              |
+#------------------------------------------------------------------------------|
+#  * (v1.02a+)Notetag <exclude self> for states                                |
+#    To make battlers with an edited confusion state never target themselves,  |
+#    put the above notetag into that state's notebox in the database.          |
+#    This noteag only works on skills picking a single non-random target       |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module Confusion_Edit
+
+#------------------------------------------------------------------------------|
+#  * (v1.01a+)Always_Confusion_Edit, default = false                           |
+#    Notetags will be ignored and all states with those restrictions will have |
+#    the edited confusion effects if Always_Confusion_Edit is true             |
+#------------------------------------------------------------------------------|
+  Always_Confusion_Edit = false
+
+#------------------------------------------------------------------------------|
+#  * (v1.02a+)Always_Exclude_Self, default = false                             |
+#    Notetags will be ignored and all states with those restrictions will stop |
+#    the battlers from targeting themselves if Always_Exclude_Self is true     |
+#    This setting only works on skills picking a single non-random target      |
+#------------------------------------------------------------------------------|
+  Always_Exclude_Self = false
+
+  end # Confusion_Edit
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: load_database                                               |
+  #----------------------------------------------------------------------------|
+  alias load_database_confusion_edit load_database
+  def load_database
+    load_database_confusion_edit
+    # Added to load confusion notetags
+    load_notetags_confusion_edit
+    #
+  end # load_database
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_confusion_edit                                  |
+  #----------------------------------------------------------------------------|
+  def load_notetags_confusion_edit
+    $data_states.each { |obj| obj.load_notetags_confusion_edit if obj }
+  end # load_notetags_confusion_edit
+
+end # DataManager
+
+class RPG::State < RPG::BaseItem
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_accessor :confusion_edit
+  attr_accessor :exclude_self
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_confusion_edit                                  |
+  #----------------------------------------------------------------------------|
+  def load_notetags_confusion_edit
+    @confusion_edit = @exclude_self = false
+    unless (ce = DoubleX_RMVXA::Confusion_Edit) && ce::Always_Exclude_Self
+      @note.split(/[\r\n]+/).each { |line|
+        case line
+          when /<(?:CONFUSION_EDIT|confusion edit)>/i
+            @confusion_edit = true
+          when /<(?:EXCLUDE_SELF|exclude self)>/i
+            @exclude_self = true
+          end
+          break if @confusion_edit && @exclude_self
+      }
+    end
+    @confusion_edit ||= ce::Always_Confusion_Edit
+    @exclude_self ||= ce::Always_Exclude_Self
+  end # load_notetags_confusion_edit
+
+end # RPG::State
+
+class Game_Action
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02c+)Rewrite method: evaluate_item_with_target                        |
+  #----------------------------------------------------------------------------|
+  def evaluate_item_with_target(target)
+    target.result.clear
+    # Rewritten to prevent executing any custom damage formula stuff
+    eval_target = Marshal.load( Marshal.dump(target) )
+    eval_subject = Marshal.load( Marshal.dump(subject) )
+    eval_target.make_damage_value(eval_subject, item)
+    #
+    if item.for_opponent?
+      return eval_target.result.hp_damage.to_f / [eval_target.hp, 1].max
+    end
+    recovery = [-eval_target.result.hp_damage, 
+    eval_target.mhp - eval_target.hp].min.to_f / eval_target.mhp
+  end # evaluate_item_with_target
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02d+)Alias method: initialize                                         |
+  #----------------------------------------------------------------------------|
+  alias initialize_confusion_edit initialize
+  def initialize(subject, forcing = false)
+    initialize_confusion_edit(subject, forcing)
+    # Added to initializes the array storing all targets selected by this script
+    @targets_confusion_edit = []
+    #
+  end # initialize
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: friends_unit                                                |
+  #----------------------------------------------------------------------------|
+  alias friends_unit_confusion_edit friends_unit
+  def friends_unit
+    # Rewritten to use confusion edit if subject.confusion_edit is true
+    friends_opponents_unit("friends", "opponents")
+    #
+  end # friends_unit
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: opponents_unit                                              |
+  #----------------------------------------------------------------------------|
+  alias opponents_unit_confusion_edit opponents_unit
+  def opponents_unit
+    # Rewritten to use confusion edit if subject.confusion_edit is true
+    friends_opponents_unit("opponents", "friends")
+    #
+  end # opponents_unit
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: prepare                                                     |
+  #----------------------------------------------------------------------------|
+  alias prepare_confusion_edit prepare
+  def prepare
+    # Rewritten to use confusion edit if subject.confusion_edit is true
+    prepare_confusion_edit unless subject.confusion_edit?(subject.states)
+    #
+  end # prepare
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02a+)Alias method: valid?                                             |
+  #----------------------------------------------------------------------------|
+  alias valid_confusion_edit? valid?
+  def valid?
+    # Rewritten to use confusion edit if subject.confusion_edit is true
+    @targets_confusion_edit = []
+    return false unless valid_confusion_edit?
+    !item.for_opponent? && !item.for_friend? || !make_targets.empty?
+    #
+  end # valid?
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_targets                                                |
+  #----------------------------------------------------------------------------|
+  alias make_targets_confusion_edit make_targets
+  def make_targets
+    # Rewritten to use confusion edit if subject.confusion_edit is true
+    return @targets_confusion_edit unless @targets_confusion_edit.empty?
+    if subject.confusion_edit?(subject.states)
+      return targets_for_opponents if item.for_opponent?
+      return targets_for_friends if item.for_friend?
+      return []
+    end
+    unless forcing || subject.confusion_level != 3 || 
+    friends_unit.alive_members.size > 1
+      return []
+    end
+    make_targets_confusion_edit
+    #
+  end # make_targets
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02b+)Alias method: confusion_target                                   |
+  #----------------------------------------------------------------------------|
+  alias confusion_target_confusion_edit confusion_target
+  def confusion_target
+    # Rewritten to exclude self if there's exclude self notetag
+    target = confusion_target_confusion_edit
+    unless subject.exclude_self?(subject.states) && target == subject
+      return target
+    end
+    target = confusion_target_confusion_edit while target == subject
+    target
+    #
+  end # confusion_target
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02a+)Alias method: targets_for_opponents                              |
+  #----------------------------------------------------------------------------|
+  alias targets_for_opponents_confusion_edit targets_for_opponents
+  def targets_for_opponents
+    # Rewritten to exclude self if there's exclude self notetag
+    confusion_edit_targets("opponents")
+    #
+  end # targets_for_opponents
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02a+)Alias method: targets_for_friends                                |
+  #----------------------------------------------------------------------------|
+  alias targets_for_friends_confusion_edit targets_for_friends
+  def targets_for_friends
+    # Rewritten to exclude self if there's exclude self notetag
+    confusion_edit_targets("friends")
+    #
+  end # targets_for_friends
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02a+)New method: targets_for_friends_opponents                        |
+  #----------------------------------------------------------------------------|
+  def targets_for_friends_opponents
+    num = 1
+    num+ subject.atk_times_add.to_i if attack? && !item.for_friend?
+    return [friends_unit.random_target] * num if rand(2) == 0
+    [opponents_unit.random_target] * num
+  end # targets_for_friends_opponents
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02a+)New method: confusion_edit_targets                               |
+  #----------------------------------------------------------------------------|
+  def confusion_edit_targets(targets)
+    return [] if item.for_user? && subject.exclude_self?(subject.states)
+    init_confusion_edit_targets(targets)
+    return @targets_confusion_edit unless @targets_confusion_edit.empty?
+    return @targets_confusion_edit if item.for_dead_friend?
+    if subject.confusion_level == 1 && item.for_friend? && 
+    freinds_unit.alive_members.size <= 1
+      return @targets_confusion_edit
+    end
+    if subject.confusion_level == 3 && item.for_opponent? && 
+    opponents_unit.alive_members.size <= 1
+      return @targets_confusion_edit
+    end
+    loop_confusion_edit_targets(targets)
+    @targets_confusion_edit
+  end # confusion_edit_targets
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02d+)New method: init_confusion_edit_targets                          |
+  #----------------------------------------------------------------------------|
+  def init_confusion_edit_targets(targets)
+    if subject.confusion_level == 2 && item.for_one? && !item.for_dead_friend?
+      @targets_confusion_edit = targets_for_friends_opponents
+    else
+      @targets_confusion_edit = 
+      send("targets_for_#{targets}_confusion_edit".to_sym)
+    end
+    return unless item.for_one? && subject.exclude_self?(subject.states)
+    return unless @targets_confusion_edit.include?(subject)    
+    @targets_confusion_edit.delete(subject)
+  end # init_confusion_edit_targets
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02d+)New method: loop_confusion_edit_targets                          |
+  #----------------------------------------------------------------------------|
+  def loop_confusion_edit_targets(targets)
+    begin
+      @target_index = -1
+      if subject.confusion_level == 2
+        @targets_confusion_edit = targets_for_friends_opponents
+      else
+        @targets_confusion_edit = 
+        send("targets_for_#{targets}_confusion_edit".to_sym)
+      end
+      next unless @targets_confusion_edit.include?(subject)
+      @targets_confusion_edit.delete(subject)
+    end while @targets_confusion_edit.empty?
+  end # loop_confusion_edit_targets
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02a+)New method: friends_opponents_unit                               |
+  #----------------------------------------------------------------------------|
+  def friends_opponents_unit(friends, opponents)
+    if !forcing && subject.confusion_edit?(subject.states)
+      case subject.confusion_level
+      when 1
+        return send("#{friends}_unit_confusion_edit".to_sym)
+      when 2
+        return send("#{friends}_unit_confusion_edit".to_sym) if rand(2) == 0
+        return send("#{opponents}_unit_confusion_edit".to_sym)
+      end
+      send("#{opponents}_unit_confusion_edit".to_sym)
+    else
+      send("#{friends}_unit_confusion_edit".to_sym)
+    end
+  end # friends_opponents_unit
+
+end # Game_Action
+
+class Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  New method: confusion_edit?                                               |
+  #----------------------------------------------------------------------------|
+  def confusion_edit?(state)
+    return false unless confusion? && state
+    state.each { |s| return true if s.confusion_edit }
+    false
+  end # confusion_edit?
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02a+)New method: exclude_self?                                        |
+  #----------------------------------------------------------------------------|
+  def exclude_self?(state)
+    return false unless confusion? && state
+    state.each { |s| return true if s.exclude_self }
+    false
+  end # exclude_self?
+
+end # Game_BattlerBase
+
+class Game_Actor < Game_Battler
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_actions                                                |
+  #----------------------------------------------------------------------------|
+  alias make_actions_confusion_edit make_actions
+  def make_actions
+    # Rewritten to use confusion edit if subject.confusion_edit is true
+    return make_actions_confusion_edit unless confusion_edit?(states)
+    super
+    make_auto_battle_actions
+    #
+  end # make_actions
+
+end # Game_Actor
+
+#==============================================================================|

@@ -1,0 +1,250 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Autobattle Edit v1.01a                                     |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.01a(GMT 0000 8-2-2014):                                                |
+#    - Added method self.make_auto_battle_action_list under module             |
+#      DoubleX_RMVXA::Autobattle_Edit                                          |
+#    v1.00a(GMT 0800 6-2-2014):                                                |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    None other than not claiming this script as created by anyone except      |
+#    DoubleX or his alias                                                      |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - none                                                                    |
+#    Knowledge:                                                                |
+#    - Decent scripting knowledge                                              |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Allows users to set autobattle actions triggered by variables for actors|
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between ¡¿ Materials and ¡¿ Main. Save to take effect.            |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Scripts aliasing method make_auto_battle_actions may have compatibility   |
+#    issues with this script                                                   |
+#    Place this script above those aliasing any of these methods if possible   |
+#==============================================================================|
+
+$imported = {} if $imported.nil?
+$imported["DoubleX RMVXA Autobattle Edit"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#  * This script is designed to be a tool for users with decent scripting      |
+#    knowledge to make custom autobattle actions triggered by game variables.  |
+#    Each actor with custom autobattle actions has an associated varaible      |
+#    deciding the autobattle actions to be used. Conditions should be written  |
+#    in battle events and autobattle actions should be written in this script. |
+#    In short, this script bridges the gap between conditions and actions.     |
+#------------------------------------------------------------------------------|
+#  * Some useful stuffs                                                        |
+#    - $data_skills[x]                                                         |
+#      Skill with id x                                                         |
+#    - $game_actors[x]                                                         |
+#      Actor with id x                                                         |
+#    - $game_switches[x]                                                       |
+#      Switch with id x                                                        |
+#    - $game_variables[x]                                                      |
+#      Variable with id x                                                      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module Autobattle_Edit
+
+  #----------------------------------------------------------------------------|
+  #  Actor and variable lists and method names settings                        |
+  #----------------------------------------------------------------------------|
+
+    # Game switch id getting rid of VARIABLE_VALUE_HASH and custom methods
+    # Sets autobattle actions of $game_actors[ACTOR_ID_LIST[x]] as skill with
+    # skill id being the value of $game_variables[VARIABLE_ID_LIST[x]] when
+    # $game_switches[VARIABLE_SET_SKILL_ID_SWITCH_ID] is true
+    VARIABLE_SET_SKILL_ID_SWITCH_ID = 0
+    # Example:
+    # VARIABLE_SET_SKILL_ID_SWITCH_ID = 1
+    # ACTOR_ID_LIST = [1, 2]
+    # VARIABLE_ID_LIST = [4, 3]
+    # Sets autobattle actions of $game_actors[ACTOR_ID_LIST[0]] and
+    # $game_actors[ACTOR_ID_LIST[1]] as skills with skill ids being the value of
+    # $game_variables[VARIABLE_ID_LIST[0]] and
+    # $game_variables[VARIABLE_ID_LIST[1]] respectively when $game_switches[1]
+    # is true
+    # Sets autobattle actions of $game_actors[1] and $game_actors[2] as skills
+    # with skill ids being the value of $game_variables[4] and
+    # $game_variables[3] respectively when $game_switches[1] is true
+
+    # Id list of actors using custom autobattle action picking conditions
+    ACTOR_ID_LIST = [0]
+    # Example: [1, 2] includes actor ids 1 and 2
+
+    # Id list of variables associated with actor ids in ACTOR_ID_LIST
+    # ACTOR_ID_LIST[x] is associated with VARIABLE_ID_LIST[x]
+    # $game_actors[ACTOR_ID_LIST[x]] is associated with
+    # $game_variables[VARIABLE_ID_LIST[x]]
+    # The size of ACTOR_ID_LIST must be the same as that of VARIABLE_ID_LIST
+    VARIABLE_ID_LIST = [0]
+    # Example: [4, 3] includes variable ids 4 and 3
+    # ACTOR_ID_LIST[0] is associated with VARIABLE_ID_LIST[0]
+    # ACTOR_ID_LIST[1] is associated with VARIABLE_ID_LIST[1]
+    # $game_actors[ACTOR_ID_LIST[0]] is associated with
+    # $game_variables[VARIABLE_ID_LIST[0]]
+    # $game_actors[ACTOR_ID_LIST[1]] is associated with
+    # $game_variables[VARIABLE_ID_LIST[1]]
+    # (Use ACTOR_ID_LIST = [1, 2] as an example)
+    # $game_actors[1] is associated with $game_variables[4]
+    # $game_actors[2] is associated with $game_variables[3]
+
+    # Value hash of variables with their ids in VARIABLE_ID_LIST
+    # Each value of a variable calls a method for its associated actor
+    # This hash won't be used if $game_switches[VARIABLE_SET_SKILL_ID_SWITCH_ID]
+    # is true
+    VARIABLE_VALUE_HASH = {
+      VARIABLE_ID_LIST[0] => [0],
+    }
+    # Example:
+    # VARIABLE_ID_LIST[0] => [8, 6],
+    # VARIABLE_ID_LIST[1] => [5, 7],
+    # Sets the values of $game_variables[VARIABLE_ID_LIST[0]] and
+    # $game_variables[VARIABLE_ID_LIST[1]] calling respective methods for
+    # $game_actors[ACTOR_ID_LIST[0]] and $game_actors[ACTOR_ID_LIST[1]] as
+    # 8, 6 and 5, 7 respectively
+    # (Use ACTOR_ID_LIST = [1, 2] and VARIABLE_ID_LIST = [4, 3] as an example)
+    # Sets the values of $game_variables[4] and $game_variables[3] calling
+    # respective methods for $game_actors[1] and $game_actors[2] as
+    # 8, 6 and 5, 7 respectively
+
+    # Method names associated with variable value hash in VARIABLE_VALUE_HASH
+    # "self." + ACTOR_ID + "actor id" + VARIABLE_VALUE + "variable value"
+    # Default of ACTOR_ID and VARIABLE_VALUE: "actor_id_", "_variable_value_"
+    # These methods won't be called if
+    # $game_switches[VARIABLE_SET_SKILL_ID_SWITCH_ID] is true
+    ACTOR_ID = "actor_id_"
+    VARIABLE_VALUE = "_variable_value_"
+    # Example: self.actor_id_0_variable_value_0
+    # Method name associated with value 0 of variable associated with actor id 0
+
+    # make_auto_battle_actions(actor_id, skill_id) sets all autobattle actions
+    # of actor with id being actor_id to be skill with id being skill_id
+    # Example: make_auto_battle_actions(0, 0)
+    # Sets all autobattle actions of actor with id 0 to be skill with id 0
+
+    # make_auto_battle_action_list(actor_id, skill_id_list) sets all autobattle
+    # actions of actor with id being actor_id to be skills with id in
+    # skill_id_list and @actions[i] will be set as
+    # $data_skills[skill_id_list[i % skill_id_list.size]]
+    # Example: make_auto_battle_actions(1000, [0, 1000])
+    # Sets all autobattle actions of actor with id 1000 to be skill with id 0
+    # and 1000 and @actions will be $data_skills[0], $data_skills[1000],
+    # $data_skills[0], ...
+
+  #----------------------------------------------------------------------------|
+  #  Example action methods of values of variables associated with actors      |
+  #----------------------------------------------------------------------------|
+
+    # ACTOR_ID = "actor_id_" and VARIABLE_VALUE = "_variable_value_" are used
+
+    # Method of value 0 of variable associated with actor id 0
+    # This method sets all autobattle actions as skill with id 1
+    def self.actor_id_0_variable_value_0
+      make_auto_battle_actions(0, 1)
+    end # self.actor_id_0_variable_value_0
+
+    # Method of value 0 of variable associated with actor id 1000
+    # This method sets all autobattle actions as skills with id 1 and 2 and
+    # @actions will be $data_skills[1], $data_skills[2], $data_skills[1], ...
+    def self.actor_id_1000_variable_value_0
+      make_auto_battle_action_list(1000, [1, 2])
+    end # self.actor_id_1000_variable_value_0
+
+#------------------------------------------------------------------------------|
+
+  #----------------------------------------------------------------------------|
+  #  Add custom autobattle action methods here                                 |
+  #----------------------------------------------------------------------------|
+
+
+
+#------------------------------------------------------------------------------|
+
+  #----------------------------------------------------------------------------|
+  #  Action method calls of variable values of variables associated with actors|
+  #----------------------------------------------------------------------------|
+
+    # Calls custom autobattle action methods for actor with id being autobattle_actor_id
+    # make_auto_battle_actions_autobattle_edit is aliased from the original make_auto_battle_actions
+    def self.actor_id_list(autobattle_actor_id)
+      id_list_index = 0
+      ACTOR_ID_LIST.each { |actor_id|
+        if actor_id == autobattle_actor_id
+          if VARIABLE_SET_SKILL_ID_SWITCH_ID > 0 && $game_switches[VARIABLE_SET_SKILL_ID_SWITCH_ID]
+            make_auto_battle_actions(actor_id, $game_variables[VARIABLE_ID_LIST[id_list_index]])
+          elsif VARIABLE_VALUE_HASH[VARIABLE_ID_LIST[id_list_index]] && VARIABLE_VALUE_HASH[VARIABLE_ID_LIST[id_list_index]].size > 0 && VARIABLE_VALUE_HASH[VARIABLE_ID_LIST[id_list_index]].find { |variable| variable == $game_variables[VARIABLE_ID_LIST[id_list_index]] }
+            eval(ACTOR_ID + actor_id.to_s + VARIABLE_VALUE + $game_variables[VARIABLE_ID_LIST[id_list_index]].to_s)
+          else
+            $game_actors[actor_id].make_auto_battle_actions_autobattle_edit
+          end
+          break
+        end
+        id_list_index += 1
+      }
+    end # self.actor_id_list
+
+    # Sets auto battle actions of actors with id being actor_id as skill with id being skill_id
+    # current_action_list is a new method that returns @actions
+    def self.make_auto_battle_actions(actor_id, skill_id)
+      $game_actors[actor_id].current_action_list.size.times do |i|
+        $game_actors[actor_id].current_action_list[i].set_skill(skill_id)
+      end
+    end # self.make_auto_battle_actions
+
+    # Sets auto battle actions of actors with id being actor_id as skill with id in skill_id_list
+    # current_action_list is a new method that returns @actions
+    def self.make_auto_battle_action_list(actor_id, skill_id_list)
+      $game_actors[actor_id].current_action_list.size.times do |i|
+        $game_actors[actor_id].current_action_list[i].set_skill(skill_id_list[i % skill_id_list.size])
+      end
+    end # self.make_auto_battle_action_list
+
+  end # Autobattle_Edit
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+class Game_Actor < Game_Battler
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_auto_battle_actions                                    |
+  #----------------------------------------------------------------------------|
+  alias make_auto_battle_actions_autobattle_edit make_auto_battle_actions
+  def make_auto_battle_actions
+    # This part is rewritten by this script to use custom autobattle action picking methods
+    DoubleX_RMVXA::Autobattle_Edit::ACTOR_ID_LIST.size > 0 && DoubleX_RMVXA::Autobattle_Edit::ACTOR_ID_LIST.find { |actor_id| actor_id == @actor_id } ? DoubleX_RMVXA::Autobattle_Edit.actor_id_list(@actor_id) : make_auto_battle_actions_autobattle_edit
+    #
+  end # make_auto_battle_actions
+
+  #----------------------------------------------------------------------------|
+  #  New method: current_action_list                                           |
+  #----------------------------------------------------------------------------|
+  def current_action_list
+    @actions
+  end # current_action_list
+
+end # Game_Actor
+
+#==============================================================================|

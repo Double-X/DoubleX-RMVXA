@@ -1,0 +1,230 @@
+#==============================================================================|
+#  ** Script Info                                                              |
+#------------------------------------------------------------------------------|
+#  * Script Name                                                               |
+#    DoubleX RMVXA Targeting Hotkeys Compatibility                             |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    Fixes compatibility issues in DoubleX RMVXA Targeting Hotkeys             |
+#    Scripts Addressed:                                                        |
+#    1. Yanfly Engine Ace - Ace Battle Engine                                  |
+#    2. YSA Battle System: Classical ATB                                       |
+#    3. DoubleX RMVXA Bug Fix to YSA Battle System: Classical ATB              |
+#    4. DoubleX RMVXA Compatibility Fix to YSA Battle System: Classical ATB    |
+#    5. DoubleX RMVXA Action Addon to YSA Battle System: Classical ATB         |
+#    6. DoubleX RMVXA Cooldown Addon to YSA Battle System: Classical ATB       |
+#    7. DoubleX RMVXA Charge Addon to YSA Battle System: Classical ATB         |
+#    8. DoubleX RMVXA Unison Addon to YSA Battle System: Classical ATB         |
+#    9. DoubleX RMVXA Enhanced YSA Battle System: Classical ATB                |
+#------------------------------------------------------------------------------|
+#  * Terms Of Use                                                              |
+#    You shall keep this script's Script Info part's contents intact           |
+#    You shalln't claim that this script is written by anyone other than       |
+#    DoubleX or his aliases                                                    |
+#    None of the above applies to DoubleX or his aliases                       |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    1. DoubleX RMVXA Targeting Hotkeys                                        |
+#------------------------------------------------------------------------------|
+#  * Instructions                                                              |
+#    1. Open the script editor and put this script into an open slot between   |
+#       Materials and Main, save to take effect.                               |
+#------------------------------------------------------------------------------|
+#  * Links                                                                     |
+#    Script Usage 101:                                                         |
+#    1. forums.rpgmakerweb.com/index.php?/topic/32752-rmvxa-script-usage-101/  |
+#    2. rpgmakervxace.net/topic/27475-rmvxa-script-usage-101/                  |
+#    This script:                                                              |
+#    1. https://pastebin.com/KwmQCn83                                          |
+#    Mentioned Patreon Supporters:                                             |
+#    https://www.patreon.com/posts/71738797                                    |
+#------------------------------------------------------------------------------|
+#  * Authors                                                                   |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00a(GMT 0400 23-5-2015):                                               |
+#    1. 1st version of this script finished                                    |
+#==============================================================================|
+
+($doublex_rmvxa ||= {})[:Targeting_Hotkeys_Compatibility] = "v1.00a"
+
+#==============================================================================|
+#  ** Script Implementations                                                   |
+#     You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+#  * Script Support Info:                                                      |
+#    1. Prerequisites                                                          |
+#       - Decent understanding of how the addressed scripts work               |
+#    2. Method documentation                                                   |
+#       - The 1st part informs which version rewritten, aliased or created this|
+#         method                                                               |
+#       - The 2nd part informs whether the method's rewritten, aliased or new  |
+#       - The 3rd part describes what the method does for new methods only     |
+#       - The 4th part describes what the arguments of the method are          |
+#       - The 5th part describes how this method works for new methods only,   |
+#         and describes the parts added or rewritten for rewritten or aliased  |
+#         methods only                                                         |
+#       Example:                                                               |
+# #----------------------------------------------------------------------------|
+# #  (Version X+)Rewrite/Alias/New method: def_name                            |
+# #  - What this method does                                                   |
+# #----------------------------------------------------------------------------|
+# # *args: What these arguments are                                            |
+# def def_name(*args)                                                          |
+#   # How this method works                                                    |
+#   def_name_code                                                              |
+#   #                                                                          |
+# end # def_name                                                               |
+#------------------------------------------------------------------------------|
+
+if $doublex_rmvxa[:Targeting_Hotkeys]
+
+if $imported["YEA-BattleEngine"]
+
+  TARGETING_HOTKEY = %Q(
+    @actor_window.hide.deactivate if @actor_window.active
+    @enemy_window.hide.deactivate if @enemy_window.active
+    @skill_window.hide
+    @item_window.hide
+    next_command
+    return unless @actor_window.active
+    @status_window.show
+    if $imported["YEA-BattleCommandList"] && !@confirm_command_window.nil?
+      @actor_command_window.visible = !@confirm_command_window.visible
+    else
+      @actor_command_window.show
+    end
+    @status_aid_window.hide
+  )
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Scene_Battle                                                  |
+#------------------------------------------------------------------------------|
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: create_targeting_hotkey_defs                              |
+  #----------------------------------------------------------------------------|
+
+  if $imported["YSA-CATB"]
+
+  def create_targeting_hotkey_defs(hotkeys)
+    # Rewritten to mimic the target confirming methods in CATB
+    hotkeys.each_index { |index|
+      eval(%Q(
+  def targeting_hotkey_#{index.to_s}
+    return unless (actor = BattleManager.actor) && actor.input.item.for_one?
+    if BattleManager.btype?(:catb)
+      if @enemy_window.active
+        return if $game_troop.all_dead?
+        if @enemy_window.data.size != $game_troop.alive_members.size
+          @enemy_window.make_item_list
+          @enemy_window.index = [@enemy_window.index, @enemy_window.data.size - 1].min
+        end
+      end
+      if $imported["DoubleX RMVXA Unison Addon to YSA-CATB"] && actor && actor.input && actor.input.item && !actor.input.item.catb_unison_actor_id.empty?
+        if (actor.input.item.catb_unison_actor_id - BattleManager.action_list(:actor).select { |a| !a.auto_battle? && !a.confusion? }.collect { |a| a.id }).empty?
+          actor.input.item.catb_unison_actor_id.each { |actor_id|
+            a = $game_actors[actor_id]
+            a.input.confirm = true
+            a.input.target_index = #{index} unless a == actor
+            if $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"]
+              a.item_cooldown = a.input.item.cooldown_rate
+              a.unison_cooldown_actor_id = a.input.item.catb_unison_actor_id
+              a.unison_cooldown_rule = a.input.item.catb_unison_rule
+            end
+            a.item_action = a.input.item.action if $imported["DoubleX RMVXA Action Addon to YSA-CATB"]
+            a.item_instant = a.input.item.instant if $imported["YEA-InstantCast"]
+            next unless $imported["DoubleX RMVXA Charge Addon to YSA-CATB"]
+            a.pay_prior_catb_charge
+            @status_window.draw_item(a.index)
+          }
+        end
+      else
+        actor.input.confirm = true
+        actor.item_instant = actor.input.item.instant if $imported["YEA-InstantCast"]
+        actor.item_action = actor.input.item.action if $imported["DoubleX RMVXA Action Addon to YSA-CATB"]
+        actor.item_cooldown = actor.input.item.cooldown_rate if $imported["DoubleX RMVXA Cooldown Addon to YSA-CATB"]
+        if $imported["DoubleX RMVXA Charge Addon to YSA-CATB"]
+          actor.pay_prior_catb_charge
+          @status_window.draw_item(actor.index)
+        end
+      end
+    end
+    $game_temp.battle_aid = nil
+    actor.input.target_index = #{index}
+    #{TARGETING_HOTKEY}
+  end
+      ))
+    }
+    #
+  end # create_targeting_hotkey_defs
+
+  elsif $doublex_rmvxa[:ECATB]
+
+  def create_targeting_hotkey_defs(hotkeys)
+    # Rewritten to mimic the target confirming methods in ECATB
+    hotkeys.each_index { |index|
+      eval(%Q(
+  def targeting_hotkey_#{index.to_s}
+    return unless (actor = BattleManager.actor) && actor.input.item.for_one?
+    if @actor_window.active
+      if BattleManager.btype?(:ecatb) && on_ecatb_unison?(:ok, @actor_window)
+        return
+      end
+    else
+      return unless @enemy_window.ecatb_update?
+      if BattleManager.btype?(:ecatb) && on_ecatb_unison?(:ok, @enemy_window)
+        return
+      end
+    end
+    if BattleManager.btype?(:ecatb)
+      actor.confirm_ecatb_item
+      @status_window.draw_item(actor.index)
+    end
+    $game_temp.battle_aid = nil
+    actor.input.target_index = #{index}
+    #{TARGETING_HOTKEY}
+  end
+      ))
+    }
+    #
+  end # create_targeting_hotkey_defs
+
+  else
+
+  def create_targeting_hotkey_defs(hotkeys)
+    # Rewritten to mimic the target confirming methods in YEA-BattleEngine
+    hotkeys.each_index { |index|
+      eval(%Q(
+  def targeting_hotkey_#{index.to_s}
+    return unless BattleManager.actor.input.item.for_one?
+    $game_temp.battle_aid = nil
+    BattleManager.actor.input.target_index = #{index}
+    #{TARGETING_HOTKEY}
+  end
+      ))
+    }
+    #
+  end # create_targeting_hotkey_defs
+
+  end
+
+end # Scene_Battle
+
+end # if $imported["YEA-BattleEngine"]
+
+#------------------------------------------------------------------------------|
+
+else
+
+  # Informs users that they didn't place ECATB above this script
+  msgbox("To use DoubleX RMVXA Targeting Hotkeys Compatibility, " + 
+         "put it below:\n DoubleX RMVXA Targeting Hotkeys\n but above Main")
+
+end # if $doublex_rmvxa[:Targeting_Hotkeys]
+
+#==============================================================================|

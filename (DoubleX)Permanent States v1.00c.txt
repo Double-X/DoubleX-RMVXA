@@ -1,0 +1,162 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Permanent States v1.00c                                    |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00c(GMT 1400 14-7-2015):                                               |
+#    - Increased this script's compactness and efficiency                      |
+#    v1.00b(GMT 0200 12-3-2014):                                               |
+#    - Fixed permanent states bug upon battler's revival                       |
+#    v1.00a(GMT 0700 13-2-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    None other than not claiming this script as created by anyone except      |
+#    DoubleX or his alias                                                      |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - none                                                                    |
+#    Knowledge:                                                                |
+#    - Use of notetags                                                         |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Sets specific states to be always added back automatically upon revival |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between ¡¿ Materials and ¡¿ Main. Save to take effect.            |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Scripts aliasing or rewriting method:                                     |
+#    - clear_states under class Game_BattlerBase                               |
+#    - revive under class Game_Battler                                         |
+#    may have compatibility issues with this script                            |
+#    Place this script above those aliasing any of these methods if possible   |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Permanent States"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module Permanent_States
+
+#------------------------------------------------------------------------------|
+#  * Notetag <permanent state> for states                                      |
+#    To make a state always being automatically added back upon revival, put   |
+#    the above notetag into that state's notebox in the database.              |
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#  * ALL_STATES_PERMANENT, default = false                                     |
+#    Notetags will be ignored and all states will be permanent states          |
+#------------------------------------------------------------------------------|
+  ALL_STATES_PERMANENT = false
+
+  end # Permanent_States
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: load_database                                               |
+  #----------------------------------------------------------------------------|
+  alias load_database_permanent_state load_database
+  def load_database
+    load_database_permanent_state
+    # Added to load permanent state notetags
+    load_notetags_permanent_state
+    #
+  end # load_database
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_permanent_state                                 |
+  #----------------------------------------------------------------------------|
+  def load_notetags_permanent_state
+    $data_states.each { |obj| obj.load_notetags_permanent_state if obj }
+  end # load_notetags_permanent_state
+
+end # DataManager
+
+class RPG::State < RPG::BaseItem
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_accessor :permanent_state
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_permanent_state                                 |
+  #----------------------------------------------------------------------------|
+  def load_notetags_permanent_state
+    if DoubleX_RMVXA::Permanent_States::ALL_STATES_PERMANENT
+      return @permanent_state = true
+    end
+    @note.split(/[\r\n]+/).each { |line|
+      case line
+      when /<(?:PERMANENT_STATE|permanent state)>/i
+        return @permanent_state = true
+      end
+    }
+  end # load_notetags_permanent_state
+
+end # RPG::State
+
+class Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: clear_states                                                |
+  #----------------------------------------------------------------------------|
+  alias clear_states_permanent_state clear_states
+  def clear_states
+    # Added to store permanent states
+    @permanent_states = []
+    @permanent_states_turns = {}
+    if @states && @states.size > 0
+      @states.each { |state|
+        next unless $data_states[state].permanent_state
+        @permanent_states << state
+        @permanent_states_turns[state] = @state_turns[state]
+      }
+    end
+    #
+    clear_states_permanent_state
+  end # clear_states
+
+end # Game_BattlerBase
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: revive                                                      |
+  #----------------------------------------------------------------------------|
+  alias revive_permanent_states revive
+  def revive
+    # Added to add permanent states upon revival
+    add_permanent_states
+    #
+    revive_permanent_states
+  end # revive
+
+  #----------------------------------------------------------------------------|
+  #  New method: add_permanent_states                                          |
+  #----------------------------------------------------------------------------|
+  def add_permanent_states
+    @states = @permanent_states
+    @state_turns = @permanent_states_turns
+  end # add_permanent_states
+
+end # Game_Battler
+
+#==============================================================================|

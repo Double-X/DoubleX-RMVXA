@@ -1,0 +1,435 @@
+#==============================================================================|
+#  ** Script Info                                                              |
+#------------------------------------------------------------------------------|
+#  * Script Name                                                               |
+#    DoubleX RMVXA Basic ATB Bar                                               |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    Aids other scripters to learn how to solve atb system addon dependencies  |
+#------------------------------------------------------------------------------|
+#  * Terms Of Use                                                              |
+#    You shall keep this script's Script Info part's contents intact           |
+#    You shalln't claim that this script is written by anyone other than       |
+#    DoubleX or his aliases                                                    |
+#    None of the above applies to DoubleX or his aliases                       |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    1. DoubleX RMVXA Basic ATB                                                |
+#    Abilities:                                                                |
+#    1. Little RGSS3 scripting proficiency to fully utilize this script        |
+#------------------------------------------------------------------------------|
+#  * Instructions                                                              |
+#    1. Open the script editor and put this script into an open slot between   |
+#       DoubleX RMVXA Basic ATB and Main, save to take effect.                 |
+#------------------------------------------------------------------------------|
+#  * Links                                                                     |
+#    Script Usage 101:                                                         |
+#    1. forums.rpgmakerweb.com/index.php?/topic/32752-rmvxa-script-usage-101/  |
+#    2. rpgmakervxace.net/topic/27475-rmvxa-script-usage-101/                  |
+#    How to write an atb system script:                                        |
+#    1. http://rpgmaker.net/articles/1127/                                     |
+#    This script:                                                              |
+#    1. http://pastebin.com/Lg0NCYU5                                           |
+#    Video:                                                                    |
+#    1. https://www.youtube.com/watch?v=_mRU0o9Q3Ac                            |
+#    Mentioned Patreon Supporters:                                             |
+#    https://www.patreon.com/posts/71738797                                    |
+#------------------------------------------------------------------------------|
+#  * Authors                                                                   |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00b(GMT 0900 9-9-2015):                                                |
+#    1. Fixed drawing the actor sprite atb bars and window atb bars together   |
+#    2. Fixed not updating the atb bar positions when their offsets changes    |
+#    3. Little RGSS3 scripting proficiency's needed to fully utilize the script|
+#    v1.00a(GMT 0900 22-8-2015):                                               |
+#    1. 1st version of this script finished                                    |
+#==============================================================================|
+
+#==============================================================================|
+#  ** (v1.00b+)Script Call Info                                                |
+#------------------------------------------------------------------------------|
+#  * Battle manipulations                                                      |
+#    1. batb_offset_change = true                                              |
+#       - Notifies that the atb bars' x or y offsets are changed               |
+#==============================================================================|
+
+($doublex_rmvxa ||= {})[:BATB_Bar] = "v1.00b"
+
+#==============================================================================|
+#  ** Script Configurations                                                    |
+#     You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+
+  module BATB_Bar
+
+    # Sets the actor atb bars to be shown at their sprites instead of the
+    # status window if ATB_BAR_ACTOR returns true
+    # It should only return true if the actor sprites are already created
+    # If ATB_BAR_WIDTH_SWITCH_ID is a natural number, the state of switch with
+    # id ATB_BAR_WIDTH_SWITCH_ID will be used instead of using ATB_BAR_ACTOR
+    # The state of switch with id ATB_BAR_WIDTH_SWITCH_ID should remain the same
+    # during the same battle to ensure proper atb bar displays
+    ATB_BAR_ACTOR = false
+    ATB_BAR_ACTOR_SWITCH_ID = 0
+
+    # Sets the maximum atb bar width as ATB_BAR_W
+    # If ATB_BAR_W_VAR_ID is a natural number, the value of variable with id
+    # ATB_BAR_W_VAR_ID will be used instead of using ATB_BAR_W
+    # The value of variable with id ATB_BAR_W_VAR_ID should remain the same
+    # during the same battle to ensure proper atb bar displays
+    ATB_BAR_W = 48
+    ATB_BAR_W_VAR_ID = 0
+
+    # Sets the atb bar height as ATB_BAR_H
+    # If ATB_BAR_H_VAR_ID is a natural number, the value of variable with id
+    # ATB_BAR_H_VAR_ID will be used instead of using ATB_BAR_H
+    # The value of variable with id ATB_BAR_H_VAR_ID should remain the same
+    # during the same battle to ensure proper atb bar displays
+    ATB_BAR_H = 12
+    ATB_BAR_H_VAR_ID = 0
+
+    # Sets the atb bar x offset from the battler sprite as ATB_BAR_X
+    # If ATB_BAR_X_VAR_ID is a natural number, the value of variable with id
+    # ATB_BAR_X_VAR_ID will be used instead of using ATB_BAR_X
+    # The value of variable with id ATB_BAR_X_VAR_ID should remain the same
+    # during the same battle to ensure proper atb bar displays
+    ATB_BAR_X = -12
+    ATB_BAR_X_VAR_ID = 0
+
+    # Sets the atb bar y offset from the battler sprite as ATB_BAR_Y
+    # If ATB_BAR_Y_VAR_ID is a natural number, the value of variable with id
+    # ATB_BAR_Y_VAR_ID will be used instead of using ATB_BAR_Y
+    # The value of variable with id ATB_BAR_Y_VAR_ID should remain the same
+    # during the same battle to ensure proper atb bar displays
+    ATB_BAR_Y = -8
+    ATB_BAR_Y_VAR_ID = 0
+
+    # Sets the atb bar z position as ATB_BAR_Z
+    # If ATB_BAR_Z_VAR_ID is a natural number, the value of variable with id
+    # ATB_BAR_Z_VAR_ID will be used instead of using ATB_BAR_Z
+    # The value of variable with id ATB_BAR_Z_VAR_ID should remain the same
+    # during the same battle to ensure proper atb bar displays
+    ATB_BAR_Z = 125
+    ATB_BAR_Z_VAR_ID = 0
+
+    # Sets the atb back bar color 1 as ATB_BACK_COLOR1
+    # If ATB_BACK_COLOR1_VAR_ID is a natural number, the value of variable with
+    # id ATB_BACK_COLOR1_VAR_ID will be used instead of using ATB_BACK_COLOR1
+    # The value of variable with id ATB_BACK_COLOR1_VAR_ID should remain the
+    # same during the same battle to ensure proper atb back bar color displays
+    ATB_BACK_COLOR1 = 15
+    ATB_BACK_COLOR1_VAR_ID = 0
+
+    # Sets the atb back bar color 2 as ATB_BACK_COLOR2
+    # If ATB_BACK_COLOR2_VAR_ID is a natural number, the value of variable with
+    # id ATB_BACK_COLOR2_VAR_ID will be used instead of using ATB_BACK_COLOR2
+    # The value of variable with id ATB_BACK_COLOR2_VAR_ID should remain the
+    # same during the same battle to ensure proper atb back bar color displays
+    ATB_BACK_COLOR2 = 15
+    ATB_BACK_COLOR2_VAR_ID = 0
+
+#==============================================================================|
+#  ** Script Implementations                                                   |
+#     You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+#  * Script Support Info:                                                      |
+#    1. Prerequisites                                                          |
+#       - Basic atb concept and default RMVXA battle system knowledge          |
+#       - Some RGSS3 scripting proficiency to fully comprehend this script     |
+#    2. Method documentation                                                   |
+#       - The 1st part describes why this method's rewritten/aliased for       |
+#         rewritten/aliased methods or what the method does for new methods    |
+#       - The 2nd part describes what the arguments of the method are          |
+#       - The 3rd part informs which version rewritten, aliased or created this|
+#         method                                                               |
+#       - The 4th part informs whether the method's rewritten or new           |
+#       - The 5th part describes how this method works for new methods only,   |
+#         and describes the parts added, removed or rewritten for rewritten or |
+#         aliased methods only                                                 |
+#       Example:                                                               |
+# #--------------------------------------------------------------------------| |
+# #  Why rewrite/alias/What this method does                                 | |
+# #--------------------------------------------------------------------------| |
+# # *argv: What these variables are                                            |
+# # &argb: What this block is                                                  |
+# def def_name(*argv, &argb) # Version X+; Rewrite/New                         |
+#   # Added/Removed/Rewritten to do something/How this method works            |
+#   def_name_code                                                              |
+#   #                                                                          |
+# end # def_name                                                               |
+#------------------------------------------------------------------------------|
+
+    #--------------------------------------------------------------------------|
+    #  Helper methods simplifying the uses of the configuration values         |
+    #--------------------------------------------------------------------------|
+
+    def self.atb_bar_actor
+      return ATB_BAR_ACTOR if ATB_BAR_ACTOR_SWITCH_ID <= 0
+      $game_switches[ATB_BAR_ACTOR_SWITCH_ID]
+    end # atb_bar_actor
+
+    def self.atb_bar_w
+      ATB_BAR_W_VAR_ID > 0 ? $game_variables[ATB_BAR_W_VAR_ID] : ATB_BAR_W
+    end # atb_bar_w
+
+    def self.atb_bar_h
+      ATB_BAR_H_VAR_ID > 0 ? $game_variables[ATB_BAR_H_VAR_ID] : ATB_BAR_H
+    end # atb_bar_h
+
+    def self.atb_bar_x
+      ATB_BAR_X_VAR_ID > 0 ? $game_variables[ATB_BAR_X_VAR_ID] : ATB_BAR_X
+    end # atb_bar_x
+
+    def self.atb_bar_y
+      ATB_BAR_Y_VAR_ID > 0 ? $game_variables[ATB_BAR_Y_VAR_ID] : ATB_BAR_Y
+    end # atb_bar_y
+
+    def self.atb_bar_z
+      ATB_BAR_Z_VAR_ID > 0 ? $game_variables[ATB_BAR_Z_VAR_ID] : ATB_BAR_Z
+    end # atb_bar_z
+
+    def self.atb_back_color1
+      return ATB_BACK_COLOR1 if ATB_BACK_COLOR1_VAR_ID <= 0
+      $game_variables[ATB_BACK_COLOR1_VAR_ID]
+    end # atb_back_color1
+
+    def self.atb_back_color2
+      return ATB_BACK_COLOR2 if ATB_BACK_COLOR2_VAR_ID <= 0
+      $game_variables[ATB_BACK_COLOR2_VAR_ID]
+    end # atb_back_color2
+
+  end # BATB_Bar
+
+end # DoubleX_RMVXA
+
+if $doublex_rmvxa[:BATB]
+
+class << BattleManager # v1.00b+; Edit
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_accessor :batb_offset_change # The atb bar x/y offset changes notifier
+
+end # BattleManager
+
+#------------------------------------------------------------------------------|
+#  * Hosts battler sprite atb bars                                             |
+#------------------------------------------------------------------------------|
+class Sprite_Battler < Sprite_Base # Edit
+
+  #----------------------------------------------------------------------------|
+  #  New private instance variable                                             |
+  #----------------------------------------------------------------------------|
+  # @batb_bars: The battler's atb bars
+
+  alias initialize_batb initialize
+  def initialize(viewport, battler = nil)
+    initialize_batb(viewport, battler)
+    # Added
+    return unless @battler
+    return unless @battler.enemy? || DoubleX_RMVXA::BATB_Bar.atb_bar_actor
+    create_batb_bars
+    #
+  end # initialize
+
+  alias dispose_batb dispose
+  def dispose
+    dispose_batb
+    @batb_bars.each_value { |bar| bar.dispose } if @batb_bars # Added
+  end # dispose
+
+  alias update_batb update
+  def update
+    update_batb
+    @batb_bars.each_value { |bar| bar.update } if @batb_bars # Added
+  end # update
+
+  def create_batb_bars # New
+    @batb_bars = {
+      back: BATB_Bar.new(@battler, :back),
+      atb: BATB_Bar.new(@battler, :atb)
+    }
+  end # create_batb_bars
+
+end # Sprite_Battler
+
+#------------------------------------------------------------------------------|
+#  * Handles the battler's sprite atb bars                                     |
+#------------------------------------------------------------------------------|
+class BATB_Bar < Viewport # New
+
+  #----------------------------------------------------------------------------|
+  #  Private instance variables                                                |
+  #----------------------------------------------------------------------------|
+  # @battler: The battler using the atb bar
+  # @last_x: The last atb bar x position
+  # @last_y: The last atb bar y position
+  # @plane: The plane with the bitmap drawing the atb bar
+  # @type: The atb bar type
+
+  # type: The atb bar type
+  def initialize(battler, type)
+    @battler = battler
+    @type = type
+    bar = DoubleX_RMVXA::BATB_Bar
+    super(Rect.new(bar.atb_bar_x, bar.atb_bar_y, bar.atb_bar_w, bar.atb_bar_h))
+    @plane = Plane.new(self)
+    @plane.bitmap = Bitmap.new(rect.width, rect.height)
+    self.z = bar.atb_bar_z
+    update
+    draw_bars
+  end # initialize
+
+  def dispose
+    return if @plane.disposed?
+    @plane.bitmap.dispose if @plane.bitmap
+    @plane.dispose
+    super
+  end # dispose
+
+  def update_pos # v1.00b+
+    pos_change = @last_x != @battler.screen_x || @last_y != @battler.screen_y
+    return unless BattleManager.batb_offset_change || pos_change
+    @last_x = @battler.screen_x
+    @last_y = @battler.screen_y
+    rect.x = @last_x + DoubleX_RMVXA::BATB_Bar.atb_bar_x
+    rect.y = @last_y + DoubleX_RMVXA::BATB_Bar.atb_bar_y
+    BattleManager.batb_offset_change = false
+  end # update_pos
+
+  if $doublex_rmvxa[:BATB_Delay]
+
+  def update
+    super
+    self.visible = @battler.alive?
+    return unless visible
+    update_pos
+    return unless @type == :atb && @battler.batb_val_change
+    max = DoubleX_RMVXA::BATB_Delay.max_atb_val
+    batb_val = @battler.batb_val > max ? max : @battler.batb_val
+    rect.width = DoubleX_RMVXA::BATB_Bar.atb_bar_w * batb_val * 1.0 / max
+  end # update
+
+  def draw_bars
+    dw = rect.width
+    dh = rect.height
+    colors = set_bar_colors
+    @plane.bitmap.gradient_fill_rect(0, 0, dw, dh, colors[0], colors[1])
+  end # draw_bars
+
+  def set_bar_colors
+    if @type == :back
+      bar = DoubleX_RMVXA::BATB_Bar
+      return [bar_color(bar.atb_back_color1), bar_color(bar.atb_back_color2)]
+    end
+    if @battler.batb_val <= DoubleX_RMVXA::BATB_Delay.max_atb_val
+      batb = DoubleX_RMVXA::BATB
+      return [bar_color(batb.atb_bar_color1), bar_color(batb.atb_bar_color2)]
+    end
+    delay = DoubleX_RMVXA::BATB_Delay
+    [bar_color(delay.atb_overlay_color1), bar_color(delay.atb_overlay_color2)]
+  end # set_bar_colors
+
+  else
+
+  def update
+    super
+    self.visible = @battler.alive?
+    return unless visible
+    update_pos
+    return unless @type == :atb && @battler.batb_val_change
+    rect.width = DoubleX_RMVXA::BATB_Bar.atb_bar_w * @battler.batb_val / 100.0
+  end # update
+
+  def draw_bars
+    dw = rect.width
+    dh = rect.height
+    if @type == :atb
+      color1 = bar_color(DoubleX_RMVXA::BATB.atb_bar_color1)
+      color2 = bar_color(DoubleX_RMVXA::BATB.atb_bar_color2)
+    else
+      color1 = bar_color(DoubleX_RMVXA::BATB_Bar.atb_back_color1)
+      color2 = bar_color(DoubleX_RMVXA::BATB_Bar.atb_back_color2)
+    end
+    @plane.bitmap.gradient_fill_rect(0, 0, dw, dh, color1, color2)
+  end # draw_bars
+
+  end # if $doublex_rmvxa[:BATB_Delay]
+
+  #----------------------------------------------------------------------------|
+  #  Helper method simplifying the uses of the bar colors                      |
+  #----------------------------------------------------------------------------|
+  # color: The text color code
+  def bar_color(color)
+    Cache.system("Window").get_pixel(64 + (color % 8) * 8, 96 + (color / 8) * 8)
+  end # bar_color
+
+end # BATB_Bar
+
+class Window_BattleStatus < Window_Selectable # v1.00b+; Edit
+
+  #----------------------------------------------------------------------------|
+  #  Uses the defaults if the atb bars are drawn on the actors' sprites instead|
+  #----------------------------------------------------------------------------|
+  def draw_gauge_area_with_tp(rect, actor) # Rewrite
+    # Rewritten
+    if DoubleX_RMVXA::BATB_Bar.atb_bar_actor
+      draw_actor_hp(actor, rect.x + 0, rect.y, 72)
+      draw_actor_mp(actor, rect.x + 82, rect.y, 64)
+      return draw_actor_tp(actor, rect.x + 156, rect.y, 64)
+    end
+    draw_actor_hp(actor, rect.x + 0, rect.y, 60)
+    draw_actor_mp(actor, rect.x + 64, rect.y, 60)
+    draw_actor_tp(actor, rect.x + 128, rect.y, 52)
+    draw_batb_bar(rect, actor, true) if actor
+    #
+  end # draw_gauge_area_with_tp
+
+  #----------------------------------------------------------------------------|
+  #  Uses the defaults if the atb bars are drawn on the actors' sprites instead|
+  #----------------------------------------------------------------------------|
+  def draw_gauge_area_without_tp(rect, actor) # Rewrite
+    # Rewritten
+    if DoubleX_RMVXA::BATB_Bar.atb_bar_actor
+      draw_actor_hp(actor, rect.x + 0, rect.y, 134)
+      return draw_actor_mp(actor, rect.x + 144,  rect.y, 76)
+    end
+    draw_actor_hp(actor, rect.x + 0, rect.y, 72)
+    draw_actor_mp(actor, rect.x + 80,  rect.y, 72)
+    draw_batb_bar(rect, actor, false) if actor
+    #
+  end # draw_gauge_area_without_tp
+
+end # Window_BattleStatus
+
+class Scene_Battle < Scene_Base # v1.00b+; Edit
+
+  def batb_update # Rewrite
+    batb_update_turn(0)
+    BattleManager.batb_update
+    list = BattleManager.action_battlers.select { |b| b.actor? && b.inputable? }
+    list.collect! { |battler| battler.index }
+    batb_update_windows(list) unless list.include?(@status_window.index)
+    return if DoubleX_RMVXA::BATB_Bar.atb_bar_actor # Added
+    @status_window.refresh_batb_bars
+  end # batb_update
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+else
+
+  # Informs users that they didn't place BATB above this script
+  msgbox("To use DoubleX RMVXA Basic ATB Delay, put it below:\n" + 
+         "DoubleX RMVXA Basic ATB\nbut above Main")
+
+end
+
+#==============================================================================|

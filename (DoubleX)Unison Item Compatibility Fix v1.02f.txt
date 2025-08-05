@@ -1,0 +1,211 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Unison Skills/Items Compatibility Fix v1.02f               |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.02f(GMT 0400 21-7-2014):                                               |
+#    Outsourced the compatibility with Yami Engine Symphony - Battle Symphony  |
+#    to DoubleX RMVXA Tag Addon to Yami Engine Symphony - Battle Symphony      |
+#    DoubleX RMVXA Unison Skills/Items won't be compatible with                |
+#    Yanfly Engine Ace - Ace Battle Engine                                     |
+#    Changed this script's terms of use                                        |
+#    v1.02e(GMT 1000 15-11-2014):                                              |
+#    Improved compatibility with Yanfly Engine Ace - Ace Battle Engine         |
+#    v1.02d(GMT 0100 21-8-2014):                                               |
+#    Fixed more Victor Engine - Active Time Battle compatibility issues        |
+#    v1.02c(GMT 1100 9-6-2014):                                                |
+#    Fixed a bug when users don't use Victor Engine - Active Time Battle       |
+#    A single unison symphony tag can include more than 1 actor id             |
+#    v1.02b(GMT 1100 5-6-2014):                                                |
+#    Fixed a bug when accessing skill or item menu outside battles             |
+#    Fixed a atb recharge bug when using unison items with VE_ATB_WAIT_ACTION  |
+#    being false                                                               |
+#    v1.02a(GMT 0300 1-6-2014):                                                |
+#    Compatible with Victor Engine - Active Time Battle v 1.05                 |
+#    v1.01a(GMT 0200 7-3-2014):                                                |
+#    Compatible with                                                           |
+#    - Yanfly Engine Ace - Ace Battle Engine                                   |
+#    - Yami Engine Symphony - Battle Symphony                                  |
+#    v1.00a(GMT 1200 16-1-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX:                                                                  |
+#    - This script                                                             |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    None other than not claiming this script as created by anyone except      |
+#    DoubleX or his alias                                                      |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Unison Skills/Items                                       |
+#    Knowledge:                                                                |
+#    That of using DoubleX RMVXA Unison Skills/Items                           |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Fixes compatibility issues of DoubleX RMVXA Unison Skills/Items         |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot below DoubleX RMVXA Unison Skills/Items and the addressed       |
+#    scripts  but above ¡¿ Main. Save to take effect.                           |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Same as that of DoubleX RMVXA Unison Skills/Items except those addressed  |
+#    by this script:                                                           |
+#    - Victor Engine - Active Time Battle                                      |
+#    - Yanfly Engine Ace - Instant Cast                                        |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Unison Item Compatibility Fix"] = true
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["DoubleX RMVXA Unison Item"]
+
+#------------------------------------------------------------------------------|
+
+if $imported[:ve_active_time_battle] && $imported[:ve_active_time_battle] >= 1.05
+
+#------------------------------------------------------------------------------|
+#  * Edit module: BattleManager                                                |
+#------------------------------------------------------------------------------|
+
+class << BattleManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: update_all_atb                                              |
+  #----------------------------------------------------------------------------|
+  alias update_all_atb_unison_item_compatibility_fix update_all_atb
+  def update_all_atb
+    return if wating?
+    # Rewritten to stop updating unison actor's atb when using unison items
+    return update_all_atb_unison_item_compatibility_fix unless 
+    SceneManager.scene_is?(Scene_Battle) && SceneManager.scene.subject && 
+    SceneManager.scene.subject.current_action && 
+    (item = SceneManager.scene.subject.current_action.item) && item.unison_item
+    all_battle_members.each {|mem|
+      next if member.actor? && item.unison_actor_id.include?(mem.id)
+      mem.atb_update
+    }
+    #
+  end # update_all_atb
+
+end # BattleManager
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_Action                                                   |
+#------------------------------------------------------------------------------|
+
+class Game_Action
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: prepare                                                     |
+  #----------------------------------------------------------------------------|
+  alias prepare_unison_item_compatibility_fix prepare
+  def prepare
+    # Rewritten to prepare all unison actors' current action slots
+    return prepare_unison_item_compatibility_fix unless item && item.unison_item
+    item.unison_actor_id.each { |actor_id|
+      next unless (actor = $game_actors[actor_id]).current_action
+      actor.current_action.unison_item_compatibility_fix_prepare
+    }
+    #
+  end # prepare
+
+end # Game_Action
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_BattlerBase                                              |
+#------------------------------------------------------------------------------|
+
+class Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02f+)Rewrite method: unison_skill_usable?                             |
+  #----------------------------------------------------------------------------|
+  def unison_skill_usable?(item)
+    battle = SceneManager.scene_is?(Scene_Battle)
+    (item.unison_actor_id - [id]).each { |actor_id|
+      actor = $game_actors[actor_id]
+      # Rewritten to check if the unison actors are ready or active instead
+      return false unless actor.battle_member?
+      return false if battle && !actor.ready? && !actor.active_battler?
+      return false unless actor.skill_conditions_met?(item)
+      return false unless actor.skills.any? { |s| s == $data_skills[item.id] }
+      #
+    }
+    true
+  end # unison_skill_usable?
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02f+)Rewrite method: unison_item_usable?                              |
+  #----------------------------------------------------------------------------|
+  def unison_item_usable?(item)
+    return false unless item_conditions_met?(item)
+    # Rewritten to check if the unison actors are ready or active instead
+    battle = SceneManager.scene_is?(Scene_Battle)
+    (item.unison_actor_id - [id]).each { |actor_id|
+      actor = $game_actors[actor_id]
+      return false unless actor.battle_member?
+      return false if battle && !actor.ready? && !actor.active_battler?
+    }
+    #
+    true
+  end # unison_item_usable?
+
+end # Game_BattlerBase
+
+end # if $imported[:ve_active_time_battle] && 
+    # $imported[:ve_active_time_battle] >= 1.05
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Scene_Battle                                                  |
+#------------------------------------------------------------------------------|
+
+class Scene_Battle < Scene_Base
+
+  if $imported["YEA-InstantCast"]
+  #----------------------------------------------------------------------------|
+  #  Alias method: next_command                                                |
+  #----------------------------------------------------------------------------|
+  alias next_command_unison_item_compatibility_fix next_command
+  def next_command
+    # Added to perform instant action for unison skills
+    return perform_instant_action if instant_action?
+    #
+    next_command_unison_item_compatibility_fix
+  end # next_command
+  end # if $imported["YEA-InstantCast"]
+
+  if $imported[:ve_active_time_battle] && 
+  $imported[:ve_active_time_battle] >= 1.05
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02d+)Rewrite method: add_unison_actor_ids                             |
+  #----------------------------------------------------------------------------|
+  def add_unison_actor_ids
+    # Removed to disable this method
+    #
+  end # add_unison_actor_ids
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02d+)Rewrite method: clear_unison_actor_ids                           |
+  #----------------------------------------------------------------------------|
+  def clear_unison_actor_ids
+    # Removed to disable this method
+    #
+  end # clear_unison_actor_ids
+
+  end # if $imported[:ve_active_time_battle] && 
+      # $imported[:ve_active_time_battle] >= 1.05
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["DoubleX RMVXA Unison Item"]
+
+#==============================================================================|

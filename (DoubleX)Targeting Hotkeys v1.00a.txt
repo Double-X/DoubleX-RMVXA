@@ -1,0 +1,211 @@
+#==============================================================================|
+#  ** Script Info                                                              |
+#------------------------------------------------------------------------------|
+#  * Script Name                                                               |
+#    DoubleX RMVXA Targeting Hotkeys                                           |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    Lets you set some hotkeys to speed up skill/item target selections        |
+#------------------------------------------------------------------------------|
+#  * Terms Of Use                                                              |
+#    You shall keep this script's Script Info part's contents intact           |
+#    You shalln't claim that this script is written by anyone other than       |
+#    DoubleX or his aliases                                                    |
+#    None of the above applies to DoubleX or his aliases                       |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Abilities:                                                                |
+#    1. Little scripting proficiency to fully utilize this script              |
+#------------------------------------------------------------------------------|
+#  * Instructions                                                              |
+#    1. Open the script editor and put this script into an open slot between   |
+#       Materials and Main, save to take effect.                               |
+#------------------------------------------------------------------------------|
+#  * Links                                                                     |
+#    Script Usage 101:                                                         |
+#    1. forums.rpgmakerweb.com/index.php?/topic/32752-rmvxa-script-usage-101/  |
+#    2. rpgmakervxace.net/topic/27475-rmvxa-script-usage-101/                  |
+#    This script:                                                              |
+#    1. http://pastebin.com/UuMjaC7k                                           |
+#    Mentioned Patreon Supporters:                                             |
+#    https://www.patreon.com/posts/71738797                                    |
+#------------------------------------------------------------------------------|
+#  * Authors                                                                   |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00a(GMT 0200 23-5-2015):                                               |
+#    1. 1st version of this script finished                                    |
+#==============================================================================|
+
+($doublex_rmvxa ||= {})[:Targeting_Hotkeys] = "v1.00a"
+
+#==============================================================================|
+#  ** Script Configurations                                                    |
+#     You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+
+  module Targeting_Hotkeys
+
+      # Sets the hotkeys selecting a target that can be targeted in the target
+      # window
+      # The ith hotkey calls the ith target in the target window
+      # Nothing will happen if the ith hotkey's pressed and the ith target in
+      # the target window can't be targeted
+      # A custom keymap binding script may help setting the hotkeys
+      # Example: To disable this feature, set this as []
+      HOTKEYS = [
+        :KEY_1,
+        :KEY_2,
+        :KEY_3,
+        :KEY_4,
+        :KEY_5,
+        :KEY_6,
+        :KEY_7,
+        :KEY_8
+      ]
+
+#==============================================================================|
+#  ** Script Implementations                                                   |
+#     You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+#  * Script Support Info:                                                      |
+#    1. Prerequisites                                                          |
+#       - Decent RGSS3 scripting proficiency to fully comprehend this script   |
+#    2. Method documentation                                                   |
+#       - The 1st part informs whether the method's rewritten, aliased or new  |
+#       - The 2nd part describes what the method does for new methods only     |
+#       - The 3rd part describes what the arguments of the method are          |
+#       - The 4th part describes how this method works for new methods only,   |
+#         and describes the parts added or rewritten for rewritten or aliased  |
+#         methods only                                                         |
+#       Example:                                                               |
+# #----------------------------------------------------------------------------|
+# #  Rewrite/Alias/New method: def_name                                        |
+# #  - What this method does                                                   |
+# #----------------------------------------------------------------------------|
+# # *args: What these arguments are                                            |
+# def def_name(*args)                                                          |
+#   # How this method works                                                    |
+#   def_name_code                                                              |
+#   #                                                                          |
+# end # def_name                                                               |
+#------------------------------------------------------------------------------|
+
+    PROCESS_HANDLING = %Q(
+
+  alias initialize_target_hotkeys initialize
+  def initialize(info_viewport)
+    initialize_target_hotkeys(info_viewport)
+    init_targeting_hotkey_block
+  end
+
+  alias process_handling_targeting_hotkeys process_handling
+  def process_handling
+    if open? && active
+      DoubleX_RMVXA::Targeting_Hotkeys::HOTKEYS.each(&@targeting_hotkey_block)
+    end
+    process_handling_targeting_hotkeys
+  end # process_handling
+
+  def init_targeting_hotkey_block
+    @targeting_hotkey_block = -> hotkey {
+      return call_handler(hotkey) if Input.trigger?(hotkey)
+    }
+  end
+
+    )
+
+  end # Targeting_Hotkeys
+
+end # DoubleX_RMVXA
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Window_BattleActor                                            |
+#------------------------------------------------------------------------------|
+
+class Window_BattleActor < Window_BattleStatus
+
+  #----------------------------------------------------------------------------|
+  #  Alias/New methods                                                         |
+  #----------------------------------------------------------------------------|
+  module_eval(DoubleX_RMVXA::Targeting_Hotkeys::PROCESS_HANDLING)
+
+end # Window_BattleActor
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Window_BattleEnemy                                            |
+#------------------------------------------------------------------------------|
+
+class Window_BattleEnemy < Window_Selectable
+
+  #----------------------------------------------------------------------------|
+  #  Alias/New methods                                                         |
+  #----------------------------------------------------------------------------|
+  module_eval(DoubleX_RMVXA::Targeting_Hotkeys::PROCESS_HANDLING)
+
+end # Window_BattleEnemy
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Scene_Battle                                                  |
+#------------------------------------------------------------------------------|
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: create_all_windows                                          |
+  #----------------------------------------------------------------------------|
+  alias create_all_windows_targeting_hotkeys create_all_windows
+  def create_all_windows
+    create_all_windows_targeting_hotkeys
+    # Added to set the target selection hotkeys in the target windows
+    set_targeting_hotkeys
+    #
+  end # create_all_windows
+
+  #----------------------------------------------------------------------------|
+  #  New method: set_targeting_hotkeys                                         |
+  #  - Sets the target selection hotkeys in the target windows                 |
+  #----------------------------------------------------------------------------|
+  def set_targeting_hotkeys
+    # Creates and sets each hotkey handler for both the actor and enemy windows
+    hotkeys = DoubleX_RMVXA::Targeting_Hotkeys::HOTKEYS
+    create_targeting_hotkey_defs(hotkeys)
+    hotkeys.each_with_index { |hotkey, index|
+      @actor_window.set_handler(hotkey, method(
+      "targeting_hotkey_#{index.to_s}".to_sym))
+      @enemy_window.set_handler(hotkey, method(
+      "targeting_hotkey_#{index.to_s}".to_sym))
+    }
+    #
+  end # set_targeting_hotkeys
+
+  #----------------------------------------------------------------------------|
+  #  New method: create_targeting_hotkey_defs                                  |
+  #  - Creates methods used by the target selection hotkey handlers            |
+  #----------------------------------------------------------------------------|
+  def create_targeting_hotkey_defs(hotkeys)
+    # Points the actor's skill/item's target index to the target window index
+    hotkeys.each_index { |index|
+      eval(%Q(
+    def targeting_hotkey_#{index.to_s}
+      return unless BattleManager.actor.input.item.for_one?
+      BattleManager.actor.input.target_index = #{index}
+      @actor_window.hide if @actor_window.active
+      @enemy_window.hide if @enemy_window.active
+      @skill_window.hide
+      @item_window.hide
+      next_command
+    end
+      ))
+    }
+    #
+  end # create_targeting_hotkey_defs
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+#==============================================================================|

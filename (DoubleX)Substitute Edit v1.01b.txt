@@ -1,0 +1,295 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Substitute Edit v1.01b                                     |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.01b(GMT 1200 21-7-2014):                                               |
+#    - Compatible with DoubleX RMVXA Formulae Edit                             |
+#    v1.01a(GMT 0700 4-7-2015):                                                |
+#    - Lets users set if the substitute only triggers if the skill/item hits   |
+#    - Improved this script's readibility                                      |
+#    v1.00h(GMT 0200 5-7-2014):                                                |
+#    - Improved the compatibility with DoubleX RMVXA Counterattack Edit        |
+#    v1.00g(GMT 0500 14-3-2014):                                               |
+#    - Substitute flag applies to mp damage also                               |
+#    v1.00f(GMT 1200 8-2-2014):                                                |
+#    - Substitute flag doesn't apply to item targeting friends                 |
+#    v1.00e(GMT 0900 16-1-2014):                                               |
+#    - Fixed a & b bug in damage formula of counterattack skills               |
+#    v1.00d(GMT 0000 9-1-2014):                                                |
+#    - Battlers resisting state with death_state_id take the substitute role   |
+#    v1.00c(GMT 0400 5-1-2014):                                                |
+#    - Compatible with DoubleX RMVXA Counterattack Edit(by putting below it)   |
+#    v1.00b(GMT 0000 5-1-2014):                                                |
+#    - Substitute flag applies to MRF and CNT also                             |
+#    v1.00a(GMT 1200 2-1-2014):                                                |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    None other than not claiming this script as created by anyone except      |
+#    DoubleX or his alias                                                      |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - none                                                                    |
+#    Knowledge:                                                                |
+#    - nothing special                                                         |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Alters the effect of special flag substitute to be the one with the     |
+#      highest hp among all having this flag to take the substitute role       |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between ¡¿ Materials and ¡¿ Main. Save to take effect.            |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Scripts aliasing or rewriting:                                            |
+#    - item_apply under Game_Battler                                           |
+#    - substitute_battler under Game_Unit                                      |
+#    - invoke_item, invoke_counter_attack, invoke_magic_reflection or          |
+#      check_substitute under Scene_Battle                                     |
+#    may have compatibility issues with this script                            |
+#    Place this script above those aliasing any of these methods if possible   |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Substitute Edit"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module Substitute_Edit
+
+#------------------------------------------------------------------------------|
+#  * (v1.01a+)Hit_Substitute, default = false                                  |
+#    If Hit_Substitute is true, substitute won't trigger if the skill/item     |
+#    would miss the original target                                            |
+#------------------------------------------------------------------------------|
+    Hit_Substitute = false
+
+  end # Substitute_Edit
+end # DoubleX_RMVXA
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#  * (v1.00g+)Edit class: Game_Temp                                            |
+#------------------------------------------------------------------------------|
+
+class Game_Temp
+  
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_accessor :substitute_edit
+
+end # Game_Temp
+
+if DoubleX_RMVXA::Substitute_Edit::Hit_Substitute
+
+#------------------------------------------------------------------------------|
+#  * (v1.01a+)Edit class: Game_Battler                                         |
+#------------------------------------------------------------------------------|
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: item_apply                                                |
+  #----------------------------------------------------------------------------|
+  def item_apply(user, item)
+    @result.clear
+    @result.used = item_test(user, item)
+    @result.missed = @result.used && rand >= item_hit(user, item)
+    @result.evaded = !@result.missed && rand < item_eva(user, item)
+    return unless @result.hit?
+    # Added to apply substitute only if the skill/item would hit the target
+    if SceneManager.scene_is?(Scene_Battle)
+      substitute = SceneManager.scene.apply_substitute(self, item)
+      return substitute.item_apply(user, item) if substitute != self
+    end
+    #
+    unless item.damage.none?
+      @result.critical = rand < item_cri(user, item)
+      # Added to be compatible with DoubleX RMVXA Formulae Edit
+      if $imported["DoubleX RMVXA Formulae Edit"] && @result.critical
+        @user = user
+      end
+      #
+      make_damage_value(user, item)
+      execute_damage(user)
+    end
+    item.effects.each {|effect| item_effect_apply(user, item, effect) }
+    item_user_effect(user, item)
+  end # item_apply
+
+end # Game_Battler
+
+end # if DoubleX_RMVXA::Substitute_Edit::Hit_Substitute
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_Unit                                                     |
+#------------------------------------------------------------------------------|
+
+class Game_Unit
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: substitute_battler                                        |
+  #----------------------------------------------------------------------------|
+  def substitute_battler
+    # Rewritten to return the one with highest hp among all with substitute flag
+    member_hp = member_temp_hp = 0
+    member_temp = []
+    members.each { |member|
+      next unless member.substitute?
+      if $game_temp.substitute_edit == :mp
+        break member_hp = 0 if member.mp == 0
+        member_hp = member.mp if member_hp < member.mp
+      elsif $game_temp.substitute_edit == :hp
+        if member.state_resist?(member.death_state_id)
+          member_temp.push(member)
+          break member_temp_hp = 0 if member.hp == 0
+          member_temp_hp = member.hp if member_temp_hp < member.hp
+        else
+         member_hp = member.hp if member_hp < member.hp
+        end
+      end
+    }
+    if member_temp.empty?
+      member_temp_hp = member_hp
+      member_temp = members
+    end
+    if $game_temp.substitute_edit == :mp
+      member_temp.find {|m| m.substitute? && m.mp == member_temp_hp}
+    elsif $game_temp.substitute_edit == :hp
+      member_temp.find {|m| m.substitute? && m.hp == member_temp_hp}
+    end
+    #
+  end # substitute_battler
+
+end # Game_Unit
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Scene_Battle                                                  |
+#------------------------------------------------------------------------------|
+
+class Scene_Battle < Scene_Base
+
+  if DoubleX_RMVXA::Substitute_Edit::Hit_Substitute
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)Rewrite method: invoke_item                                      |
+  #----------------------------------------------------------------------------|
+  def invoke_item(target, item)
+    if rand < target.item_cnt(@subject, item)
+      invoke_counter_attack(target, item)
+    elsif rand < target.item_mrf(@subject, item)
+      invoke_magic_reflection(target, item)
+    else
+      # Rewritten to apply the item effects to the target first
+      apply_item_effects(target, item)
+      #
+    end
+    @subject.last_target_index = target.index
+  end # invoke_item
+
+  end # if DoubleX_RMVXA::Substitute_Edit::Hit_Substitute
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: invoke_counter_attack                                     |
+  #----------------------------------------------------------------------------|
+  def invoke_counter_attack(target, item)
+    icnte = $imported["DoubleX RMVXA Counterattack Edit"]
+    cnte = DoubleX_RMVXA::Counterattack_Edit if icnte
+    @log_window.display_counter(target, item)
+    @cnt_subject = target if icnte && cnte::Keep_Ani
+    if icnte
+      attack_skill = $data_skills[target.counterattack_skill_id]
+    else
+      attack_skill = $data_skills[target.attack_skill_id]
+    end
+    # Rewritten to apply substitute to cnt
+    repeats = icnte && cnte::Keep_Times ? attack_skill.repeats : 1
+    if attack_skill.for_opponent?
+      if icnte && cnte::Keep_Scope
+        scope = targets_for_opponents_counterattack_edit(target, attack_skill)
+      else
+        scope = [@subject]
+      end
+      show_animation(scope, item.animation_id) if icnte && cnte::Keep_Ani
+      scope.each { |s|
+        repeats.times {
+          if DoubleX_RMVXA::Substitute_Edit::Hit_Substitute
+            s.item_apply(target, attack_skill)
+            @log_window.display_action_results(s, attack_skill)
+          else
+            sub = apply_substitute(s, attack_skill)
+            sub.item_apply(target, attack_skill)
+            @log_window.display_action_results(s, attack_skill) if sub == s
+          end
+        }
+      }
+    elsif attack_skill.for_friend?
+      if icnte && cnte::Keep_Scope
+        scope = targets_for_friends_counterattack_edit(target, attack_skill)
+      else
+        scope = [target]
+      end
+      show_animation(scope, item.animation_id) if icnte && cnte::Keep_Ani
+      scope.each { |s|
+        repeats.times {
+          s.item_apply(target, attack_skill)
+          @log_window.display_action_results(s, attack_skill)
+        }
+      }
+    end
+    #
+    @cnt_subject = nil if icnte && cnte::Keep_Ani
+    refresh_status
+  end # invoke_counter_attack
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: invoke_magic_reflection                                   |
+  #----------------------------------------------------------------------------|
+  def invoke_magic_reflection(target, item)
+    @subject.magic_reflection = true
+    @log_window.display_reflection(target, item)
+    # Rewritten to apply substitute on mrf
+    if DoubleX_RMVXA::Substitute_Edit::Hit_Substitute
+      apply_item_effects(@subject, item)
+    else
+      apply_item_effects(apply_substitute(@subject, item), item)
+    end
+    #
+    @subject.magic_reflection = false
+  end # invoke_magic_reflection
+
+  #----------------------------------------------------------------------------|
+  #  (v1.00g+)Rewrite method: check_substitute                                 |
+  #----------------------------------------------------------------------------|
+  def check_substitute(target, item)
+    # Rewritten to check substitute only if item is for opponents
+    if item && item.damage
+      if item.damage.to_hp?
+        $game_temp.substitute_edit = :hp
+      elsif item.damage.to_mp?
+        $game_temp.substitute_edit = :mp
+      end
+    end
+    return true unless item
+    return false unless item.for_opponent?
+    return false if item.certain?
+    return false unless item.damage
+    target.hp < target.mhp / 4 && item.damage.to_hp? || 
+    target.mp < target.mmp / 4 && item.damage.to_mp?
+    #
+  end # check_substitute
+
+end # Scene_Battle
+
+#==============================================================================|

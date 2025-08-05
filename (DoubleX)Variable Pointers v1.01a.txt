@@ -1,0 +1,170 @@
+#==============================================================================|
+#  ** Script Info                                                              |
+#------------------------------------------------------------------------------|
+#  * Script Name                                                               |
+#    DoubleX RMVXA Variable Pointers                                           |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    Lets users set some variables to point to some other variables            |
+#------------------------------------------------------------------------------|
+#  * Terms Of Use                                                              |
+#    You shall keep this script's Script Info part's contents intact           |
+#    You shalln't claim that this script is written by anyone other than       |
+#    DoubleX or his aliases                                                    |
+#    None of the above applies to DoubleX or his aliases                       |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Abilities:                                                                |
+#    1. Basic pointer, script call and game variable knowledge                 |
+#    2. Little RGSS3 scripting proficiency to fully utilize this script        |
+#------------------------------------------------------------------------------|
+#  * Instructions                                                              |
+#    1. Open the script editor and put this script into an open slot between   |
+#       Materials and Main, save to take effect.                               |
+#------------------------------------------------------------------------------|
+#  * Links                                                                     |
+#    Script Usage 101:                                                         |
+#    1. forums.rpgmakerweb.com/index.php?/topic/32752-rmvxa-script-usage-101/  |
+#    2. rpgmakervxace.net/topic/27475-rmvxa-script-usage-101/                  |
+#    This script:                                                              |
+#    1. http://pastebin.com/f9rTGXFw                                           |
+#    Mentioned Patreon Supporters:                                             |
+#    https://www.patreon.com/posts/71738797                                    |
+#------------------------------------------------------------------------------|
+#  * Authors                                                                   |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.01a(GMT 1300 2-6-2015):                                                |
+#    1. Users can set "pointers to pointers to pointers..." for some variables |
+#    v1.00a(GMT 1500 1-6-2015):                                                |
+#    1. 1st version of this script finished                                    |
+#==============================================================================|
+
+#==============================================================================|
+#  ** Script Call Info                                                         |
+#------------------------------------------------------------------------------|
+#  * Variable manipulations                                                    |
+#    1. $game_variables.var_pointers[var_id] = [pointer_val, chain_flag]       |
+#       - Sets the variable with id var_id to point to the variable with id    |
+#         pointer_val if pointer_val is an integer greater than 0              |
+#       - Sets the variable with id var_id to stop pointing to any variable if |
+#         pointer_val isn't an integer or is less than or equal to 0           |
+#       - When a variable isn't pointing to any variable and the former's      |
+#         being read/written, only it'll be actually read/written              |
+#       - When variable A points to variable B with A's chain_flag as false or |
+#         B not pointing to any variable, and A's being read/written, only B   |
+#         will actually be read/written instead                                |
+#       - When variable A points to variable B with A's chain_flag as true and |
+#         B pointing to variable C with B's chain flag as false or C not       |
+#         pointing to any variable, and A's being read/written, only C will    |
+#         actually be read/written instead                                     |
+#       - When variable A points to variable B with A's chain_flag as true and |
+#         B pointing to variable A with B's chain flag as true, both A and B   |
+#         effectively points to their respective selfs instead                 |
+#       - When a variable points to itself, it effectively doesn't point to any|
+#         variable                                                             |
+#    2. $game_variables.var_pointers[var_id][0] =                              |
+#       $game_variables.var_pointers[var_id][0].to_s                           |
+#       - Deactivates the pointer behavior for variable with id var_id while   |
+#         still keeping its pointer record with its chain flag                 |
+#    3. $game_variables.var_pointers[var_id][0] =                              |
+#       $game_variables.var_pointers[var_id][0].to_i                           |
+#       - Activates the pointer behavior for variable with id var_id using its |
+#         pointer record with its chain flag                                   |
+#==============================================================================|
+
+($doublex_rmvxa ||= {})[:Variable_Pointers] = "v1.01a"
+
+#==============================================================================|
+#  ** Script Implementations                                                   |
+#     You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+#  * Script Support Info:                                                      |
+#    1. Prerequisites                                                          |
+#       - Solid understanding of game variables and pointers                   |
+#       - Some RGSS3 scripting proficiency to fully comprehend this script     |
+#    2. Method documentation                                                   |
+#       - The 1st part informs whether the method's rewritten, aliased or new  |
+#       - The 2nd part describes what the method does for new methods only     |
+#       - The 3rd part describes what the arguments of the method are          |
+#       - The 4th part describes how this method works for new methods only,   |
+#         and describes the parts added or rewritten for rewritten or aliased  |
+#         methods only                                                         |
+#       Example:                                                               |
+# #----------------------------------------------------------------------------|
+# #  Rewrite/Alias/New method: def_name                                        |
+# #  - What this method does                                                   |
+# #----------------------------------------------------------------------------|
+# # *args: What these arguments are                                            |
+# def def_name(*args)                                                          |
+#   # How this method works                                                    |
+#   def_name_code                                                              |
+#   #                                                                          |
+# end # def_name                                                               |
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_Variables                                                |
+#------------------------------------------------------------------------------|
+
+class Game_Variables
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_reader :var_pointers # Stores the variable pointer records
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: initialize                                                  |
+  #----------------------------------------------------------------------------|
+  alias initialize_var_pointers initialize
+  def initialize
+    initialize_var_pointers
+    # Added to store the var_id => [pointer_val, chain_flag] records
+    @var_pointers = {}
+    #
+  end # initialize
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: []                                                          |
+  #----------------------------------------------------------------------------|
+  alias get_var_pointers []
+  def [](var_id)
+    # Rewritten to get the pointed variable instead if it points to a variable
+    get_var_pointers(search_var_pointers([var_id]))
+    #
+  end
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: []=                                                         |
+  #----------------------------------------------------------------------------|
+  alias set_var_pointers []=
+  def []=(var_id, val)
+    # Rewritten to set the pointed variable instead if it points to a variable
+    set_var_pointers(search_var_pointers([var_id]), val)
+    #
+  end
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)New method: search_var_pointers                                  |
+  #  - Returns the destinated id of the variable that is actually pointed to   |
+  #----------------------------------------------------------------------------|
+  # ids: The array storing the initial variable id as its sole element
+  def search_var_pointers(ids)
+    while @var_pointers.include?(ids[-1])
+      # Stop searching when false chain flag or cycle chaining's detected
+      chain = @var_pointers[ids[-1]][1]
+      cycle = ids.include?(@var_pointers[ids[-1]][0])
+      ids << @var_pointers[ids[-1]][0]
+      break unless chain && !cycle
+      #
+    end
+    ids[-1]
+  end # search_var_pointers
+
+end # Game_Variables
+
+#------------------------------------------------------------------------------|
+
+#==============================================================================|

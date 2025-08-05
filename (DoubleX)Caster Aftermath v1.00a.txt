@@ -1,0 +1,364 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Caster Aftermath v1.00a                                    |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00a(GMT 1200 25-5-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    None other than not claiming this script as created by anyone except      |
+#    DoubleX or his alias                                                      |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - none                                                                    |
+#    Knowledge:                                                                |
+#    - Use of notetags                                                         |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Allows users to add effects applied to the casters after casting skills |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between ¡¿ Materials and ¡¿ Main. Save to take effect.            |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Scripts aliasing or rewriting method:                                     |
+#    - self.load_database under module DataManager                             |
+#    - use_item under class Scene_Battle                                       |
+#    may have compatibility issues with this script                            |
+#    Place this script above those aliasing any of these methods if possible   |
+#==============================================================================|
+
+$imported = {} if $imported.nil?
+$imported["DoubleX RMVXA Caster Aftermath"] = true
+
+#------------------------------------------------------------------------------|
+#  * Notetag <change hp: x, s> for skills/items                                |
+#    To make a skill or item to change hp of the casters by x after casting it,|
+#    put the above notetag into its notebox in the database.                   |
+#    Setting s as 0 and 1 indicates decrement and increment respectively.      |
+#------------------------------------------------------------------------------|
+#  * Notetag <change hp %: x, s> for skills/items                              |
+#    To make a skill or item to change hp of the casters by x% after casting   |
+#    it, put the above notetag into its notebox in the database.               |
+#    Setting s as 0 and 1 indicates decrement and increment respectively.      |
+#------------------------------------------------------------------------------|
+#  * Notetag <change mp: x, s> for skills/items                                |
+#    To make a skill or item to change mp of the casters by x after casting it,|
+#    put the above notetag into its notebox in the database.                   |
+#    Setting s as 0 and 1 indicates decrement and increment respectively.      |
+#------------------------------------------------------------------------------|
+#  * Notetag <change mp %: x, s> for skills/items                              |
+#    To make a skill or item to change mp of the casters by x% after casting   |
+#    it, put the above notetag into its notebox in the database.               |
+#    Setting s as 0 and 1 indicates decrement and increment respectively.      |
+#------------------------------------------------------------------------------|
+#  * Notetag <change tp: x, s> for skills/items                                |
+#    To make a skill or item to change tp of the casters by x after casting it,|
+#    put the above notetag into its notebox in the database.                   |
+#    Setting s as 0 and 1 indicates decrement and increment respectively.      |
+#------------------------------------------------------------------------------|
+#  * Notetag <change tp %: x, s> for skills/items                              |
+#    To make a skill or item to change tp of the casters by x% after casting   |
+#    it, put the above notetag into its notebox in the database.               |
+#    Setting s as 0 and 1 indicates decrement and increment respectively.      |
+#------------------------------------------------------------------------------|
+#  * Notetag <add state: id, r%> for skills/items                              |
+#    To make a skill or item to add state with id id and rate r to the casters |
+#    after casting it, put the above notetag into its notebox in the database. |
+#    Normal attack isn't supported by this notetag.                            |
+#------------------------------------------------------------------------------|
+#  * Notetag <remove state: id, r%> for skills/items                           |
+#    To make a skill or item to remove state with id id and rate r from the    |
+#    casters after casting it, put the above notetag into its notebox in the   |
+#    database.                                                                 |
+#------------------------------------------------------------------------------|
+#  * Notetag <add buff: id, t> for skills/items                                |
+#    To make a skill or item to add buff of parameter with id id and turn t to |
+#    the casters after casting it, put the above notetag into its notebox in   |
+#    the database.                                                             |
+#------------------------------------------------------------------------------|
+#  * Notetag <add debuff: id, t> for skills/items                              |
+#    To make a skill or item to add debuff of parameter with id id and turn t  |
+#    to the casters after casting it, put the above notetag into its notebox in|
+#    the database.                                                             |
+#------------------------------------------------------------------------------|
+#  * Notetag <remove buff: id> for skills/items                                |
+#    To make a skill or item to remove buff of parameter with id id from the   |
+#    casters after casting it, put the above notetag into its notebox in the   |
+#    database.                                                                 |
+#------------------------------------------------------------------------------|
+#  * Notetag <remove buff: id> for skills/items                                |
+#    To make a skill or item to remove debuff of parameter with id id from the |
+#    casters after casting it, put the above notetag into its notebox in the   |
+#    database.                                                                 |
+#------------------------------------------------------------------------------|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module REGEXP
+    module USABLEITEM
+
+      CHANGE_HP = /<(?:CHANGE_HP|change hp):[ ](\d+(?:\s*,\s*\d+)*)>/i
+      CHANGE_HP_PERCENT = /<(?:CHANGE_HP_PERCENT|change hp %):[ ](\d+(?:\s*,\s*\d+)*)>/i
+      CHANGE_MP = /<(?:CHANGE_MP|change mp):[ ](\d+(?:\s*,\s*\d+)*)>/i
+      CHANGE_MP_PERCENT = /<(?:CHANGE_MP_PERCENT|change mp %):[ ](\d+(?:\s*,\s*\d+)*)>/i
+      CHANGE_TP = /<(?:CHANGE_TP|change tp):[ ](\d+(?:\s*,\s*\d+)*)>/i
+      CHANGE_TP_PERCENT = /<(?:CHANGE_TP_PERCENT|change tp %):[ ](\d+(?:\s*,\s*\d+)*)>/i
+      ADD_STATE = /<(?:ADD_STATE|add state):[ ](\d+(?:\s*,\s*\d+)*)>/i
+      REMOVE_STATE = /<(?:REMOVE_STATE|remove state):[ ](\d+(?:\s*,\s*\d+)*)>/i
+      ADD_BUFF = /<(?:ADD_BUFF|add buff):[ ](\d+(?:\s*,\s*\d+)*)>/i
+      ADD_DEBUFF = /<(?:ADD_DEBUFF|add debuff):[ ](\d+(?:\s*,\s*\d+)*)>/i
+      REMOVE_BUFF = /<(?:REMOVE_BUFF|remove buff):[ ]*(\d+)>/i
+      REMOVE_DEBUFF = /<(?:REMOVE_DEBUFF|remove debuff):[ ]*(\d+)>/i
+
+    end # USABLEITEM
+  end # REGEXP
+end # DoubleX_RMVXA
+
+module DataManager
+
+  CASTER_AFTERMATH = ["change_hp", "change_hp_percent", "change_mp", "change_mp_percent", "change_tp", "change_tp_percent", "add_state", "remove_state", "add_buff", "add_debuff", "remove_buff", "remove_debuff"]
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: self.load_database                                          |
+  #----------------------------------------------------------------------------|
+  class <<self; alias load_database_caster_aftermath load_database; end
+  def self.load_database
+    load_database_caster_aftermath
+    # This part is added by this script to load caster aftermath notetags
+    load_notetags_caster_aftermath
+    #
+  end # self.load_database
+
+  #----------------------------------------------------------------------------|
+  #  New method: self.load_notetags_caster_aftermath                           |
+  #----------------------------------------------------------------------------|
+  def self.load_notetags_caster_aftermath
+    groups = [$data_skills, $data_items]
+    for group in groups
+      for obj in group
+        next if obj.nil?
+        obj.load_notetags_caster_aftermath
+      end
+    end
+  end # self.load_notetags_caster_aftermath
+
+end # DataManager
+
+class RPG::UsableItem < RPG::BaseItem
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  DataManager::CASTER_AFTERMATH.each { |note| eval("attr_accessor :" + note) }
+
+  #----------------------------------------------------------------------------|
+  #  New common cache: load_notetags_caster_aftermath                          |
+  #----------------------------------------------------------------------------|
+  def load_notetags_caster_aftermath
+    DataManager::CASTER_AFTERMATH.each { |note| eval("@" + note + " = []") }
+    self.note.split(/[\r\n]+/).each { |line|
+      DataManager::CASTER_AFTERMATH.each_with_index { |note, i|
+        case line
+        when eval("DoubleX_RMVXA::REGEXP::USABLEITEM::" + note.upcase)
+          if i > 9
+            eval("@" + note + ".push($1.to_i)")
+          else
+            $1.scan(/\d+/).each_with_index { |input, index|
+              eval("@" + note + ".push([input.to_i, 0].max)")
+            }
+          end
+        end
+      }
+    }
+  end # load_notetags_caster_aftermath
+
+end # RPG::UsableItem
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  New method : apply_caster_aftermath                                       |
+  #----------------------------------------------------------------------------|
+  def apply_caster_aftermath(item)
+    @result.clear
+    @result.used = item_test(self, item)
+    DataManager::CASTER_AFTERMATH.each_with_index { |note, index|
+      aftermath = eval("item." + note)
+      next if aftermath.size <= 0
+      if index < 10
+        next if aftermath.size % 2 != 0
+        note_1 = []
+        note_2 = []
+        aftermath.each_with_index { |a, i| i % 2 == 0 ? note_1.push(a) : note_2.push(a) }
+        eval(index < 4 ? "caster_" + note + "(item, note_1, note_2)" : "caster_" + note + "(note_1, note_2)")
+      else
+        eval("caster_" + note + "(aftermath)")
+      end
+    }
+  end # apply_caster_aftermath
+
+  #----------------------------------------------------------------------------|
+  #  New method : caster_change_hp                                             |
+  #----------------------------------------------------------------------------|
+  def caster_change_hp(item, value, sign)
+    caster_change_vp_hm(item, value, sign, "value", "hp")
+  end # caster_change_hp
+
+  #----------------------------------------------------------------------------|
+  #  New method : caster_change_hp_percent                                     |
+  #----------------------------------------------------------------------------|
+  def caster_change_hp_percent(item, percent, sign)
+    caster_change_vp_hm(item, precent, sign, "percent", "hp")
+  end # caster_change_hp_percent
+
+  #----------------------------------------------------------------------------|
+  #  New method : caster_change_mp                                             |
+  #----------------------------------------------------------------------------|
+  def caster_change_mp(item, value, sign)
+    caster_change_vp_hm(item, value, sign, "value", "mp")
+  end # caster_change_mp
+
+  #----------------------------------------------------------------------------|
+  #  New method : caster_change_mp_percent                                     |
+  #----------------------------------------------------------------------------|
+  def caster_change_mp_percent(item, percent, sign)
+    caster_change_vp_hm(item, precent, sign, "percent", "mp")
+  end # caster_change_mp_percent
+
+  #----------------------------------------------------------------------------|
+  #  New method : caster_change_vp_hm                                          |
+  #----------------------------------------------------------------------------|
+  def caster_change_vp_hm(item, value, sign, vp, hm)
+    sign.each_index { |i|
+      v = rec * (sign[i] * 2 - 1) * value[i] * (vp == "value" ? 1 : eval("m" + hm))
+      v *= pha if item.is_a?(RPG::Item)
+      eval("@result." + hm + "_damage -= v.to_i")
+      eval("self." + hm + " += v.to_i")
+      @result.success = true if hm == "hp" || v != 0
+    }
+  end # caster_change_vp_hm
+
+  #----------------------------------------------------------------------------|
+  #  New method : caster_change_tp                                             |
+  #----------------------------------------------------------------------------|
+  def caster_change_tp(value, sign)
+    caster_change_tp_vp(value, sign, "value")
+  end # caster_change_tp
+
+  #----------------------------------------------------------------------------|
+  #  New method : caster_change_tp_percent                                     |
+  #----------------------------------------------------------------------------|
+  def caster_change_tp_percent(percent, sign)
+    caster_change_tp_vp(value, sign, "percent")
+  end # caster_change_tp_percent
+
+  #----------------------------------------------------------------------------|
+  #  New method : caster_change_tp_vp                                          |
+  #----------------------------------------------------------------------------|
+  def caster_change_tp_vp(value, sign, vp)
+    sign.each_index { |i|
+      v = (sign[i] * 2 - 1) * value[i] * (vp = "value" ? 1 : max_tp)
+      @result.tp_damage -= v.to_i
+      self.tp += v.to_i
+      @result.success = true if v != 0
+    }
+  end # caster_change_tp_vp
+
+  #----------------------------------------------------------------------------|
+  #  New method : caster_add_state                                             |
+  #----------------------------------------------------------------------------|
+  def caster_add_state(state_id, rate)
+    rate.each_index { |i|
+      rate[i] *= state_rate(state_id[i]) * luk_effect_rate(self) if opposite?(self)
+      add_state(state_id[i]) if rand < rate[i] / 100
+    }
+    @result.success = true
+  end # caster_add_state
+
+  #----------------------------------------------------------------------------|
+  #  New method : caster_remove_state                                          |
+  #----------------------------------------------------------------------------|
+  def caster_remove_state(state_id, rate)
+    rate.each_index { |i| remove_state(state_id[i]) if rand < rate[i] / 100 }
+    @result.success = true
+  end # caster_remove_state
+
+  #----------------------------------------------------------------------------|
+  #  New method : caster_add_buff                                              |
+  #----------------------------------------------------------------------------|
+  def caster_add_buff(param_id, turn)
+    turn.each_index { |i| add_buff(param_id[i], turn[i]) }
+    @result.success = true
+  end # caster_add_buff
+
+  #----------------------------------------------------------------------------|
+  #  New method : caster_add_debuff                                            |
+  #----------------------------------------------------------------------------|
+  def caster_add_debuff(param_id, turn)
+    turn.each_index { |i| add_debuff(param_id[i], turn[i]) if rand < debuff_rate(param_id[i]) * luk_effect_rate(self) }
+    @result.success = true
+  end # caster_add_debuff
+
+  #----------------------------------------------------------------------------|
+  #  New method : caster_remove_buff                                           |
+  #----------------------------------------------------------------------------|
+  def caster_remove_buff(param_id)
+    caster_remove_buff_debuff(param_id, ">")
+  end # caster_remove_buff
+
+  #----------------------------------------------------------------------------|
+  #  New method : caster_remove_debuff                                         |
+  #----------------------------------------------------------------------------|
+  def caster_remove_debuff(param_id)
+    caster_remove_buff_debuff(param_id, "<")
+  end # caster_remove_debuff
+
+  #----------------------------------------------------------------------------|
+  #  New method : caster_remove_buff_debuff                                    |
+  #----------------------------------------------------------------------------|
+  def caster_remove_buff_debuff(param_id, operator)
+    param_id.each { |id| remove_buff(id) if eval("@buffs[id] " + operator + " 0") }
+    @result.success = true
+  end # caster_remove_buff_debuff
+
+end # Game_Battler
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Alias method : use_item                                                   |
+  #----------------------------------------------------------------------------|
+  alias use_item_caster_aftermath use_item
+  def use_item
+    use_item_caster_aftermath
+    # This part is added by this script to apply caster aftermath after use_item
+    if @subject && @subject.current_action && item_caster_aftermath?(@subject.current_action.item)
+      @subject.apply_caster_aftermath(@subject.current_action.item)
+      refresh_status
+      @subject.current_action ? @log_window.display_action_results(@subject, @subject.current_action.item) : @subject.perform_collapse_effect
+    end
+    #
+  end # use_item
+
+  #----------------------------------------------------------------------------|
+  #  New method : item_caster_aftermath?                                       |
+  #----------------------------------------------------------------------------|
+  def item_caster_aftermath?(item)
+    return false if !item
+    DataManager::CASTER_AFTERMATH.each { |note|
+      return true if eval("item." + note + ".size > 0")
+    }
+  end # item_caster_aftermath?
+
+end # Scene_Battle
+
+#==============================================================================|

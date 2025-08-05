@@ -1,0 +1,212 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Reverse Input v1.00a                                       |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00a (GMT 0900 24-9-2014):                                              |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    None other than not claiming this script as created by anyone except      |
+#    DoubleX or his alias                                                      |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - none                                                                    |
+#    Knowledge:                                                                |
+#    - Use of notetags                                                         |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Lets users set states reversing inputs in related actors' skill lists   |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between ¡¿ Materials and ¡¿ Main. Save to take effect.            |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Aliased method:                                                           |
+#    - load_database under module DataManager                                  |
+#    - cursor_down, cursor_up, cursor_right, cursor_left, cursor_pagedown,     |
+#      cursor_pageup, call_ok_handler and call_cancel_handler under class      |
+#      Window_SkillList                                                        |
+#==============================================================================|
+
+($doublex_rmvxa ||= {})["Reverse Input"] = 10001
+
+#------------------------------------------------------------------------------|
+#  * Actor/Class/Equip/State Notetags:(their noteboxes in the database)        |
+#    - <custom catb disorder>                                                  |
+#    To make a battler's skill list to receive reversed inputs, put the above  |
+#    notetag into the related actor's, class's, equip's, or state's notebox in |
+#    the database.                                                             |
+#------------------------------------------------------------------------------|
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module Reverse_Input
+
+    # REVERSE_DIRECTIONAL, default = true
+    # Directional inputs won't be reversed if REVERSE_DIRECTIONAL is false
+    REVERSE_DIRECTIONAL = true
+
+    # REVERSE_PAGE_CHANGE, default = true
+    # Page up and down inputs won't be reversed if REVERSE_PAGE_CHANGE is false
+    REVERSE_PAGE_CHANGE = true
+
+    # REVERSE_CONFIRM_CANCEL, default = true
+    # Confirm and cancel inputs won't be reversed if REVERSE_CONFIRM_CANCEL is
+    # false
+    REVERSE_CONFIRM_CANCEL = true
+
+  end # Reverse_Input
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#  * Edit module: DataManager                                                  |
+#------------------------------------------------------------------------------|
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: load_database                                               |
+  #----------------------------------------------------------------------------|
+  alias load_database_reverse_input load_database
+  def load_database
+    load_database_reverse_input
+    # This part is added by this script to load disorder addon notetags
+    load_notetags_reverse_input
+    #
+  end # load_database
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_reverse_input                                   |
+  #----------------------------------------------------------------------------|
+  def load_notetags_reverse_input
+    [$data_actors, $data_classes, $data_weapons, $data_armors, $data_states].each { |data|
+      data.each { |obj| obj.load_notetags_reverse_input if obj }
+    }
+  end # load_notetags_reverse_input
+
+end # DataManager
+
+#------------------------------------------------------------------------------|
+#  * Edit class: RPG::BaseItem                                                 |
+#------------------------------------------------------------------------------|
+
+class RPG::BaseItem
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_reader :reverse_input
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_reverse_input                                   |
+  #----------------------------------------------------------------------------|
+  def load_notetags_reverse_input
+    @reverse_input = false
+    self.note.split(/[\r\n]+/).each { |line|
+      case line
+      when /<reverse input>/i
+        return @reverse_input = true
+      end
+    }
+  end # load_notetags_reverse_input
+
+end # RPG::BaseItem
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_Actor                                                    |
+#------------------------------------------------------------------------------|
+
+class Game_Actor < Game_Battler
+
+  #----------------------------------------------------------------------------|
+  #  New method: reverse_input?                                                |
+  #----------------------------------------------------------------------------|
+  def reverse_input?
+    states.each { |state| return true if state.reverse_input }
+    equips.each { |equip| return true if equip && equip.reverse_input } if equips
+    self.class.reverse_input || actor.reverse_input
+  end # reverse_input?
+
+end # Game_Actor
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Window_BattleSkill                                            |
+#------------------------------------------------------------------------------|
+
+class Window_SkillList < Window_Selectable
+
+  include DoubleX_RMVXA::Reverse_Input
+
+  #----------------------------------------------------------------------------|
+  #  Mass alias methods                                                        |
+  #----------------------------------------------------------------------------|
+  alias cursor_down_reverse_input cursor_down
+  alias cursor_up_reverse_input cursor_up
+  alias cursor_right_reverse_input cursor_right
+  alias cursor_left_reverse_input cursor_left
+  alias cursor_pagedown_reverse_input cursor_pagedown
+  alias cursor_pageup_reverse_input cursor_pageup
+  alias call_ok_handler_reverse_input call_ok_handler
+  alias call_cancel_handler_reverse_input call_cancel_handler
+
+  def cursor_down(wrap = false)
+    # This part is rewritten by this script to reverse down input
+    REVERSE_DIRECTIONAL && @actor.reverse_input? ? cursor_up_reverse_input(wrap) : cursor_down_reverse_input(wrap)
+    #
+  end # cursor_down
+
+  def cursor_up(wrap = false)
+    # This part is rewritten by this script to reverse up input
+    REVERSE_DIRECTIONAL && @actor.reverse_input? ? cursor_down_reverse_input(wrap) : cursor_up_reverse_input(wrap)
+    #
+  end # cursor_up
+
+  def cursor_right(wrap = false)
+    # This part is rewritten by this script to reverse right input
+    REVERSE_DIRECTIONAL && @actor.reverse_input? ? cursor_left_reverse_input(wrap) : cursor_right_reverse_input(wrap)
+    #
+  end # cursor_right
+
+  def cursor_left(wrap = false)
+    # This part is rewritten by this script to reverse left input
+    REVERSE_DIRECTIONAL && @actor.reverse_input? ? cursor_right_reverse_input(wrap) : cursor_left_reverse_input(wrap)
+    #
+  end # cursor_left
+
+  def cursor_pagedown
+    # This part is rewritten by this script to reverse pagedown input
+    REVERSE_PAGE_CHANGE && @actor.reverse_input? ? cursor_pageup_reverse_input : cursor_pagedown_reverse_input
+    #
+  end # cursor_pagedown
+
+  def cursor_pageup
+    # This part is rewritten by this script to reverse pageup input
+    REVERSE_PAGE_CHANGE && @actor.reverse_input? ? cursor_pagedown_reverse_input : cursor_pageup_reverse_input
+    #
+  end # cursor_pageup
+
+  def call_ok_handler
+    REVERSE_CONFIRM_CANCEL && @actor.reverse_input? ? call_cancel_handler_reverse_input : call_ok_handler_reverse_input
+  end # call_ok_handler
+
+  def call_cancel_handler
+    REVERSE_CONFIRM_CANCEL && @actor.reverse_input? ? call_ok_handler_reverse_input : call_cancel_handler_reverse_input
+  end # call_cancel_handler
+
+end # Window_SkillList
+
+#==============================================================================|

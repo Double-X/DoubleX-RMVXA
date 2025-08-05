@@ -1,0 +1,569 @@
+#==============================================================================|
+#  ** Script Info                                                              |
+#------------------------------------------------------------------------------|
+#  * Script Name                                                               |
+#    DoubleX RMVXA Item Triggers Compatibility                                 |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    Fixes compatibility issues in DoubleX RMVXA Item Triggers                 |
+#    Scripts Addressed:                                                        |
+#    1. Yanfly Engine Ace - Victory Aftermath                                  |
+#    2. Yami Engine Symphony - Equipment Learning                              |
+#    3. DoubleX RMVXA Confusion Edit                                           |
+#    4. DoubleX RMVXA Dynamic Data                                             |
+#    5. Kread-EX's Grathnode Install                                           |
+#    6. Mr.Bubble's Tactics Ogre PSP Crafting System                           |
+#    7. Theolized Sideview Battle System                                       |
+#    8. Tsukihime's Instance Items                                             |
+#    9. Victor Engine - Custom Slip Effect                                     |
+#------------------------------------------------------------------------------|
+#  * Terms Of Use                                                              |
+#    You shall keep this script's Script Info part's contents intact           |
+#    You shalln't claim that this script is written by anyone other than       |
+#    DoubleX or his aliases                                                    |
+#    None of the above applies to DoubleX or his aliases                       |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    1. DoubleX RMVXA Item Triggers                                            |
+#------------------------------------------------------------------------------|
+#  * Instructions                                                              |
+#    1. Open the script editor and put this script into an open slot between   |
+#       Materials and Main, save to take effect.                               |
+#------------------------------------------------------------------------------|
+#  * Links                                                                     |
+#    Script Usage 101:                                                         |
+#    1. forums.rpgmakerweb.com/index.php?/topic/32752-rmvxa-script-usage-101/  |
+#    2. rpgmakervxace.net/topic/27475-rmvxa-script-usage-101/                  |
+#    This script:                                                              |
+#    1. http://pastebin.com/Czwe6Uij                                           |
+#------------------------------------------------------------------------------|
+#  * Authors                                                                   |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.01a(GMT 0700 1-7-2015):                                                |
+#    1. Addressed compatibility with                                           |
+#       - Yanfly Engine Ace - Victory Aftermath                                |
+#       - Yami Engine Symphony - Equipment Learning                            |
+#       - DoubleX RMVXA Confusion Edit                                         |
+#       - Kread-EX's Grathnode Install                                         |
+#       - Victor Engine - Custom Slip Effect                                   |
+#    2. Fixed compatibility bugs with Theolized Sideview Battle System         |
+#    v1.00b(GMT 1300 5-6-2015):                                                |
+#    1. Fixed instance items' item triggers lambdas not cleared nor reset bug  |
+#    v1.00a(GMT 0800 30-5-2015):                                               |
+#    1. 1st version of this script finished                                    |
+#==============================================================================|
+
+($doublex_rmvxa ||= {})[:Item_Triggers_Compatibility] = "v1.01a"
+
+#==============================================================================|
+#  ** Script Implementations                                                   |
+#     You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+#  * Script Support Info:                                                      |
+#    1. Prerequisites                                                          |
+#       - Decent understanding of how the addressed scripts work               |
+#    2. Method documentation                                                   |
+#       - The 1st part informs which version rewritten, aliased or created this|
+#         method                                                               |
+#       - The 2nd part informs whether the method's rewritten, aliased or new  |
+#       - The 3rd part describes what the method does for new methods only     |
+#       - The 4th part describes what the arguments of the method are          |
+#       - The 5th part describes how this method works for new methods only,   |
+#         and describes the parts added or rewritten for rewritten or aliased  |
+#         methods only                                                         |
+#       Example:                                                               |
+# #----------------------------------------------------------------------------|
+# #  (Version X+)Rewrite/Alias/New method: def_name                            |
+# #  - What this method does                                                   |
+# #----------------------------------------------------------------------------|
+# # *args: What these arguments are                                            |
+# def def_name(*args)                                                          |
+#   # How this method works                                                    |
+#   def_name_code                                                              |
+#   #                                                                          |
+# end # def_name                                                               |
+#------------------------------------------------------------------------------|
+
+if $doublex_rmvxa[:Item_Triggers]
+
+if $doublex_rmvxa[:Dynamic_Data] || $imported['KRX-GrathnodeInstall'] || 
+$imported[:TSBS] || $imported["TH_InstanceItems"]
+
+  # Stores the object lambda clearance and reset methods
+  CLEAR_RESET_ITEM_TRIGGER_LAMBDAS = %Q(
+def clear_item_triggers_lambdas(obj, copy = true)
+  #{$imported["BubsTOCrafting"] ? %Q(
+  if copy && obj.ingredient_list
+    obj.ingredient_list.each { |i|
+      clear_item_triggers_lambdas(i) if i.is_a?(RPG::UsableItem)
+    }
+  end
+  ) : %Q()}
+  obj.item_triggers = {}
+end
+
+def reset_item_triggers_lambdas(obj, copy = true)
+  #{$imported["BubsTOCrafting"] ? %Q(
+  if copy && obj.ingredient_list
+    obj.ingredient_list.each { |i|
+      reset_item_triggers_lambdas(i) if i.is_a?(RPG::UsableItem)
+    }
+  end
+  ) : %Q()}
+  obj.reset_notetags_item_triggers
+end
+  )
+
+end # if $doublex_rmvxa[:Dynamic_Data] || $imported['KRX-GrathnodeInstall'] || 
+# $imported[:TSBS] || $imported["TH_InstanceItems"]
+
+if $doublex_rmvxa[:Dynamic_Data]
+
+#------------------------------------------------------------------------------|
+#  * Edit module: DataManager                                                  |
+#------------------------------------------------------------------------------|
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: save_game_without_rescue                                    |
+  #----------------------------------------------------------------------------|
+  alias save_game_without_rescue_item_triggers_1 save_game_without_rescue
+  def save_game_without_rescue(index)
+    # Added to clear all state triggers lambdas before saving
+    [$data_skills, $data_items].each { |data|
+      data.each { |obj| clear_item_triggers_lambdas(obj, false) if obj }
+    }
+    #
+    save_game_without_rescue_item_triggers_1(index)
+    # Added to restore all state triggers lambdas after saving
+    [$data_skills, $data_items].each { |data|
+      data.each { |obj| reset_item_triggers_lambdas(obj, false) if obj }
+    }
+    #
+  end # save_game_without_rescue
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: extract_save_contents                                       |
+  #----------------------------------------------------------------------------|
+  alias extract_save_contents_item_triggers_1 extract_save_contents
+  def extract_save_contents(contents)
+    extract_save_contents_item_triggers_1(contents)
+    # Added to restore all state triggers lambdas after loading
+    [$data_skills, $data_items].each { |data|
+      data.each { |obj| reset_item_triggers_lambdas(obj, false) if obj }
+    }
+    #
+  end # extract_save_contents
+
+  #----------------------------------------------------------------------------|
+  #  New methods                                                               |
+  #  - Clears and resets all lambdas contained by the passed object            |
+  #----------------------------------------------------------------------------|
+  module_eval(CLEAR_RESET_ITEM_TRIGGER_LAMBDAS)
+
+end # DataManager
+
+#------------------------------------------------------------------------------|
+#  * Edit class: RPG::UsableItem                                               |
+#------------------------------------------------------------------------------|
+
+class RPG::UsableItem < RPG::BaseItem
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_accessor :item_triggers_string # Stores the notetag values as strings
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: load_notetags_item_triggers                                 |
+  #----------------------------------------------------------------------------|
+  alias load_notetags_item_triggers_compatibility load_notetags_item_triggers
+  def load_notetags_item_triggers
+    load_notetags_item_triggers_compatibility
+    # Added to store all notetag values in the string form as well
+    @item_triggers_string = {}
+    it = "DoubleX_RMVXA::Item_Triggers::"
+    @note.split(/[\r\n]+/).each { |line|
+      next unless line =~ /<(\w+) item trigger:\s*(\w+)\s*,\s*(\w+)\s*>/
+      @item_triggers_string[$1.to_sym] ||= []
+      @item_triggers_string[$1.to_sym].push(
+      [eval("#{it}#{$2}"), eval("#{it}#{$3}")])
+    }
+    #
+  end # load_notetags_item_triggers
+
+  #----------------------------------------------------------------------------|
+  #  New method: reset_notetags_item_triggers                                  |
+  #  - Resets all lambdas used by the notetag values of the passed notetag     |
+  #----------------------------------------------------------------------------|
+  def reset_notetags_item_triggers
+    # Uses stored strings of notetag values to reset the lambdas
+    @item_triggers_string.each { |timing, triggers|
+      @item_triggers[timing] = triggers.collect { |trigger|
+        eval("-> battler { battler.instance_exec { #{trigger} } }")
+      }
+    }
+    #
+  end # reset_notetags_item_triggers
+
+end # RPG::UsableItem
+
+end # if $doublex_rmvxa[:Dynamic_Data]
+
+if $imported['KRX-GrathnodeInstall']
+
+#------------------------------------------------------------------------------|
+#  * (v1.01a+)Edit module: DataManager                                         |
+#------------------------------------------------------------------------------|
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: save_game_without_rescue                                    |
+  #----------------------------------------------------------------------------|
+  alias save_game_without_rescue_item_triggers_2 save_game_without_rescue
+  def save_game_without_rescue
+    # Added to clear the party's last selected skill as well
+    skill = $game_party.last_selected_skill
+    clear_item_triggers_lambdas(skill, false) if skill
+    #
+    save_game_without_rescue_item_triggers_2
+    # Added to reset the party's last selected skill as well
+    reset_item_triggers_lambdas(skill, false) if skill
+    #
+  end # clear_ecatb_blocks
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: extract_save_contents                                       |
+  #----------------------------------------------------------------------------|
+  alias extract_save_contents_item_triggers_2 extract_save_contents
+  def extract_save_contents
+    extract_save_contents_item_triggers_2
+    # Added to reset the party's last selected skill as well
+    return unless skill = $game_party.last_selected_skill
+    reset_item_triggers_lambdas(skill, false) if skill
+    #
+  end # extract_save_contents
+
+  #----------------------------------------------------------------------------|
+  #  New methods                                                               |
+  #  - Clears and resets all lambdas contained by the passed object            |
+  #----------------------------------------------------------------------------|
+  module_eval(CLEAR_RESET_ITEM_TRIGGER_LAMBDAS)
+
+end # DataManager
+
+end # $imported['KRX-GrathnodeInstall']
+
+if $imported[:TSBS]
+
+#------------------------------------------------------------------------------|
+#  Alias method: copy                                                          |
+#------------------------------------------------------------------------------|
+alias copy_state_triggers copy
+def copy(obj)
+  # Added to clear all lambdas right before using marshal
+  battler = obj.is_a?(Game_Battler)
+  item = obj.is_a?(RPG::UsableItem)
+  if battler
+    obj.clear_item_triggers
+  elsif item
+    clear_item_triggers_lambdas(obj)
+  end
+  #
+  clone = copy_item_triggers(obj)
+  # Added to reset all lambdas right after using marshal
+  if battler
+    $game_temp.copy_item_triggers(obj, clone)
+    obj.reset_item_triggers
+    clone.reset_item_triggers
+  elsif item
+    reset_item_triggers_lambdas(obj)
+    reset_item_triggers_lambdas(clone)
+  end
+  #
+  clone
+end # copy
+
+#------------------------------------------------------------------------------|
+#  New methods                                                                 |
+#  - Clears and resets all lambdas contained by the passed object              |
+#------------------------------------------------------------------------------|
+eval(CLEAR_RESET_ITEM_TRIGGER_LAMBDAS)
+
+if $imported["YEA-VictoryAftermath"] || $imported["YES-EquipmentLearning"]
+
+#------------------------------------------------------------------------------|
+#  * (v1.01a+)Edit module: BattleManager                                       |
+#------------------------------------------------------------------------------|
+
+class << BattleManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: process_victory                                             |
+  #----------------------------------------------------------------------------|
+  alias tsbs_process_victory process_victory
+  def process_victory
+    # Rewritten to clear all lambdas right before using Marshal
+    $game_party.all_members.each { |member| member.clear_item_triggers }
+    $game_troop.members.each { |member| member.clear_item_triggers }
+    tsbs_process_victory
+    #
+  end # process_victory
+
+end # BattleManager
+
+end # if $imported["YEA-VictoryAftermath"] || $imported["YES-EquipmentLearning"]
+
+GAME_TEMP_ITEM_TRIGGERS = %Q(
+  attr_accessor :item_in_use
+  #{$imported[:ve_custom_slip_effect] ? "attr_accessor :state_user" : ""}
+
+  alias initialize_item_triggers initialize
+  def initialize
+    initialize_item_triggers
+    clear_item_triggers
+  end
+
+  def clear_item_triggers
+    @ecatb_item_in_use = {}
+    #{$imported[:ve_custom_slip_effect] ? "@state_user = {}" : ""}
+  end
+  def copy_item_triggers(battler, clone)
+    [item_in_use
+    #{$imported[:ve_custom_slip_effect] ? ", @state_user" : ""}].
+    each { |temp| temp[clone] = temp[battler] if temp[battler] }
+  end
+)
+
+#------------------------------------------------------------------------------|
+#  * (v1.01a+)Edit class: Game_Temp                                            |
+#------------------------------------------------------------------------------|
+
+class Game_Temp
+
+  # Temporarily stores battler data for clearing and resetting the lambdas
+  module_eval(GAME_TEMP_ITEM_TRIGGERS)
+
+end # Game_Temp
+
+if $imported["DoubleX RMVXA Confusion Edit"]
+
+#------------------------------------------------------------------------------|
+#  * (v1.01a+)Edit class: Game_Action                                          |
+#------------------------------------------------------------------------------|
+
+class Game_Action
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: evaluate_item_with_target                                 |
+  #----------------------------------------------------------------------------|
+  def evaluate_item_with_target(target)
+    target.result.clear
+    # Rewritten to temporarily clear all iterator blocks when using Marshal
+    target.clear_item_triggers
+    subject.clear_item_triggers
+    eval_target = Marshal.load( Marshal.dump(target) )
+    eval_subject = Marshal.load( Marshal.dump(subject) )
+    reset_item_triggers(target, eval_target, eval_subject)
+    #
+    eval_target.make_damage_value(eval_subject, item)
+    if item.for_opponent?
+      eval_target.result.hp_damage.to_f / [eval_target.hp, 1].max
+    else
+      [-eval_target.result.hp_damage, eval_target.mhp - eval_target.hp].min / 
+      eval_target.mhp.to_f
+    end
+  end # evaluate_item_with_target
+
+  #----------------------------------------------------------------------------|
+  #  New method: reset_item_triggers                                           |
+  #  -                                                                         |
+  #----------------------------------------------------------------------------|
+  def reset_item_triggers(target, eval_target, eval_subject)
+    #
+    $game_temp.copy_item_triggers(subject, eval_subject)
+    $game_temp.copy_item_triggers(target, eval_target)
+    [target, subject, eval_target, eval_subject].each { |battler|
+      battler.reset_item_triggers
+    }
+    #
+  end # reset_item_triggers
+
+end # Game_Action
+
+end # if $imported["DoubleX RMVXA Confusion Edit"]
+
+GAME_BATTLER_ITEM_TRIGGERS = %Q(
+
+  alias tsbs_on_battle_end on_battle_end
+  def on_battle_end
+    tsbs_on_battle_end
+    clear_item_triggers
+  end
+
+  def clear_item_triggers
+    $game_temp.item_in_use[self] = @item_in_use
+    @item_in_use = nil
+    #{$imported[:ve_custom_slip_effect] ? "
+    $game_temp.state_user[self] = @state_user
+    @state_user = {}" : ""}
+  end
+
+  def reset_item_triggers
+    @item_in_use = $game_temp.item_in_use[self]
+    $game_temp.item_in_use.delete(self)
+    #{$imported[:ve_custom_slip_effect] ? "
+    @state_user = $game_temp.state_user[self] || {}
+    $game_temp.state_user.delete(self)" : ""}
+  end
+)
+
+#------------------------------------------------------------------------------|
+#  * (v1.01a+)Edit class: Game_Battler                                         |
+#------------------------------------------------------------------------------|
+
+class Game_Battler < Game_BattlerBase
+
+  # Temporarily stores battler data for clearing and resetting the lambdas
+  module_eval(GAME_BATTLER_ITEM_TRIGGERS)
+
+end # Game_Battler
+
+end # $imported[:TSBS]
+
+if $imported["TH_InstanceItems"]
+
+#------------------------------------------------------------------------------|
+#  * (v1.00b+)Edit module: DataManager                                         |
+#------------------------------------------------------------------------------|
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: save_game_without_rescue                                    |
+  #----------------------------------------------------------------------------|
+  alias save_game_without_rescue_item_triggers_4 save_game_without_rescue
+  def save_game_without_rescue
+    # Added to clear and reset all item triggers lambda before and after saving
+    [InstanceManager.weapons, InstanceManager.armors, 
+     InstanceManager.items].each { |data|
+      data.each_value { |obj| clear_item_triggers_lambdas(obj) if obj }
+    }
+    $game_party.clear_item_triggers_lambdas
+    save_game_without_rescue_item_triggers_4
+    [InstanceManager.weapons, InstanceManager.armors, 
+     InstanceManager.items].each { |data|
+      data.each_value { |obj| reset_item_triggers_lambdas(obj) if obj }
+    }
+    $game_party.reset_item_triggers_lambdas
+    #
+  end # save_game_without_rescue
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: extract_save_contents                                       |
+  #----------------------------------------------------------------------------|
+  alias extract_save_contents_item_triggers_4 extract_save_contents
+  def extract_save_contents(contents)
+    extract_save_contents_item_triggers_4(contents)
+    # Added to restore all item triggers lambdas after loading
+    [InstanceManager.weapons, InstanceManager.armors, 
+     InstanceManager.items].each { |data|
+      data.each_value { |obj| reset_item_triggers_lambdas(obj) if obj }
+    }
+    $game_party.reset_item_triggers_lambdas
+    #
+  end # extract_save_contents
+
+  #----------------------------------------------------------------------------|
+  #  New methods                                                               |
+  #  - Clears and resets all lambdas contained by the passed object            |
+  #----------------------------------------------------------------------------|
+  module_eval(CLEAR_RESET_ITEM_TRIGGER_LAMBDAS)
+
+end # DataManager
+
+#------------------------------------------------------------------------------|
+#  * Edit module: InstanceManager                                              |
+#------------------------------------------------------------------------------|
+
+class << InstanceManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_full_copy                                              |
+  #----------------------------------------------------------------------------|
+  alias make_full_copy_item_triggers make_full_copy
+  def make_full_copy(obj)
+    # Added to clear all lambdas right before using marshal
+    item = obj.is_a?(RPG::UsableItem)
+    clear_item_triggers_lambdas(obj) if item
+    #
+    clone = make_full_copy_item_triggers(obj)
+    # Added to reset all lambdas right after using marshal
+    if item
+      reset_item_triggers_lambdas(obj)
+      reset_item_triggers_lambdas(clone)
+    end
+    #
+    clone
+  end # make_full_copy
+
+  #----------------------------------------------------------------------------|
+  #  New methods                                                               |
+  #  - Clears and resets all lambdas contained by the passed object            |
+  #----------------------------------------------------------------------------|
+  module_eval(CLEAR_RESET_ITEM_TRIGGER_LAMBDAS)
+
+end # InstanceManager
+
+#------------------------------------------------------------------------------|
+#  * (v1.00b+)Edit class: Game_Party                                           |
+#------------------------------------------------------------------------------|
+
+class Game_Party < Game_Unit
+
+  #----------------------------------------------------------------------------|
+  #  New method: clear_item_triggers_lambdas                                   |
+  #  - Clears all stored lambdas as notetag values of all instance items       |
+  #----------------------------------------------------------------------------|
+  def clear_item_triggers_lambdas
+    [@item_list, @weapon_list, @armor_list].each { |data|
+      data.each { |obj| clear_item_triggers_lambdas(obj) if obj }
+    }
+  end # clear_item_triggers_lambdas
+
+  #----------------------------------------------------------------------------|
+  #  New method: reset_item_triggers_lambdas                                   |
+  #  - Resets all stored lambdas as notetag values of all instance items       |
+  #----------------------------------------------------------------------------|
+  def reset_item_triggers_lambdas
+    [@item_list, @weapon_list, @armor_list].each { |data|
+      data.each { |obj| reset_item_triggers_lambdas(obj) if obj }
+    }
+  end # reset_item_triggers_lambdas
+
+  #----------------------------------------------------------------------------|
+  #  New methods                                                               |
+  #  - Clears and resets all lambdas contained by the passed object            |
+  #----------------------------------------------------------------------------|
+  module_eval(CLEAR_RESET_ITEM_TRIGGER_LAMBDAS)
+
+end # Game_Party
+
+end # if $imported["TH_InstanceItems"]
+
+#------------------------------------------------------------------------------|
+
+else
+
+  # Informs users that they didn't place Item Triggers above this script
+  msgbox("To use DoubleX RMVXA Item Triggers Compatibility, " + 
+         "put it below:\n DoubleX RMVXA Item Triggers\n but above Main")
+
+end # if $doublex_rmvxa[:Item_Triggers]
+
+#==============================================================================|

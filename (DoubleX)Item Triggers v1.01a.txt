@@ -1,0 +1,256 @@
+#==============================================================================|
+#  ** Script Info                                                              |
+#------------------------------------------------------------------------------|
+#  * Script Name                                                               |
+#    DoubleX RMVXA Item Triggers                                               |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    Sets some skills/items to trigger effects before and/or after being used  |
+#------------------------------------------------------------------------------|
+#  * Terms Of Use                                                              |
+#    You shall keep this script's Script Info part's contents intact           |
+#    You shalln't claim that this script is written by anyone other than       |
+#    DoubleX or his aliases                                                    |
+#    None of the above applies to DoubleX or his aliases                       |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Abilities:                                                                |
+#    1. Decent RGSS3 scripting proficiency to fully utilize this script        |
+#------------------------------------------------------------------------------|
+#  * Instructions                                                              |
+#    1. Open the script editor and put this script into an open slot between   |
+#       Materials and Main, save to take effect.                               |
+#------------------------------------------------------------------------------|
+#  * Links                                                                     |
+#    Script Usage 101:                                                         |
+#    1. forums.rpgmakerweb.com/index.php?/topic/32752-rmvxa-script-usage-101/  |
+#    2. rpgmakervxace.net/topic/27475-rmvxa-script-usage-101/                  |
+#    This script:                                                              |
+#    1. https://pastebin.com/FUeT6D0u                                          |
+#    Mentioned Patreon Supporters:                                             |
+#    https://www.patreon.com/posts/71738797                                    |
+#------------------------------------------------------------------------------|
+#  * Authors                                                                   |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.01a(GMT 1300 26-2-2016):                                               |
+#    1. itcx and itax take the skill/item calling them as an argument as well  |
+#    2. Fixed passing Scene_battle instead of a battler into itcx/itax bug     |
+#    v1.00b(GMT 0400 7-11-2015):                                               |
+#    1. Notetag values are now symbols of methods in the configuration regions |
+#    2. This script doesn't need DoubleX RMVXA Item Triggers Compatibility to  |
+#       be compatible with all its addressed scripts                           |
+#    3. Further improved this script's compatibility, efficiency and simplicity|
+#    v1.00a(GMT 1300 11-5-2015):                                               |
+#    1. 1st version of this script finished                                    |
+#==============================================================================|
+
+#==============================================================================|
+#  ** Notetag Info                                                             |
+#------------------------------------------------------------------------------|
+#  * Skill/Item Notetags:                                                      |
+#    1. <timing item trigger: itcx, itax>                                      |
+#       - Sets a skill/item to trigger itax when timing and itcx are met       |
+#       - It only works in battles using the default battle scene(Scene_Battle)|
+#       - timing can be pre, post or custom timings set by you                 |
+#       - pre means right before using the skill/item                          |
+#       - post means right after using the skill/item                          |
+#       - timing must only consist of alphanumeric characters                  |
+#       - itcx can be set in Item Trigger Condition Notetag Values             |
+#       - itax can be set in Item Trigger Action Notetag Values                |
+#==============================================================================|
+
+#==============================================================================|
+#  ** Script Call Info                                                         |
+#------------------------------------------------------------------------------|
+#  * Scene manipulations                                                       |
+#    1. exec_item_triggers(item, timing)                                       |
+#       - Executes all item triggers with timing timing of item item           |
+#==============================================================================|
+
+($doublex_rmvxa ||= {})[:Item_Triggers] = "v1.01a"
+
+#==============================================================================|
+#  ** Script Configurations                                                    |
+#     You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+
+  module Item_Triggers
+
+    #--------------------------------------------------------------------------|
+    #  Item Trigger Condition Notetag Values                                   |
+    #  - Setups itcx used by <timing item trigger: itcx, itax>                 |
+    #--------------------------------------------------------------------------|
+    # itcx are used at:
+    # 1. Scene_Battle
+    #    - it.send(trigger[1], self) if it.send(trigger[0], self) in
+    #      exec_item_triggers
+    # itcx are strings of names of methods under DoubleX_RMVXA::Item_Triggers
+    # itcx names can only use alphanumeric characters
+    # battler is the battler using item
+    # item is the skill/item using the itcx
+    # The below itcx are examples added to help you set your itcx
+    # You can freely use, rewrite and/or delete these examples
+
+    # Sets the item trigger condition as always true
+    def self.itc1(battler, item)
+      true
+    end
+
+    # Sets the item trigger condition as always false
+    def self.itc2(battler, item)
+      false
+    end
+
+    # Sets the item trigger condition as needing switch with id x to be on
+    def self.itc3(battler, item)
+      $game_switches[x]
+    end
+
+    # Adds new itcx here
+    
+
+    #--------------------------------------------------------------------------|
+    #  Item Trigger Action Notetag Values                                      |
+    #  - Setups itax used by <timing item trigger: itcx, itax>                 |
+    #--------------------------------------------------------------------------|
+    # itax are used at:
+    # 1. Scene_Battle
+    #    - it.send(trigger[1], self) if it.send(trigger[0], self) in
+    #      exec_item_triggers
+    # itax are strings of names of methods under DoubleX_RMVXA::Item_Triggers
+    # itax names can only use alphanumeric characters
+    # battler is the battler using item
+    # item is the skill/item using the itax
+    # The below itax are examples added to help you set your itax
+    # You can freely use, rewrite and/or delete these examples
+
+    # Sets the item trigger action as what Special Effect Escape does
+    def self.ita1(battler, item)
+      battler.hide
+    end
+
+    # Sets the item trigger action as calling common event with id
+    # common_event_id
+    def self.ita2(battler, item)
+      $game_temp.reserve_common_event(common_event_id)
+      SceneManager.scene.process_event
+    end
+
+    # Sets the item trigger action as executing damage equal to the value of
+    # game variable with id x to self with type equal to that of skill with id
+    # equal to y
+    def self.ita3(battler, item)
+      battler.result.clear
+      battler.result.make_damage($game_variables[x], $data_skills[y])
+      battler.execute_damage(battler)
+    end
+
+    # Adds new itax here
+    
+
+  end # Item_Triggers
+
+end # DoubleX_RMVXA
+
+#==============================================================================|
+#  ** Script Implementations                                                   |
+#     You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+#  * Script Support Info:                                                      |
+#    1. Prerequisites                                                          |
+#       - Some RGSS3 scripting proficiency to fully comprehend this script     |
+#    2. Method documentation                                                   |
+#       - The 1st part describes why this method's rewritten/aliased for       |
+#         rewritten/aliased methods or what the method does for new methods    |
+#       - The 2nd part describes what the arguments of the method are          |
+#       - The 3rd part informs which version rewritten, aliased or created this|
+#         method                                                               |
+#       - The 4th part informs whether the method's rewritten or new           |
+#       - The 5th part informs whether the method's a real or potential hotspot|
+#       - The 6th part describes how this method works for new methods only,   |
+#         and describes the parts added, removed or rewritten for rewritten or |
+#         aliased methods only                                                 |
+#       Example:                                                               |
+# #--------------------------------------------------------------------------| |
+# #  Why rewrite/alias/What this method does                                 | |
+# #--------------------------------------------------------------------------| |
+# # *argv: What these variables are                                            |
+# # &argb: What this block is                                                  |
+# def def_name(*argv, &argb) # Version X+; Rewrite/New; Hotspot                |
+#   # Added/Removed/Rewritten to do something/How this method works            |
+#   def_name_code                                                              |
+#   #                                                                          |
+# end # def_name                                                               |
+#------------------------------------------------------------------------------|
+
+class << DataManager # Edit
+
+  alias load_database_item_triggers load_database
+  def load_database
+    load_database_item_triggers
+    # Added
+    $data_skills.each { |obj| obj.load_item_triggers_notes if obj }
+    $data_items.each { |obj| obj.load_item_triggers_notes if obj }
+    #
+  end # load_database
+
+end # DataManager
+
+class RPG::UsableItem < RPG::BaseItem # Edit
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_accessor :item_triggers # The storage of all item trigger notetags
+
+  def load_item_triggers_notes
+    # Stores all timing, itcx and itax triples from matching lines sequentially
+    @item_triggers = {}
+    @note.split(/[\r\n]+/).each { |line|
+      next unless line =~ /< *(\w+) +item +trigger *: *(\w+) *, *(\w+) *>/i
+      (@item_triggers[$1.downcase.to_sym] ||= []).push(
+      [$2.downcase.to_sym, $3.downcase.to_sym])
+    }
+    #
+  end # load_item_triggers_notes
+
+end # RPG::UsableItem
+
+class Scene_Battle < Scene_Base # Edit
+
+  alias use_item_triggers use_item
+  def use_item
+    # Added to execute the item triggers with timing pre
+    item = @subject.current_action.item
+    exec_item_triggers(item, :pre)
+    #
+    use_item_triggers
+    # Added to execute the item triggers with timing post
+    exec_item_triggers(item, :post)
+    #
+  end # use_item
+
+  #----------------------------------------------------------------------------|
+  #  Triggers each item action when each respective condition's met            |
+  #----------------------------------------------------------------------------|
+  # item: The item triggering its actions
+  # timing: The timing of the item triggering its actions
+  def exec_item_triggers(item, timing)
+    # Evaluates each itcx to see if its corresponding itax should be evaluated
+    return unless triggers = item.item_triggers[timing]
+    it = DoubleX_RMVXA::Item_Triggers
+    triggers.each { |trigger|
+      it.send(trigger[1], @subject, item) if it.send(trigger[0], @subject, item)
+    }
+    #
+  end # exec_item_triggers
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+#==============================================================================|

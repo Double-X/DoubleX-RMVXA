@@ -1,0 +1,424 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Constants Edit v1.02d                                      |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.02d(GMT 0500 27-10-2014):                                              |
+#    - Improved this script's effectiveness, efficiency and robustness         |
+#    v1.02c(GMT 1000 26-10-2014):                                              |
+#    - Fixed leveling bug when max level > 99                                  |
+#    v1.02b(GMT 0600 26-10-2014):                                              |
+#    - Fixed param bug when max level > 99                                     |
+#    v1.02a(GMT 0300 13-6-2014):                                               |
+#    - Added some more gameplay constants                                      |
+#    v1.01a(GMT 0300 30-1-2014):                                               |
+#    - Added some more gameplay constants                                      |
+#    v1.00a(GMT 1200 2-1-2014):                                                |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    None other than not claiming this script as created by anyone except      |
+#    DoubleX or his alias                                                      |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - none                                                                    |
+#    Knowledge:                                                                |
+#    - nothing special                                                         |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Lets users alters some hardcoded gameplay constants                     |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between ¡¿ Materials and ¡¿ Main. Save to take effect.            |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Rewritten method:                                                         |
+#    - savefile_max under module DataManager                                   |
+#    - process_escape under module BattleManager                               |
+#    - param_max, param_buff_rate, max_tp and tp_rate under class              |
+#      Game_BattlerBase                                                        |
+#    - buff_max?, debuff_max?, init_tp and charge_tp_by_damage under class     |
+#      Game_Battler                                                            |
+#    - param_max, steps_for_turn or basic_floor_damage under class Game_Actor  |
+#    - max_battle_members, max_gold, max_item_number, rate_preemptive and      |
+#      rate_surprise under class Game_Party                                    |
+#    - selling_price under class Scene_Shop                                    |
+#    Aliased method:                                                           |
+#    - load_database under module DataManager                                  |
+#    - param_base under class Game_Actor                                       |
+#    Added method:                                                             |
+#    - init_lv under class RPG::Actor                                          |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Constants Edit"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module Constants_Edit
+
+#------------------------------------------------------------------------------|
+#  * Parameters maximum value                                                  |
+#------------------------------------------------------------------------------|
+  # MHP, MMP, ATK, DEF, MAT, MDF, AGI, LUK
+  # Default = 999999, 9999, 999, 999, 999, 999, 999, 999
+  Param_Max = [999999, 99999, 9999, 9999, 9999, 9999, 9999, 9999]
+
+  # Parameter buff and debuff rate, default = 0.25
+  Param_Buff_Rate = 0.25
+
+  # Maximum buff and debuff level, default = 2
+  Buff_Max = 2
+
+  # Maximum level, default = 99
+  # Note that if it's greater than 99, it assumes the growth type of the class parameters is average
+  Lv_Max = 99
+
+#------------------------------------------------------------------------------|
+#  * TP constants                                                              |
+#------------------------------------------------------------------------------|
+  # TP maximum value, default = 100
+  Tp_Max = 100
+
+  # TP maximum value in initialization, default = 25
+  Init_Tp_Max = 25
+
+  # Maximum charged TP by damage(before being multiplied by tcr), default = 50
+  Charge_Tp_By_Damage_Max = 50
+
+#------------------------------------------------------------------------------|
+#  * Some other battle constants                                               |
+#------------------------------------------------------------------------------|
+  # Increment of probability of escape after each failed attempt, default = 0.1
+  Escape_Ratio = 0.1
+
+  # Preemptive rate when party's average agi >= that of troops, default = 0.05
+  Preemptive_Rate_High = 0.05
+
+  # Preemptive rate when party's average agi < that of troops, default = 0.03
+  Preemptive_Rate_Low = 0.03
+
+  # Raise Preemptive multiplier, default = 4
+  Raise_Preemptive = 4
+
+  # Susprise rate when party's average agi < that of troops, default = 0.05
+  Susprise_Rate_High = 0.05
+
+  # Susprise rate when party's average agi >= that of troops, default = 0.03
+  Susprise_Rate_Low = 0.03
+
+#------------------------------------------------------------------------------|
+#  * Some other gameplay constants                                             |
+#------------------------------------------------------------------------------|
+  # Maximum number of save files, default = 16
+  Save_Max = 16
+
+  # Number of steps regarded as a turn, default = 20
+  Steps_For_Turn = 20
+
+  # Basic floor damage, default = 10
+  Basic_Floor_Damage = 10
+
+  # Battle members maximum value, default = 4
+  Battle_Members_Max = 4
+
+  # Gold maximum value, default = 99999999
+  Gold_Max = 99999999999
+
+  # Maximum number per item, default = 99
+  Item_Number_Max = 999
+
+  # Selling price divisor, default = 2
+  Selling_Price_Divisor = 2
+
+  end # Constants_Edit
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#  * Edit module: DataManager                                                  |
+#------------------------------------------------------------------------------|
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: savefile_max                                              |
+  #----------------------------------------------------------------------------|
+  def savefile_max
+    # Rewritten to alter maximum number of save files
+    DoubleX_RMVXA::Constants_Edit::Save_Max
+    #
+  end # savefile_max
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02b+)Alias method: load_database                                      |
+  #----------------------------------------------------------------------------|
+  alias load_database_constans_edit load_database
+  def load_database
+    load_database_constans_edit
+    # Added to set the max level of actors and resize the param table of classes if max level is greater than 99
+    $data_actors.each { |obj| obj.init_lv if obj }
+    #
+  end # load_database
+
+end # DataManager
+
+#------------------------------------------------------------------------------|
+#  * Edit class: RPG::Actor                                                    |
+#------------------------------------------------------------------------------|
+
+class RPG::Actor < RPG::BaseItem
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02c+)New method: init_lv                                              |
+  #----------------------------------------------------------------------------|
+  def init_lv
+    @max_level = DoubleX_RMVXA::Constants_Edit::Lv_Max
+  end # init_lv
+
+end # RPG::Actor
+
+#------------------------------------------------------------------------------|
+#  * Edit module: BattleManager                                                |
+#------------------------------------------------------------------------------|
+
+class << BattleManager
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: process_escape                                            |
+  #----------------------------------------------------------------------------|
+  def process_escape
+    $game_message.add(sprintf(Vocab::EscapeStart, $game_party.name))
+    success = @preemptive || rand < @escape_ratio
+    Sound.play_escape
+    if success
+      process_abort
+    else
+      # Rewritten to alter the increment of @escape_ratio
+      @escape_ratio += DoubleX_RMVXA::Constants_Edit::Escape_Ratio
+      #
+      $game_message.add('\.' + Vocab::EscapeFailure)
+      $game_party.clear_actions
+    end
+    wait_for_message
+    success
+  end # process_escape
+
+end # BattleManager
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_BattlerBase                                              |
+#------------------------------------------------------------------------------|
+
+class Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: param_max                                                 |
+  #----------------------------------------------------------------------------|
+  def param_max(param_id)
+    # Rewritten to alter param_max
+    DoubleX_RMVXA::Constants_Edit::Param_Max[param_id]
+    #
+  end # param_max
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: param_buff_rate                                           |
+  #----------------------------------------------------------------------------|
+  def param_buff_rate(param_id)
+    # Rewritten to alter the param buff rate
+    @buffs[param_id] * DoubleX_RMVXA::Constants_Edit::Param_Buff_Rate + 1.0
+    #
+  end # param_buff_rate
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: max_tp                                                    |
+  #----------------------------------------------------------------------------|
+  def max_tp
+    # Rewritten to alter max_tp
+    DoubleX_RMVXA::Constants_Edit::Tp_Max
+    # Tp_Max
+  end # max_tp
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: tp_rate                                                   |
+  #----------------------------------------------------------------------------|
+  def tp_rate
+    # Rewritten to fix issues when max_tp isn't 100
+    @tp.to_f / max_tp
+    # Tp_Max
+  end # tp_rate
+
+end # Game_BattlerBase
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_Battler                                                  |
+#------------------------------------------------------------------------------|
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: buff_max?                                                 |
+  #----------------------------------------------------------------------------|
+  def buff_max?(param_id)
+    # Rewritten to alter the buff max level
+    @buffs[param_id] == DoubleX_RMVXA::Constants_Edit::Buff_Max
+    #
+  end # buff_max?
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: debuff_max?                                               |
+  #----------------------------------------------------------------------------|
+  def debuff_max?(param_id)
+    # Rewritten to alter the debuff max level
+    @buffs[param_id] == DoubleX_RMVXA::Constants_Edit::Buff_Max * -1
+    #
+  end # debuff_max?
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: init_tp                                                   |
+  #----------------------------------------------------------------------------|
+  def init_tp
+    # Rewritten to alter init_tp
+    @tp = rand * DoubleX_RMVXA::Constants_Edit::Init_Tp_Max
+    #
+  end # init_tp
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: charge_tp_by_damage                                       |
+  #----------------------------------------------------------------------------|
+  def charge_tp_by_damage(damage_rate)
+    # Rewritten to alter charge_tp_by_damage
+    @tp += DoubleX_RMVXA::Constants_Edit::Charge_Tp_By_Damage_Max * damage_rate * tcr
+    #
+  end # charge_tp_by_damage
+
+end # Game_Battler
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_Actor                                                    |
+#------------------------------------------------------------------------------|
+
+class Game_Actor < Game_Battler
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: param_max                                                 |
+  #----------------------------------------------------------------------------|
+  def param_max(param_id)
+    # Rewritten to use the global param max
+    super
+    #
+  end # param_max
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: steps_for_turn                                            |
+  #----------------------------------------------------------------------------|
+  def steps_for_turn
+    # Rewritten to alter the number of steps per turn
+    DoubleX_RMVXA::Constants_Edit::Steps_For_Turn
+    #
+  end # steps_for_turn
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: basic_floor_damage                                        |
+  #----------------------------------------------------------------------------|
+  def basic_floor_damage
+    # Rewritten to alter the basic floor damage
+    DoubleX_RMVXA::Constants_Edit::Basic_Floor_Damage
+    #
+  end # basic_floor_damage
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02c+)Alias method: param_base                                         |
+  #----------------------------------------------------------------------------|
+  alias param_base_constants_edit param_base
+  def param_base(param_id)
+    # Rewritten to return class params for level 100 or above
+    params = self.class.params
+    @level > 99 ? params[param_id, 99] + (params[param_id, 99] - params[param_id, 98]) * (@level - 99) : param_base_constants_edit(param_id)
+    #
+  end # param_base
+
+end # Game_Actor
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_Party                                                    |
+#------------------------------------------------------------------------------|
+
+class Game_Party < Game_Unit
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: max_battle_members                                        |
+  #----------------------------------------------------------------------------|
+  def max_battle_members
+    # Rewritten to alter the max battle members
+    DoubleX_RMVXA::Constants_Edit::Battle_Members_Max
+    #
+  end # max_battle_members
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: max_gold                                                  |
+  #----------------------------------------------------------------------------|
+  def max_gold
+    # Rewritten to alter the max gold
+    DoubleX_RMVXA::Constants_Edit::Gold_Max
+    #
+  end # max_gold
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: max_item_number                                           |
+  #----------------------------------------------------------------------------|
+  def max_item_number(item)
+    # Rewritten to alter the max item number
+    DoubleX_RMVXA::Constants_Edit::Item_Number_Max
+    #
+  end # max_item_number
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: rate_preemptive                                           |
+  #----------------------------------------------------------------------------|
+  def rate_preemptive(troop_agi)
+    # Rewritten to alter the preemptive rate
+    (agi >= troop_agi ? DoubleX_RMVXA::Constants_Edit::Preemptive_Rate_High : DoubleX_RMVXA::Constants_Edit::Preemptive_Rate_Low) * (raise_preemptive? ? DoubleX_RMVXA::Constants_Edit::Raise_Preemptive : 1)
+    #
+  end # rate_preemptive
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: rate_surprise                                             |
+  #----------------------------------------------------------------------------|
+  def rate_surprise(troop_agi)
+    # Rewritten to alter the surprise rate
+    cancel_surprise? ? 0 : (agi >= troop_agi ? DoubleX_RMVXA::Constants_Edit::Susprise_Rate_Low : DoubleX_RMVXA::Constants_Edit::Susprise_Rate_High)
+    #
+  end # rate_surprise
+
+end # Game_Party
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Scene_Shop                                                    |
+#------------------------------------------------------------------------------|
+
+class Scene_Shop < Scene_MenuBase
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: selling_price                                             |
+  #----------------------------------------------------------------------------|
+  def selling_price
+    # Rewritten to alter the selling price
+    @item.price / DoubleX_RMVXA::Constants_Edit::Selling_Price_Divisor
+    #
+  end # selling_price
+
+end # Scene_Shop
+
+#==============================================================================|

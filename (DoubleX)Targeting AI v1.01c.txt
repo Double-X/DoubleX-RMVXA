@@ -1,0 +1,456 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Targeting AI v1.01c                                        |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.01c(GMT 1500 14-7-2015):                                               |
+#    - Increased this script's efficiency and readability                      |
+#    v1.01b(GMT 0200 23-3-2014):                                               |
+#    - Compatible with DoubleX RMVXA Confusion Edit v1.02b+                    |
+#    v1.01a(GMT 0600 13-3-2014):                                               |
+#    - Added resisting notetags                                                |
+#    - Changed the hierarchy of different types of notetags                    |
+#    - Changed the definition of the avoid filtering notetags                  |
+#    v1.00a(GMT 1100 12-3-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    None other than not claiming this script as created by anyone except      |
+#    DoubleX or his alias                                                      |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - none                                                                    |
+#    Knowledge:                                                                |
+#    - Use of notetags with boolean logic                                      |
+#    - Some scripting knowledge to use this script to its full potential       |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    Allows users to have greater control on single non random target          |
+#    selections of skills used by enemies or autobattle or confused actors     |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between ¡¿ Materials and ¡¿ Main. Save to take effect.            |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Scripts aliasing method:                                                  |
+#    - self.load_database under module DataManager                             |
+#    - targets_for_opponents or targets_for_friends under class Game_Action    |
+#    may have compatibility issues with this script                            |
+#    Place this script above those aliasing any of these methods if possible   |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Targeting AI"] = true
+
+#==============================================================================|
+#  ** Resisting notetags for skills                                            |
+#------------------------------------------------------------------------------|
+#  * Note                                                                      |
+#    - Resisting notetags work on all targets and are checked first            |
+#    - If there's any of these notetags, working targets not included by any of|
+#      them will be excluded                                                   |
+#    - If all working targets are excluded, those excluded by this check will  |
+#      be included back                                                        |
+#------------------------------------------------------------------------------|
+#  * Notetag <resist state: a1, a2, a3, ..., an>                               |
+#    Includes targets not resisting any state with respective id in this       |
+#    notetag                                                                   |
+#------------------------------------------------------------------------------|
+#  * Notetag <resist debuff: param, param, param, ..., param>                  |
+#    Includes targets not resisting any debuff with respective param in this   |
+#    notetag                                                                   |
+#==============================================================================|
+#  ** Filtering notetags for skills                                            |
+#------------------------------------------------------------------------------|
+#  * Note                                                                      |
+#    - Filtering notetags only work on non-excluded targets and are checked    |
+#      second                                                                  |
+#    - If there's any of these notetags, working targets not included by any of|
+#      them will be excluded                                                   |
+#    - If all working targets are excluded, those excluded by this check will  |
+#      be included back                                                        |
+#------------------------------------------------------------------------------|
+#  * Notetag <target state: a1, a2, a3, ..., an>                               |
+#    Includes targets having all states with respective id in this notetag     |
+#------------------------------------------------------------------------------|
+#  * Notetag <avoid state: a1, a2, a3, ..., an>                                |
+#    Includes targets not having any state with respective id in this notetag  |
+#------------------------------------------------------------------------------|
+#  * Notetag <target buff: param, lv, param, lv, param, lv, ..., param, lv>    |
+#    Includes targets having all buffs with respective param and level(or      |
+#    above) in this notetag                                                    |
+#------------------------------------------------------------------------------|
+#  * Notetag <avoid buff: param, lv, param, lv, param, lv, ..., param, lv>     |
+#    Includes targets not having any buff with respective param and level(or   |
+#    above) in this notetag                                                    |
+#------------------------------------------------------------------------------|
+#  * Notetag <target debuff: param, lv, param, lv, param, lv, ..., param, lv>  |
+#    Includes targets having all debuffs with respective param and level(or    |
+#    above) in this notetag                                                    |
+#------------------------------------------------------------------------------|
+#  * Notetag <avoid debuff: param, lv, param, lv, param, lv, ..., param, lv>   |
+#    Includes targets not having any debuff with respective param and level(or |
+#    above) in this notetag                                                    |
+#==============================================================================|
+#  ** Sorting notetags for skills                                              |
+#------------------------------------------------------------------------------|
+#  * Note                                                                      |
+#    - Sorting notetags only work on non-excluded targets and are checked last |
+#    - If there's any of these notetags, working targets not included by any of|
+#      them will be excluded                                                   |
+#    - If all working targets are excluded, those excluded by this check will  |
+#      be included back                                                        |
+#------------------------------------------------------------------------------|
+#  * Notetag <sort param: param, ord, param, ord, param, ord, ..., param, ord> |
+#    - param can be Parameter, Ex-Parameter, Sp-Parameter, hp, mp, tp, level,  |
+#      hp_rate, mp_rate, tp_rate, element_rate(element_id),                    |
+#      debuff_rate(param_id) or state_rate(state_id)                           |
+#    - (Needs scripting knowledge)param can also be some other methods under   |
+#      class Game_BattlerBase, Game_Battler, Game_Actor or Game_Enemy          |
+#      These methods need to be comparable                                     |
+#    - ord can be high or low(pick the highest or lowest param respectively)   |
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module REGEXP
+  module SKILL
+
+    RESIST_STATE = /<(?:RESIST_STATE|resist state):[ ](\w+(?:\s*,\s*\w+)*)>/i
+    RESIST_DEBUFF = /<(?:RESIST_DEBUFF|resist debuff):[ ](\w+(?:\s*,\s*\w+)*)>/i
+    TARGET_STATE = /<(?:TARGET_STATE|target state):[ ](\w+(?:\s*,\s*\w+)*)>/i
+    AVOID_STATE = /<(?:AVOID_STATE|avoid state):[ ](\w+(?:\s*,\s*\w+)*)>/i
+    TARGET_BUFF = /<(?:TARGET_BUFF|target buff):[ ](\w+(?:\s*,\s*\w+)*)>/i
+    AVOID_BUFF = /<(?:AVOID_BUFF|avoid buff):[ ](\w+(?:\s*,\s*\w+)*)>/i
+    TARGET_DEBUFF = /<(?:TARGET_DEBUFF|target debuff):[ ](\w+(?:\s*,\s*\w+)*)>/i
+    AVOID_DEBUFF = /<(?:AVOID_DEBUFF|avoid debuff):[ ](\w+(?:\s*,\s*\w+)*)>/i
+    SORT_PARAM = /<(?:SORT_PARAM|sort param):[ ](\w+(?:\s*,\s*\w+)*)>/i
+
+    TARGETING_AI = ["resist_state", "resist_debuff", "target_state", 
+    "avoid_state", "target_buff", "avoid_buff", "target_debuff", 
+    "avoid_debuff", "sort_param"]
+
+  end # SKILL
+  end # REGEXP
+end # DoubleX_RMVXA
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: load_database                                               |
+  #----------------------------------------------------------------------------|
+  alias load_database_targeting_ai load_database
+  def load_database
+    load_database_targeting_ai
+    # Added to load targeting ai notetags
+    load_notetags_targeting_ai
+    #
+  end # load_database
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_targeting_ai                                    |
+  #----------------------------------------------------------------------------|
+  def load_notetags_targeting_ai
+    $data_skills.each { |obj| obj.load_notetags_targeting_ai if obj }
+  end # load_notetags_targeting_ai
+
+end # DataManager
+
+class RPG::Skill < RPG::UsableItem
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  DoubleX_RMVXA::REGEXP::SKILL::TARGETING_AI.each { |note|
+    eval("attr_accessor :#{note}")
+    eval("attr_accessor :#{note}s")
+  }
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_targeting_ai                                    |
+  #----------------------------------------------------------------------------|
+  def load_notetags_targeting_ai
+    DoubleX_RMVXA::REGEXP::SKILL::TARGETING_AI.each { |note|
+      eval("@#{note} = false")
+      eval("@#{note}s = {}")
+      eval("@#{note}s[:index] = []")
+    }
+    @note.split(/[\r\n]+/).each_with_index { |line, num|
+      DoubleX_RMVXA::REGEXP::SKILL::TARGETING_AI.each_with_index { |note, i|
+        eval("@#{note}s[num] = []")
+        case line
+        when eval("DoubleX_RMVXA::REGEXP::SKILL::#{note.upcase}")
+          $1.scan(/\w+/).each_with_index { |input, index|
+            if i > 3 && i < 8
+              next store_notetags_targeting_ai(num, 
+              store_param_targeting_ai(input), note, :to_i) if index % 2 == 0
+            elsif i == 1
+              next store_notetags_targeting_ai(num, 
+              store_param_targeting_ai(input), note, :to_i)
+            elsif i < 4
+              next store_notetags_targeting_ai(num, input, note, :to_i)
+            end
+            store_notetags_targeting_ai(num, input, note, :to_s)
+          }
+        end
+      }
+    }
+    DoubleX_RMVXA::REGEXP::SKILL::TARGETING_AI.each { |note| 
+      eval("@#{note}s[:index].uniq if @#{note}")
+    }
+  end # load_notetags_targeting_ai
+
+  #----------------------------------------------------------------------------|
+  #  New method: store_notetags_targeting_ai                                   |
+  #----------------------------------------------------------------------------|
+  def store_notetags_targeting_ai(num, input, note, store)
+    eval("@#{note}s")[num] << input.send(store)
+    eval("@#{note}s")[:index] << num
+    eval("@#{note} = true")
+  end # store_notetags_targeting_ai
+
+  #----------------------------------------------------------------------------|
+  #  New common cache: store_param_targeting_ai                                |
+  #----------------------------------------------------------------------------|
+  def store_param_targeting_ai(input)
+    case input
+    when "mhp"
+      0
+    when "mmp"
+      1
+    when "atk"
+      2
+    when "def"
+      3
+    when "mat"
+      4
+    when "mdf"
+      5
+    when "agi"
+      6
+    when "luk"
+      7
+    end
+  end # store_param_targeting_ai
+
+end # RPG::Skill
+
+class Game_Action
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: targets_for_opponents                                       |
+  #----------------------------------------------------------------------------|
+  alias targets_for_opponents_targeting_ai targets_for_opponents
+  def targets_for_opponents
+    targeting_ai_targets("opponents")
+  end # targets_for_opponents
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: targets_for_friends                                         |
+  #----------------------------------------------------------------------------|
+  alias targets_for_friends_targeting_ai targets_for_friends
+  def targets_for_friends
+    targeting_ai_targets("friends")
+  end # targets_for_friends
+
+  #----------------------------------------------------------------------------|
+  #  New method: targeting_ai_targets                                          |
+  #----------------------------------------------------------------------------|
+  def targeting_ai_targets(targets)
+    unless item.is_a?(RPG::Skill) && item.for_one? && (subject.enemy? || 
+    subject.auto_battle? || subject.confusion?)
+      return send("targets_for_#{targets}_targeting_ai".to_sym)
+    end
+    if targeting_ai_dead_targets(targets).size <= 1
+      return targeting_ai_dead_targets(targets)
+    end
+    ai_resist_target = []
+    ai_filter_target = []
+    ai_sort_target = []
+    DoubleX_RMVXA::REGEXP::SKILL::TARGETING_AI.each { |note|
+      if (note == "resist_state" || note == "resist_debuff") && 
+      item.send(note.to_sym) && send("#{note}_ai(targets)".to_sym).size > 0
+        ai_resist_target.concat(send("#{note}_ai(targets)".to_sym))
+      elsif note == "sort_param"
+        if ai_resist_target.empty?
+          ai_resist_target = targeting_ai_dead_targets(targets)
+        end
+        ai_filter_target.delete_if { |t| !ai_resist_target.include?(t) }
+        ai_filter_target = ai_resist_target if ai_filter_target.empty?
+        next unless item.send(note.to_sym)
+        ai_sort_target = sort_param_ai(ai_filter_target)
+      elsif item.send(note.to_sym) && 
+      send("#{note}_ai(targets)".to_sym).size > 0
+        ai_filter_target.concat(send("#{note}_ai(targets)".to_sym))
+      end
+    }
+    ai_sort_target = ai_filter_target if ai_sort_target.empty?
+    targeting_ai_random_targets(ai_sort_target)
+  end # targeting_ai_targets
+
+  #----------------------------------------------------------------------------|
+  #  New method: targeting_ai_random_targets                                   |
+  #----------------------------------------------------------------------------|
+  def targeting_ai_random_targets(targets)
+    num = 1
+    num += subject.atk_times_add.to_i if attack?
+    return [targets[0]] * num if targets.size == 1
+    tgr_rand = rand * targets.inject(0) {|r, mem| r + mem.tgr }
+    targets.each { |target|
+      tgr_rand -= target.tgr
+      return [target] * num if tgr_rand < 0
+    }
+    [targets[0]] * num
+  end # targeting_ai_random_targets
+
+  #----------------------------------------------------------------------------|
+  #  New method: targeting_ai_dead_targets                                     |
+  #----------------------------------------------------------------------------|
+  def targeting_ai_dead_targets(targets)
+    if item.for_dead_friend?
+      target = friends_unit.dead_members
+    elsif $imported["DoubleX RMVXA Confusion Edit"] && 
+    subject.exclude_self?(subject.states)
+      target = opponents_unit.alive_members + friends_unit.alive_members
+    else
+      target = send("#{targets}_unit".to_sym).alive_members
+    end
+    if $imported["DoubleX RMVXA Confusion Edit"] && 
+    subject.exclude_self?(subject.states) && target.include?(subject)
+      target.delete(subject)
+    end
+    target
+  end # targeting_ai_dead_targets
+
+  #----------------------------------------------------------------------------|
+  #  New method: ai_target_uniq                                                |
+  #----------------------------------------------------------------------------|
+  def ai_target_uniq(targets)
+    targets.uniq if targets.size > 1
+    targets
+  end # ai_target_uniq
+
+  #----------------------------------------------------------------------------|
+  #  New method: notetag_targeting_ai                                          |
+  #----------------------------------------------------------------------------|
+  def notetag_targeting_ai(targets, notetag)
+    notetags = [:target_buffs, :avoid_buffs, :target_debuffs, :avoid_debuffs]
+    ai_target = []
+    item_index = item.send(notetag)[:index]
+    item_index.each { |index|
+      index_item = item.send(notetag)[index]
+      target = targeting_ai_dead_targets(targets)
+      param_id = nil if include = notetags.include?(notetag)
+      index_item.each_with_index { |note, num|
+        next param_id = note if include && num % 2 == 0
+        target.delete_if { |t| yield(param_id, note, t) }
+        break if target.empty?
+      }
+      ai_target.concat(target) unless target.empty?
+    }
+    ai_target_uniq(ai_target)
+  end # notetag_targeting_ai
+
+  #----------------------------------------------------------------------------|
+  #  New method: resist_state_ai                                               |
+  #----------------------------------------------------------------------------|
+  def resist_state_ai(targets)
+    notetag_targeting_ai(targets, :resist_states) { |p, n, t| 
+    t.state_resist?(n) || t.state_rate(n) * t.luk_effect_rate(subject) <= 0 }
+  end # resist_state_ai
+
+  #----------------------------------------------------------------------------|
+  #  New method: resist_debuff_ai                                              |
+  #----------------------------------------------------------------------------|
+  def resist_debuff_ai(targets)
+    notetag_targeting_ai(targets, :resist_debuffs) { |p, n, t| 
+    t.debuff_rate(n) * t.luk_effect_rate(subject) <= 0 }
+  end # resist_state_ai
+
+  #----------------------------------------------------------------------------|
+  #  New method: target_state_ai                                               |
+  #----------------------------------------------------------------------------|
+  def target_state_ai(targets)
+    notetag_targeting_ai(targets, :target_states) { |p, n, t| !t.state?(n) }
+  end # target_state_ai
+
+  #----------------------------------------------------------------------------|
+  #  New method: avoid_state_ai                                                |
+  #----------------------------------------------------------------------------|
+  def avoid_state_ai(targets)
+    notetag_targeting_ai(targets, :avoid_states) { |p, n, t| t.state?(n) }
+  end # avoid_state_ai
+
+  #----------------------------------------------------------------------------|
+  #  New method: target_buff_ai                                                |
+  #----------------------------------------------------------------------------|
+  def target_buff_ai(targets)
+    notetag_targeting_ai(targets, :target_buffs) { |p, n, t| t.buffs[p] < n }
+  end # target_buff_ai
+
+  #----------------------------------------------------------------------------|
+  #  New method: avoid_buff_ai                                                 |
+  #----------------------------------------------------------------------------|
+  def avoid_buff_ai(targets)
+    notetag_targeting_ai(targets, :avoid_buffs) { |p, n, t| t.buffs[p] >= n }
+  end # avoid_buff_ai
+
+  #----------------------------------------------------------------------------|
+  #  New method: target_debuff_ai                                              |
+  #----------------------------------------------------------------------------|
+  def target_debuff_ai(targets)
+    notetag_targeting_ai(targets, :target_debuffs) { |p, n, t| t.buffs[p] > -n }
+  end # target_debuff_ai
+
+  #----------------------------------------------------------------------------|
+  #  New method: avoid_debuff_ai                                               |
+  #----------------------------------------------------------------------------|
+  def avoid_debuff_ai(targets)
+    notetag_targeting_ai(targets, :avoid_debuffs) { |p, n, t| t.buffs[p] <= -n }
+  end # avoid_debuff_ai
+
+  #----------------------------------------------------------------------------|
+  #  New method: sort_param_ai                                                 |
+  #----------------------------------------------------------------------------|
+  def sort_param_ai(ai_target)
+    targets = []
+    item.sort_params[:index].each { |index|
+      target = []
+      param = nil
+      item.sort_params[index].each_with_index { |note, num|
+        next param = note if num % 2 == 0
+        param = param.to_sym
+        case note
+        when "high"
+          t = ai_target.sort { |a, b| b.send(param) <=> a.send(param) }
+          target << t[0]
+        when "low"
+          t = ai_target.sort { |a, b| a.send(param) <=> b.send(param) }
+          target << t[0]
+        end
+        target.uniq if target.size > 1
+        break if target.size > 1
+      }
+      targets.concat(target) if target.size == 1
+    }
+    ai_target_uniq(targets)
+  end # sort_param_ai
+
+end # Game_Action
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01c+)New public instance_variable                                     |
+  #----------------------------------------------------------------------------|
+  attr_reader :buffs
+
+end # Game_Battler
+
+#==============================================================================|

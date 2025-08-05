@@ -1,0 +1,203 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Equip Prerequisite v1.00b                                  |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00b(GMT 1500 14-7-2015):                                               |
+#    - Increased this script's readability                                     |
+#    v1.00a(GMT 1200 25-5-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    None other than not claiming this script as created by anyone except      |
+#    DoubleX or his alias                                                      |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - none                                                                    |
+#    Knowledge:                                                                |
+#    - Use of notetags                                                         |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Allows users to add prerequisites for equipments to actors              |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between ¡¿ Materials and ¡¿ Main. Save to take effect.            |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Scripts aliasing or rewriting method:                                     |
+#    - self.load_database under module DataManager                             |
+#    - equippable? under class Game_BattlerBase                                |
+#    may have compatibility issues with this script                            |
+#    Place this script above those aliasing any of these methods if possible   |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Equip Prerequisite"] = true
+
+#------------------------------------------------------------------------------|
+#  * Notetag <armor req: id> for weapons/armors                                |
+#    To make a weapon or armor requiring an equipped armor with id id to be    |
+#    equipped, put the above notetag into its notebox in the database.         |
+#------------------------------------------------------------------------------|
+#  * Notetag <stat req: stat, operator, value> for weapons/armors              |
+#    To make a weapon or armor requiring stat to fulfill the operator and value|
+#    requirement to be equipped, put the above notetag into its notebox in the |
+#    database.                                                                 |
+#    stat can be Parameter, Ex-Parameter, Sp-Parameter, hp, mp, tp, level,     |
+#    hp_rate, mp_rate, tp_rate, element_rate(element_id),                      |
+#    debuff_rate(param_id) or state_rate(state_id).                            |
+#    (Needs scripting knowledge)It also includes any other numerical method    |
+#    under class Game_BattlerBase, Game_Battler, Game_Actor or Game_Enemy.     |
+#    operator can be either l, le, e, ge, g or ne. They stand for <, <=, ==,   |
+#    >=, > and != respectively.                                                |
+#------------------------------------------------------------------------------|
+#  * Notetag <var req: id, operator, value> for weapons/armors                 |
+#    To make a weapon or armor requiring variable with id id to fulfill the    |
+#    operator and value requirement to be equipped, put the above notetag into |
+#    its notebox in the database.                                              |
+#    operator can be either l, le, e, ge, g or n. They stand for <, <=, ==,    |
+#    >=, > and != respectively.                                                |
+#------------------------------------------------------------------------------|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: load_database                                               |
+  #----------------------------------------------------------------------------|
+  alias load_database_equip_prerequisite load_database
+  def load_database
+    load_database_equip_prerequisite
+    # Added to load equip prerequisite notetags
+    load_notetags_equip_prerequisite
+    #
+  end # load_database
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_equip_prerequisite                              |
+  #----------------------------------------------------------------------------|
+  def load_notetags_equip_prerequisite
+    [$data_armors, $data_weapons].each { |data|
+      data.each { |obj| obj.load_notetags_equip_prerequisite if obj }
+    }
+  end # load_notetags_equip_prerequisite
+
+end # DataManager
+
+class RPG::EquipItem
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  ["armor", "stat", "var"].each { |note| eval("attr_accessor :#{note}_req") }
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_equip_prerequisite                              |
+  #----------------------------------------------------------------------------|
+  def load_notetags_equip_prerequisite
+    ["armor", "stat", "var"].each { |note| eval("@#{note}_req = []") }
+    @note.split(/[\r\n]+/).each { |line|
+      case line
+      when /<(?:ARMOR_REQ|armor req):[ ]*(\d+)>/i
+        @armor_req << $1.to_i
+      when /<(?:STAT_REQ|stat req):[ ](\w+(?:\s*,\s*\w+)*)>/i
+        $1.scan(/\w+/).each_with_index { |input, index|
+          @stat_req << (index % 3 == 2 ? input.to_f : input.to_s)
+        }
+      when /<(?:VAR_REQ|var req):[ ](\w+(?:\s*,\s*\w+)*)>/i
+        $1.scan(/\w+/).each_with_index { |input, index|
+          @var_req << (index % 3 == 1 ? input.to_s : input.to_i)
+        }
+      end
+    }
+  end # load_notetags_equip_prerequisite
+
+end # RPG::EquipItem
+
+class Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: equippable?                                                 |
+  #----------------------------------------------------------------------------|
+  alias equip_prerequisite_equippable? equippable?
+  def equippable?(item)
+    # Rewritten to apply the equip prerequisites
+    equip_req?(item) && equip_prerequisite_equippable?(item)
+    #
+  end # equippable?
+
+  #----------------------------------------------------------------------------|
+  #  New method: equip_req?                                                    |
+  #----------------------------------------------------------------------------|
+  def equip_req?(item)
+    return false unless actor? && item.is_a?(RPG::EquipItem)
+    armor_req?(item) && stat_req?(item) && var_req?(item)
+  end # equip_req?
+
+  #----------------------------------------------------------------------------|
+  #  New method: armor_req?                                                    |
+  #----------------------------------------------------------------------------|
+  def armor_req?(item)
+    return true if item.armor_req.empty?
+    item.armor_req.each { |req|
+      return false unless armors.include?($data_armors[req])
+    }
+  end # armor_req?
+
+  #----------------------------------------------------------------------------|
+  #  New method: stat_req?                                                     |
+  #----------------------------------------------------------------------------|
+  def stat_req?(item)
+    return true if item.stat_req.empty? || item.stat_req.size % 3 != 0
+    operator = stat = nil
+    item.stat_req.each_with_index { |req, i|
+      next stat = req if i % 3 == 0
+      next operator = equip_req_operator(req) if i % 3 == 1
+      return false unless eval("#{stat} #{operator} req")
+    }
+  end # stat_req?
+
+  #----------------------------------------------------------------------------|
+  #  New method: var_req?                                                      |
+  #----------------------------------------------------------------------------|
+  def var_req?(item)
+    return true if item.var_req.empty? || item.var_req.size % 3 != 0
+    operator = nil
+    var = 0
+    item.var_req.each_with_index { |req, i|
+      next var = "$game_variables[req]" if i % 3 == 0
+      next operator = equip_req_operator(req) if i % 3 == 1
+      return false unless eval("#{var} #{operator} req")
+      }
+  end # var_req?
+
+  #----------------------------------------------------------------------------|
+  #  New method: equip_req_operator                                            |
+  #----------------------------------------------------------------------------|
+  def equip_req_operator(operator)
+    case operator
+    when "l"
+      return "<"
+    when "le"
+      return "<="
+    when "e"
+      return "=="
+    when "ge"
+      return ">="
+    when "g"
+      return ">"
+    when "n"
+      return "!="
+    end
+    nil
+  end # equip_req_operator
+
+end # Game_BattlerBase
+
+#==============================================================================|

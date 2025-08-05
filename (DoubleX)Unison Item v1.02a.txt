@@ -1,0 +1,620 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Unison Skills/Items v1.01d                                 |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.01d(GMT 0300 21-7-2015):                                               |
+#    - Increased this script's effectiveness, efficiency and flexibility       |
+#    v1.01c(GMT 0900 1-6-2014):                                                |
+#    - Fixed unison item not invoking common event bug                         |
+#    v1.01b(GMT 0030 13-2-2014):                                               |
+#    - Fixed nil @input_actor and @unison_actor bug                            |
+#    v1.01a(GMT 0700 7-2-2014):                                                |
+#    - Added <unison param: x> notetag                                         |
+#    v1.00e(GMT 0300 26-1-2014):                                               |
+#    - Fixed nil, non-skill and non-item item bug                              |
+#    v1.00d(GMT 0500 24-1-2014):                                               |
+#    - Fixed Action Times+ Bug                                                 |
+#    v1.00c(GMT 0900 16-1-2014):                                               |
+#    - Unison skills and items can only be selected by their unison actors     |
+#    v1.00b(GMT 1300 15-1-2014):                                               |
+#    - Fixed $game_actors[actor_id] with actor_id equals nil bug               |
+#    v1.00a(GMT 0600 15-1-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    None other than not claiming this script as created by anyone except      |
+#    DoubleX or his alias                                                      |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - none                                                                    |
+#    Knowledge:                                                                |
+#    - Use of notetags                                                         |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Allows users to create unison skills or items for actors                |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between ¡¿ Materials and ¡¿ Main. Save to take effect.            |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Scripts rewriting or aliasing:                                            |
+#    - load_database under DataManager                                         |
+#    - param, inputable? or usable? under Game_BattlerBase                     |
+#    - make_damage_value or use_item under Game_Battler                        |
+#    - clear_actions or next_command under Game_Actor                          |
+#    - enable? under Window_ItemList                                           |
+#    - display_use_item under Window_BattleLog                                 |
+#    - start, next_command, prior_command or turn_start under Scene_Battle     |
+#    may have compatibility issues with this script                            |
+#    Place this script above those aliasing any of these methods if possible   |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Unison Item"] = true
+
+#------------------------------------------------------------------------------|
+#  * Notetag <unison item: x> for skills and items:                            |
+#    x is the list of id of actors needed for the skill or item. For instance: |
+#    - <unison item: 1> means actor with id 1 is required to use it            |
+#    - <unison item: 4, 2> means actors with id 4 and 2 are needed to use it   |
+#    All actors in list x needs to be in the battle, inputable, able to use it |
+#    and pay its cost. They'll all pay the cost after using it. Only actors in |
+#    list x can select it.                                                     |
+#------------------------------------------------------------------------------|
+#  * Notetag <unison rule: x> for skills and items:                            |
+#    x is the rule of setting parameters used in the damage formula of the     |
+#    skill or item. Notetag setting overrides the universal UNISON_PARAM_RULE. |
+#    This notetag doesn't work if <unison item: x> is absent or x is nil.      |
+#------------------------------------------------------------------------------|
+#  * Notetag <unison param: x> for skills and items:                           |
+#    x is the list of id of actors needed for the skill or item and stat is    |
+#    parameters used in its damage formula. For instance:                      |
+#    - <unison atk: 1> means atk in its damage formula uses atk of actor with  |
+#      id 1                                                                    |
+#    - <unison mat: 4, 2> means mat in its damage formula uses mat of actors   |
+#      with id 4 and 2 under unison rule specified in <unison rule: x> notetag |
+#    param can be hp, mp, tp, level, mhp, mmp, atk, def, mat, mdf, agi or luk. |
+#------------------------------------------------------------------------------|
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module Unison_Item
+
+#------------------------------------------------------------------------------|
+#  * SHOW_UNISON_ACTOR, default = true                                         |
+#    The battlelog will show all actors involved in the unison skills or items |
+#    instead of only the one invoking them if SHOW_UNISON_ACTOR is true.       |
+#------------------------------------------------------------------------------|
+  SHOW_UNISON_ACTOR = true
+
+#------------------------------------------------------------------------------|
+#  * UNISON_PARAM_RULE, default = 2                                            |
+#    Each parameter in the damage formula of the unison skills or items used   |
+#    will be altered by one of the rules below if there's no working notetag:  |
+#    0 - No changes will take place                                            |
+#    1 - Its minimum among all actors involved in the unison skills or items   |
+#        used will be used in their damage formulae                            |
+#    2 - Its average among all actors involved in the unison skills or items   |
+#        used will be used in their damage formulae                            |
+#    3 - Its maximum among all actors involved in the unison skills or items   |
+#        used will be used in their damage formulae                            |
+#------------------------------------------------------------------------------|
+  UNISON_PARAM_RULE = 2
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+    UNISON_PARAM_0 = /<(?:UNISON_PARAM_0|unison mhp):[ ](\d+(?:\s*,\s*\d+)*)>/i
+    UNISON_PARAM_1 = /<(?:UNISON_PARAM_1|unison mmp):[ ](\d+(?:\s*,\s*\d+)*)>/i
+    UNISON_PARAM_2 = /<(?:UNISON_PARAM_2|unison atk):[ ](\d+(?:\s*,\s*\d+)*)>/i
+    UNISON_PARAM_3 = /<(?:UNISON_PARAM_3|unison def):[ ](\d+(?:\s*,\s*\d+)*)>/i
+    UNISON_PARAM_4 = /<(?:UNISON_PARAM_4|unison mat):[ ](\d+(?:\s*,\s*\d+)*)>/i
+    UNISON_PARAM_5 = /<(?:UNISON_PARAM_5|unison mdf):[ ](\d+(?:\s*,\s*\d+)*)>/i
+    UNISON_PARAM_6 = /<(?:UNISON_PARAM_6|unison agi):[ ](\d+(?:\s*,\s*\d+)*)>/i
+    UNISON_PARAM_7 = /<(?:UNISON_PARAM_7|unison luk):[ ](\d+(?:\s*,\s*\d+)*)>/i
+    UNISON_PARAM_hp = /<(?:UNISON_PARAM_hp|unison hp):[ ](\d+(?:\s*,\s*\d+)*)>/i
+    UNISON_PARAM_mp = /<(?:UNISON_PARAM_mp|unison mp):[ ](\d+(?:\s*,\s*\d+)*)>/i
+    UNISON_PARAM_tp = /<(?:UNISON_PARAM_tp|unison tp):[ ](\d+(?:\s*,\s*\d+)*)>/i
+    UNISON_PARAM_level = /<(?:UNISON_PARAM_level|unison level):[ ](\d+(?:\s*,\s*\d+)*)>/i
+
+  end # Unison_Item
+end # DoubleX_RMVXA
+
+#------------------------------------------------------------------------------|
+#  * Edit module: DataManager                                                  |
+#------------------------------------------------------------------------------|
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: load_database                                               |
+  #----------------------------------------------------------------------------|
+  alias load_database_unison_item load_database
+  def load_database
+    load_database_unison_item
+    # Added to load unison notetags
+    load_notetags_unison_item
+    #
+  end # load_database
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_unison_item                                     |
+  #----------------------------------------------------------------------------|
+  def load_notetags_unison_item
+    [$data_skills, $data_items].each { |data|
+      data.each { |obj| obj.load_notetags_unison_item if obj }
+    }
+  end # load_notetags_unison_item
+
+end # DataManager
+
+#------------------------------------------------------------------------------|
+#  * Edit class: RPG::UsableItem                                               |
+#------------------------------------------------------------------------------|
+
+class RPG::UsableItem < RPG::BaseItem
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  attr_accessor :unison_item
+  attr_accessor :unison_actor_id
+  attr_accessor :unison_rule
+  [0, 1, 2, 3, 4, 5, 6, 7, "hp", "mp", "tp", "level"].each { |param|
+    eval("attr_accessor :unison_param_#{param = param.to_s}")
+    eval("attr_accessor :unison_param_#{param}_id")
+  }
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_unison_item                                     |
+  #----------------------------------------------------------------------------|
+  def load_notetags_unison_item
+    @unison_item = false
+    @unison_actor_id = []
+    @unison_rule = (ui = DoubleX_RMVXA::Unison_Item)::UNISON_PARAM_RULE
+    [0, 1, 2, 3, 4, 5, 6, 7, "hp", "mp", "tp", "level"].each { |param|
+      eval("@unison_param_#{param = param.to_s} = false")
+      eval("@unison_param_#{param}_id = []")
+    }
+    @note.split(/[\r\n]+/).each { |line|
+      case line
+      when /<(?:UNISON_ITEM|unison item):[ ](\d+(?:\s*,\s*\d+)*)>/i
+        $1.scan(/\d+/).each { |n| @unison_actor_id << n.to_i if n.to_i > 0 }
+        @unison_item ||= @unison_actor_id.size > 0
+      when /<(?:UNISON_RULE|unison rule):[ ]*(\d+)>/i
+        @unison_rule = $1.to_i if @unison_item
+      else
+        [0, 1, 2, 3, 4, 5, 6, 7, "hp", "mp", "tp", "level"].each { |param|
+          case line
+          when eval("ui::UNISON_PARAM_#{param = param.to_s}")
+            $1.scan(/\d+/).each { |num|
+              eval("@unison_param_#{param}_id.push(num.to_i)") if num.to_i > 0
+            }
+            eval("@unison_param_#{param} = true") if 
+            eval("@unison_param_#{param}_id.size > 0")
+          end
+        }
+      end
+    }
+  end # load_notetags_unison_item
+
+end # RPG::UsableItem
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_BattlerBase                                              |
+#------------------------------------------------------------------------------|
+
+class Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: param                                                       |
+  #----------------------------------------------------------------------------|
+  alias param_unison_item param
+  def param(param_id)
+    # Rewritten to return unison param when it's set
+    @unison_param_set ? @unison_param[param_id] : param_unison_item(param_id)
+    #
+  end # param
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: inputable?                                                  |
+  #----------------------------------------------------------------------------|
+  alias inputable_unison_item? inputable?
+  def inputable?
+    # Rewritten to check if at least 1 action slot isn't reserved
+    return false unless inputable_unison_item?
+    return true unless SceneManager.scene_is?(Scene_Battle) && actor?
+    @unison_inputs < @actions.size
+    #
+  end # inputable?
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: usable?                                                     |
+  #----------------------------------------------------------------------------|
+  alias usable_unison_item? usable?
+  def usable?(item)
+    # Rewritten to check if all unison actors can use the unison skill/item
+    unless actor? && item && item.is_a?(RPG::UsableItem) && item.unison_item
+      return usable_unison_item?(item)
+    end
+    return false unless item.unison_actor_id.include?(id)
+    return false unless usable_unison_item?(item)
+    return unison_skill_usable?(item) if item.is_a?(RPG::Skill)
+    return unison_item_usable?(item) if item.is_a?(RPG::Item)
+    false
+    #
+  end # usable?
+
+  #----------------------------------------------------------------------------|
+  #  New method: unison_skill_usable?                                          |
+  #----------------------------------------------------------------------------|
+  def unison_skill_usable?(item)
+    battle = SceneManager.scene_is?(Scene_Battle)
+    (item.unison_actor_id - [id]).each { |actor_id|
+      actor = $game_actors[actor_id]
+      return false unless actor.battle_member? && actor.inputable?
+      return false if battle && actor.actions.select { |a| a.item }.size >= 
+      actor.actions.size - actor.unison_inputs
+      return false unless actor.skill_conditions_met?(item)
+      return false unless actor.skills.any? { |s| s == $data_skills[item.id] }
+    }
+    true
+  end # unison_skill_usable?
+
+  #----------------------------------------------------------------------------|
+  #  New method: unison_item_usable?                                           |
+  #----------------------------------------------------------------------------|
+  def unison_item_usable?(item)
+    return false unless item_conditions_met?(item)
+    (item.unison_actor_id - [id]).each { |actor_id|
+      actor = $game_actors[actor_id]
+      return false unless actor.battle_member? && actor.inputable?
+    }
+    true
+  end # unison_item_usable?
+
+  #----------------------------------------------------------------------------|
+  #  New method: unison_param_set                                              |
+  #----------------------------------------------------------------------------|
+  def unison_param_set(item)
+    @unison_param = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    [0, 1, 2, 3, 4, 5, 6, 7, "hp", "mp", "tp", "level"].each_with_index { |param_id, i|
+      if item.send("unison_param_#{param_id.to_s}".to_sym)
+        unison_param_actor = item.send("unison_param_#{param_id.to_s}_id".to_sym)
+      else
+        unison_param_actor = item.unison_actor_id
+      end
+      unison_param_rule(item, param_id, i, unison_param_actor)
+    }
+    @unison_level = @unison_param[11]
+    @unison_param_set = true
+  end # unison_param_set
+
+  #----------------------------------------------------------------------------|
+  #  New method: unison_param_rule                                             |
+  #----------------------------------------------------------------------------|
+  def unison_param_rule(item, param_id, i, unison_param_actor)
+    case item.unison_rule
+    when 1
+      if param_id.is_a?(Numeric)
+        @unison_param[i] = param_max(param_id)
+      elsif param_id == "hp"
+        @unison_param[8] = param_max(0)
+      elsif param_id == "mp"
+        @unison_param[9] = param_max(1)
+      elsif param_id == "tp"
+        @unison_param[10] = max_tp
+      else
+        @unison_param[11] = max_level
+      end
+      unison_param_min_max(param_id, i, unison_param_actor, :min)
+    when 2
+      unison_param_actor.each { |actor_id|
+        if param_id.is_a?(Numeric)
+          @unison_param[i] += $game_actors[actor_id].param(i)
+        else
+          @unison_param[i] += $game_actors[actor_id].send(param_id.to_s.to_sym)
+        end
+      }
+      @unison_param[i] /= unison_param_actor.size
+    when 3
+      unison_param_min_max(param_id, i, unison_param_actor, :max)
+    else
+      return unison_param_clear
+    end
+  end # unison_param_rule
+
+  #----------------------------------------------------------------------------|
+  #  New method: unison_param_min_max                                          |
+  #----------------------------------------------------------------------------|
+  def unison_param_min_max(param_id, i, unison_param_actor, sym)
+    unison_param_actor.each { |actor_id|
+      if param_id.is_a?(Numeric)
+        @unison_param[i] = [@unison_param[i], $game_actors[actor_id].param(i)].send(sym)
+      else
+        @unison_param[i] = [@unison_param[i], 
+        $game_actors[actor_id].send(param_id.to_s.to_sym)].send(sym)
+      end
+    }
+  end # unison_param_min_max
+
+  #----------------------------------------------------------------------------|
+  #  New method: unison_param_clear                                            |
+  #----------------------------------------------------------------------------|
+  def unison_param_clear
+    @unison_level = nil
+    @unison_param_set = false
+  end # unison_param_clear
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)New method: hp                                                   |
+  #----------------------------------------------------------------------------|
+  def hp
+    @unison_param_set ? @unison_param[8] : @hp
+  end # hp
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)New method: mp                                                   |
+  #----------------------------------------------------------------------------|
+  def mp
+    @unison_param_set ? @unison_param[9] : @mp
+  end # mp
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)New method: tp                                                   |
+  #----------------------------------------------------------------------------|
+  def tp
+    @unison_param_set ? @unison_param[10] : @tp
+  end # tp
+
+end # Game_BattlerBase
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_Battler                                                  |
+#------------------------------------------------------------------------------|
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_damage_value                                           |
+  #----------------------------------------------------------------------------|
+  alias make_damage_value_unison_item make_damage_value
+  def make_damage_value(user, item)
+    # Added to set the params of the user as the unison version
+    unison = user.actor? && item.unison_item && item.unison_rule > 0
+    user.unison_param_set(item) if unison
+    #
+    make_damage_value_unison_item(user, item)
+    # Added to reset the params of the user to the default
+    user.unison_param_clear if unison
+    #
+  end # make_damage_value
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: use_item                                                    |
+  #----------------------------------------------------------------------------|
+  alias use_item_unison_item use_item
+  def use_item(item)
+    # Rewritten to pay unison skill cost
+    unless item.is_a?(RPG::Skill) && item.unison_item
+      return use_item_unison_item(item)
+    end
+    item.unison_actor_id.each { |a_id| $game_actors[a_id].pay_skill_cost(item) }
+    item.effects.each { |effect| item_global_effect_apply(effect) }
+    #
+  end # use_item
+
+end # Game_Battler
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Game_Actor                                                    |
+#------------------------------------------------------------------------------|
+
+class Game_Actor < Game_Battler
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  attr_accessor :unison_inputs
+  attr_writer :unison_level
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01d+)Alias method: setup                                              |
+  #----------------------------------------------------------------------------|
+  alias setup_unison_item setup
+  def setup(actor_id)
+    setup_unison_item(actor_id)
+    # Added to initialize the number of reserved action slots
+    @unison_inputs = 0
+    #
+  end # setup
+
+  #----------------------------------------------------------------------------|
+  #  (v1.00d+)Alias method: clear_actions                                      |
+  #----------------------------------------------------------------------------|
+  alias clear_actions_unison_item clear_actions
+  def clear_actions
+    clear_actions_unison_item
+    # Added to reset the number of reserved action slots
+    @unison_inputs = 0
+    #
+  end # clear_actions
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01d+)Alias method: next_command                                       |
+  #----------------------------------------------------------------------------|
+  alias next_command_unison_item next_command
+  def next_command
+    # Added to return false if the next slot is reserved for unison skill/items
+    return false if @action_input_index >= @actions.size - 1 - @unison_inputs
+    #
+    next_command_unison_item
+  end # next_command
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)New method: level                                                |
+  #----------------------------------------------------------------------------|
+  def level
+    @unison_level || @level
+  end # level
+
+end # Game_Actor
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Window_ItemList                                               |
+#------------------------------------------------------------------------------|
+
+class Window_ItemList < Window_Selectable
+
+  #----------------------------------------------------------------------------|
+  #  (v1.00c+)Alias method: enable?                                            |
+  #----------------------------------------------------------------------------|
+  alias enable_unison_item? enable?
+  def enable?(item)
+    # Rewritten to set disable unison items when unison conditions aren't met
+    return enable_unison_item?(item) unless item.is_a?(RPG::Item) && 
+    item.unison_item && SceneManager.scene_is?(Scene_Battle)
+    BattleManager.actor.usable?(item)
+    #
+  end # enable?
+
+end # Window_ItemList
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Window_BattleLog                                              |
+#------------------------------------------------------------------------------|
+
+class Window_BattleLog < Window_Selectable
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: display_use_item                                            |
+  #----------------------------------------------------------------------------|
+  alias display_use_item_unison_item display_use_item
+  def display_use_item(subject, item)
+    # Rewritten to display unison actors while using unison skills or items
+    unless DoubleX_RMVXA::Unison_Item::SHOW_UNISON_ACTOR && item.unison_item
+      return display_use_item_unison_item(subject, item)
+    end
+    display_unison_item(item)
+    #
+  end # display_use_item
+
+  #----------------------------------------------------------------------------|
+  #  New method: display_unison_item                                           |
+  #----------------------------------------------------------------------------|
+  def display_unison_item(item)
+    unless item.is_a?(RPG::Skill)
+      return add_text(sprintf(Vocab::UseItem, unison_actor_names(item), item.name))
+    end
+    add_text(unison_actor_names(item) + item.message1)
+    return if item.message2.empty?
+    wait
+    add_text(item.message2)
+  end # display_unison_item
+
+  #----------------------------------------------------------------------------|
+  #  New method: unison_actor_names                                            |
+  #----------------------------------------------------------------------------|
+  def unison_actor_names(item)
+    names = ""
+    size = item.unison_actor_id.size
+    item.unison_actor_id.each_with_index { |actor_id, index|
+      if index > 0 && index < size - 1
+        names += ", "
+      elsif size > 1 && index == size - 1
+        names += " and "
+      end
+      names += $game_actors[actor_id].name
+    }
+    names
+  end # unison_actor_names
+
+end # Window_BattleLog
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Scene_Battle                                                  |
+#------------------------------------------------------------------------------|
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01d+)Alias method: start                                              |
+  #----------------------------------------------------------------------------|
+  alias start_unison_item start
+  def start
+    start_unison_item
+    # Added to initialize the unison action linkage hash
+    @unison_actor_ids = {}
+    #
+  end # start
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: next_command                                                |
+  #----------------------------------------------------------------------------|
+  alias next_command_unison_item next_command
+  def next_command
+    # Added to set the link of the unison action slot to the unison invokees
+    add_unison_actor_ids if (actor = BattleManager.actor) && actor.input && 
+    actor.input.item && actor.input.item.unison_item
+    #
+    next_command_unison_item
+  end # next_command
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: prior_command                                               |
+  #----------------------------------------------------------------------------|
+  alias prior_command_unison_item prior_command
+  def prior_command
+    # Added to clear the currently selected action before selecting the prior
+    BattleManager.actor.input.clear if BattleManager.actor.input
+    #
+    prior_command_unison_item
+    # Added to clear the unison action linkage and unconfirm the action
+    clear_unison_actor_ids if BattleManager.actor
+    #
+  end # prior_command
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: turn_start                                                  |
+  #----------------------------------------------------------------------------|
+  alias turn_start_unison_item turn_start
+  def turn_start
+    # Added to reset the links of the unison action slots to the unison invokees
+    @unison_actor_ids = {}
+    $game_party.alive_members.each { |mem| mem.unison_inputs = -1 }
+    #
+    turn_start_unison_item
+  end # turn_start
+
+  #----------------------------------------------------------------------------|
+  #  New method: add_unison_actor_ids                                          |
+  #----------------------------------------------------------------------------|
+  def add_unison_actor_ids
+    ids = (actor = BattleManager.actor).input.item.unison_actor_id - [actor.id]
+    @unison_actor_ids[[actor.index, actor.action_input_index]] = ids
+    ids.each { |id| $game_actors[id].unison_inputs += 1 }
+  end # add_unison_actor_ids
+
+  #----------------------------------------------------------------------------|
+  #  New method: clear_unison_actor_ids                                        |
+  #----------------------------------------------------------------------------|
+  def clear_unison_actor_ids
+    a = BattleManager.actor
+    return unless ids = @unison_actor_ids[[a.index, a.action_input_index]]
+    @unison_actor_ids.delete([a.index, a.action_input_index])
+    ids.each { |id| $game_actors[id].unison_inputs -= 1 }
+  end # clear_unison_actor_ids
+
+end # Scene_Battle
+
+#==============================================================================|

@@ -1,0 +1,473 @@
+#==============================================================================|
+#  ** Script Info                                                              |
+#------------------------------------------------------------------------------|
+#  * Script Name                                                               |
+#    DoubleX RMVXA State Counters                                              |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    Displays the state icons with remaining turns on their battler sprites    |
+#------------------------------------------------------------------------------|
+#  * Terms Of Use                                                              |
+#    You shall keep this script's Script Info part's contents intact           |
+#    You shalln't claim that this script is written by anyone other than       |
+#    DoubleX or his aliases                                                    |
+#    None of the above applies to DoubleX or his aliases                       |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Abilities:                                                                |
+#    1. Some RGSS3 scripting proficiency to fully utilize this script          |
+#------------------------------------------------------------------------------|
+#  * Instructions                                                              |
+#    1. Open the script editor and put this script into an open slot between   |
+#       Materials and Main, save to take effect.                               |
+#------------------------------------------------------------------------------|
+#  * Links                                                                     |
+#    Script Usage 101:                                                         |
+#    1. forums.rpgmakerweb.com/index.php?/topic/32752-rmvxa-script-usage-101/  |
+#    2. rpgmakervxace.net/topic/27475-rmvxa-script-usage-101/                  |
+#    This script:                                                              |
+#    1. http://pastebin.com/pPvJCrmx                                           |
+#    Mentioned Patreon Supporters:                                             |
+#    https://www.patreon.com/posts/71738797                                    |
+#------------------------------------------------------------------------------|
+#  * Authors                                                                   |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00e(GMT 1300 19-9-2015):                                               |
+#    1. Fixed lacking the spriteset viewport reader and iconset loader bug     |
+#    2. Further increased this script's compatibility                          |
+#    v1.00d(GMT 0800 16-9-2015):                                               |
+#    1. Fixed duplicate actor sprite creations at the start of battles bug     |
+#    2. Increased this script's compatibility and readability                  |
+#    v1.00c(GMT 1500 14-4-2015):                                               |
+#    1. Improved this script's robustness                                      |
+#    v1.00b(GMT 1100 11-4-2015):                                               |
+#    1. Fixed the state remaining turn display bug when a state's reapplied    |
+#    v1.00a(GMT 0900 11-4-2015):                                               |
+#    1. 1st version of this script finished                                    |
+#==============================================================================|
+
+($doublex_rmvxa ||= {})[:State_Counters] = "v1.00e"
+
+#==============================================================================|
+#  ** Script Configurations                                                    |
+#     You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+
+  module State_Counters
+
+      # Sets if this script needs to create the actor sprites at the start of
+      # battles
+      # This script won't display the actor sprites by itself
+      # It should be set as false if other custom scripts already do that
+      # It can't be changed once set
+      # Example: To use this script to create the actor sprites at the start of
+      #          battles, set this as true
+      CREATE_ACTOR_SPRITE = false
+
+      # Sets if the state icons are displayed for actor sprites as well
+      # It only works with scripts supporting actor sprite displays in battles
+      # It's used at:
+      # 1. Game_Battler
+      #    - return nil unless enemy? || #{ACTOR_SPRITE} in
+      #      state_counters_battler_sprite
+      # 2. Sprite_Battler
+      #    - @state_counters = {} if @battler && (@battler.enemy? || 
+      #      #{ACTOR_SPRITE}) in initialize
+      #    - return unless @battler && (@battler.enemy? || #{ACTOR_SPRITE}) in
+      #      create_state_counter
+      # Example: To display the state icon for actor sprites as well, set this
+      #          as "true"
+      ACTOR_SPRITE = "false"
+
+      # Sets the state icon xy offsets from its battler sprite
+      # It's used at:
+      # 1. State_Counter_Sprite
+      #    - xy_offset = #{XY_OFFSET} in update_pos
+      # The state priority index can be referneced by @index
+      # It must return an array of real numbers and should return an array of
+      # integers
+      # Example: To set the state icon xy offsets as the value of
+      #          variables with id a and b respectively, set this as
+      #          "[$game_variables[a], $game_variables[b]]"
+      XY_OFFSET = "[24 * (@index % 2 - 0.5), -24 * (@index / 2) - 20]"
+
+      # Sets the state icon z position
+      # It's used at:
+      # 1. State_Counter_Sprite
+      #    - z_pos = #{Z} in update_pos
+      # It must return a non-negative real number and should return a
+      # non-negative integer
+      # Example: To set the state icon z position as the value of variable
+      #          with id x, set this as "$game_variables[x]"
+      Z = "125"
+
+      # Sets the state remaining turn text color
+      # It's used at:
+      # 1. State_Counter_Sprite
+      #    - color = #{TEXT_COLOR} in update_text_font
+      # It must return a color
+      # Example: To set the state remaining turn text color's rgba values as r, 
+      #          g, b and a, set this as "Color.new(r, g, b, a)"
+      TEXT_COLOR = "Color.new(0, 0, 0, 255)"
+
+      # Sets the state remaining turn text size
+      # It's used at:
+      # 1. State_Counter_Sprite
+      #    - size = #{TEXT_SIZE} in update_text_font
+      # It must return a positive real number and should return a natural number
+      # Example: To set the state remaining turn text size as the value of
+      #          variable with id x, set this as "$game_variables[x]"
+      TEXT_SIZE = "16"
+
+      # Sets the state remaining turn text x and y positions
+      # It's used at:
+      # 1. State_Counter_Sprite
+      #    - text_xy = #{TEXT_XY} in update_turn
+      # It must return an array of real numbers and should return an array of
+      # integers
+      # Example: To set the state remaining turn text x and y positions as the
+      #          value of variables with id a and b respectively, set this as
+      #          "[$game_variables[a], $game_variables[b]]"
+      TEXT_XY = "[12, 0]"
+
+#==============================================================================|
+#  ** Script Implementations                                                   |
+#     You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+#  * Script Support Info:                                                      |
+#    1. Prerequisites                                                          |
+#       - Some RGSS3 scripting proficiency to fully comprehend this script     |
+#    2. Method documentation                                                   |
+#       - The 1st part describes why this method's rewritten/aliased for       |
+#         rewritten/aliased methods or what the method does for new methods    |
+#       - The 2nd part describes what the arguments of the method are          |
+#       - The 3rd part informs which version rewritten, aliased or created this|
+#         method                                                               |
+#       - The 4th part informs whether the method's rewritten or new           |
+#       - The 5th part describes how this method works for new methods only,   |
+#         and describes the parts added, removed or rewritten for rewritten or |
+#         aliased methods only                                                 |
+#       Example:                                                               |
+# #--------------------------------------------------------------------------| |
+# #  Why rewrite/alias/What this method does                                 | |
+# #--------------------------------------------------------------------------| |
+# # *argv: What these variables are                                            |
+# # &argb: What this block is                                                  |
+# def def_name(*argv, &argb) # Version X+; Rewrite/New                         |
+#   # Added/Removed/Rewritten to do something/How this method works            |
+#   def_name_code                                                              |
+#   #                                                                          |
+# end # def_name                                                               |
+#------------------------------------------------------------------------------|
+
+    GAME_BATTLER = %Q(
+  def state_counters_battler_sprite
+    return nil unless SceneManager.scene_is?(Scene_Battle)
+    return nil unless SceneManager.scene.spriteset
+    return nil unless enemy? || #{ACTOR_SPRITE}
+    SceneManager.scene.spriteset.battler_sprites.find { |s| s.battler == self }
+  end
+    )
+
+    SPRITE_BATTLER = %Q(
+  alias initialize_state_counters initialize
+  def initialize(viewport, battler = nil, &argb)
+    initialize_state_counters(viewport, battler, &argb)
+    @state_counters = {}
+  end
+
+  def create_state_counter(state, turn)
+    return unless @battler && (@battler.enemy? || #{ACTOR_SPRITE})
+    return if !@state_counters || @state_counters[state]
+    @state_counters[state] = State_Counter_Sprite.new(@battler, state, turn)
+  end
+    )
+
+    STATE_COUNTER_SPRITE = %Q(
+  def update_pos
+    z_pos = #{Z}
+    self.z = z_pos if z != z_pos
+    dx = @battler.screen_x
+    dy = @battler.screen_y
+    xy_offset = #{XY_OFFSET}
+    return if @last_x == dx && @last_y == dy && @last_xy_offest == xy_offset
+    @last_x = dx
+    @last_y = dy
+    @last_xy_offest = xy_offset
+    self.x = dx + xy_offset[0]
+    self.y = dy + xy_offset[1]
+  end
+
+  def update_turn(turn)
+    return if disposed? || bitmap.disposed? || !@bw || !@bh
+    update_text_font
+    bitmap.clear
+    return unless visible
+    icon_index = @state.icon_index
+    @rect ||= Rect.new(icon_index % 16 * 24, icon_index / 16 * 24, 24, 24)
+    bitmap.blt(24 + @bw / 2 - 36, (@bh - 24) / 2, Cache.system("Iconset"), 
+    @rect, 255)
+    return if turn <= 0 || @state.auto_removal_timing <= 0
+    text_xy = #{TEXT_XY}
+    bitmap.draw_text(text_xy[0], text_xy[1], @bw - 24, @bh, turn.to_s, 1)
+  end
+
+  def update_text_font
+    color = #{TEXT_COLOR}
+    bitmap.font.out_color.set(color) if bitmap.font.out_color != color
+    size = #{TEXT_SIZE}
+    bitmap.font.size = size if bitmap.font.size != size
+  end
+    )
+
+  end # State_Counters
+
+end # DoubleX_RMVXA
+
+class Game_BattlerBase # Edit
+
+  alias erase_state_counters erase_state
+  def erase_state(state_id, &argb)
+    remove_state_counter(state_id) if @states.include?(state_id) # Added
+    erase_state_counters(state_id, &argb)
+  end # erase_state
+
+  #----------------------------------------------------------------------------|
+  #  Removes the state icons and repositions those having larger indices       |
+  #----------------------------------------------------------------------------|
+  def remove_state_counter(state_id) # New
+    battler_sprite = state_counters_battler_sprite
+    return unless battler_sprite && battler_sprite.state_counters
+    index = if battler_sprite.state_counters[$data_states[state_id]]
+      battler_sprite.state_counters[$data_states[state_id]].index
+    else
+      nil
+    end
+    battler_sprite.dispose_state_counter($data_states[state_id])
+    reposition_state_counters(battler_sprite.state_counters, index) if index
+  end # remove_state_counter
+
+  #----------------------------------------------------------------------------|
+  #  Repositions all the state icons on its battler sprite                     |
+  #----------------------------------------------------------------------------|
+  def reposition_state_counters(state_counters, index) # New
+    state_counters.each_value { |sprite|
+      next if sprite.index <= index
+      sprite.index -= 1
+      sprite.update_pos if sprite.visible
+    }
+  end # reposition_state_counters
+
+end # Game_BattlerBase
+
+class Game_Battler < Game_BattlerBase # Edit
+
+  alias clear_states_counters clear_states
+  def clear_states(*argv, &argb)
+    clear_states_counters(*argv, &argb)
+    clear_state_counters # Added
+  end # clear_states
+
+  alias reset_state_counts_state_counters reset_state_counts
+  def reset_state_counts(state_id, &argb)
+    reset_state_counts_state_counters(state_id, &argb)
+    reset_state_counter(state_id) if @states.include?(state_id) # Added
+  end # reset_state_counts
+
+  alias update_state_turns_state_counters update_state_turns
+  def update_state_turns(*argv, &argb)
+    update_state_turns_state_counters(*argv, &argb)
+    update_state_counters # Added
+  end # update_state_turns
+
+  #----------------------------------------------------------------------------|
+  #  Removes all state icons from their battler sprite                         |
+  #----------------------------------------------------------------------------|
+  def clear_state_counters # New
+    battler_sprite = state_counters_battler_sprite
+    return unless battler_sprite && battler_sprite.state_counters
+    battler_sprite.state_counters.each_key { |state|
+      battler_sprite.dispose_state_counter(state)
+    }
+  end # clear_state_counters
+
+  #----------------------------------------------------------------------------|
+  #  Resets this state's icon and sort all state icons using their priorities  |
+  #----------------------------------------------------------------------------|
+  def reset_state_counter(state_id) # New
+    battler_sprite = state_counters_battler_sprite
+    return unless battler_sprite && battler_sprite.state_counters
+    state = $data_states[state_id]
+    turn = @state_turns[state_id]
+    if battler_sprite.state_counters[state]
+      return battler_sprite.state_counters[state].update_turn(turn)
+    end
+    battler_sprite.create_state_counter(state, turn)
+    sort_state_counters(battler_sprite.state_counters)
+  end # reset_state_counter
+
+  #----------------------------------------------------------------------------|
+  #  Sort all state icons on their battler sprite using their priorities       |
+  #----------------------------------------------------------------------------|
+  def sort_state_counters(state_counters) # New
+    state_counters.each { |state, sprite|
+      sprite.index = states.index(state)
+      sprite.update_pos if sprite.visible
+    }
+  end # sort_state_counters
+
+  #----------------------------------------------------------------------------|
+  #  Updates the remaining turn of the state icons on their battler sprite     |
+  #----------------------------------------------------------------------------|
+  def update_state_counters # New
+    battler_sprite = state_counters_battler_sprite
+    return unless battler_sprite && battler_sprite.state_counters
+    battler_sprite.state_counters.each { |state, sprite|
+      sprite.update_turn(@state_turns[state.id])
+    }
+  end # update_state_counters
+
+  #----------------------------------------------------------------------------|
+  #  Returns the battler sprite used by this battler in battles                |
+  #----------------------------------------------------------------------------|
+  module_eval(DoubleX_RMVXA::State_Counters::GAME_BATTLER) # New
+
+end # Game_Battler
+
+if DoubleX_RMVXA::State_Counters::CREATE_ACTOR_SPRITE
+
+class Spriteset_Battle # Edit
+
+  alias create_actors_state_counters create_actors
+  def create_actors(*argv, &argb)
+    create_actors_state_counters(*argv, &argb)
+    # Added to insert actors into the actor sprites if it's not already done
+    @actor_sprites = $game_party.members.reverse.collect { |actor|
+      Sprite_Battler.new(@viewport1, actor)
+    }
+    #
+  end # create_actors
+
+end # Spriteset_Battle
+
+end # if DoubleX_RMVXA::State_Counters::CREATE_ACTOR_SPRITE
+
+class Sprite_Battler < Sprite_Base # Edit
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_reader :state_counters # The battler sprite state icon container
+
+  #----------------------------------------------------------------------------|
+  #  Creates the battler sprite state icon container if the battler shows them |
+  #----------------------------------------------------------------------------|
+  module_eval(DoubleX_RMVXA::State_Counters::SPRITE_BATTLER) # Alias; New
+
+  alias dispose_state_counters dispose
+  def dispose(*argv, &argb)
+    dispose_state_counters(*argv, &argb)
+    # Added
+    return unless @state_counters
+    @state_counters.each_key { |state| dispose_state_counter(state) }
+    #
+  end # dispose
+
+  alias update_state_counters update
+  def update(*argv, &argb)
+    update_state_counters(*argv, &argb)
+    # Added
+    return unless @state_counters
+    @state_counters.each_value { |sprite| sprite.update }
+    #
+  end # dispose
+
+  def dispose_state_counter(state) # New
+    return unless @state_counters[state]
+    @state_counters[state].dispose
+    @state_counters.delete(state)
+  end # dispose_state_counter
+
+end # Sprite_Battler
+
+class Spriteset_Battle # v1.00e+; Edit
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_reader :viewport1 # Used by State_Counter_Sprite to read the 1st viewport
+
+end # Spriteset_Battle
+
+#------------------------------------------------------------------------------|
+#  * Handles the state icons with remaining turns on their battler sprites     |
+#------------------------------------------------------------------------------|
+class State_Counter_Sprite < Sprite # New
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_accessor :index # The state index in the priority-sorted states
+
+  #----------------------------------------------------------------------------|
+  #  New private instance variables                                            |
+  #----------------------------------------------------------------------------|
+  # @battler: The battler having this sprite
+  # @state: The state using this sprite
+
+  def initialize(battler, state, turn)
+    super(SceneManager.scene.spriteset.viewport1)
+    @battler = battler
+    @state = state
+    @index = @battler.states.index(@state)
+    self.visible = @battler.alive?
+    create_state_bitmap
+    update_turn(turn)
+  end # initialize
+
+  def create_state_bitmap
+    @bw = Graphics.width + 48
+    @bh = Font.default_size * 3
+    self.bitmap = Bitmap.new(@bw, @bh)
+    update_pos
+    self.ox = @bw / 2
+    self.oy = @bh / 2
+  end # create_state_bitmap
+
+  #----------------------------------------------------------------------------|
+  #  Updates this state icon's display                                         |
+  #----------------------------------------------------------------------------|
+  def update
+    super
+    update_pos if self.visible = @battler.alive?
+  end # update
+
+  def dispose
+    return if disposed?
+    bitmap.dispose unless bitmap.disposed?
+    super
+  end # dispose
+
+  #----------------------------------------------------------------------------|
+  #  Updates the positions, state turns and text fonts                         |
+  #----------------------------------------------------------------------------|
+  module_eval(DoubleX_RMVXA::State_Counters::STATE_COUNTER_SPRITE)
+
+end # State_Counter_Sprite
+
+class Scene_Battle < Scene_Base # Edit
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_reader :spriteset # Used by Game_Battler to read the battler sprite set
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+#==============================================================================|

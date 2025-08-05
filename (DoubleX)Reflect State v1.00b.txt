@@ -1,0 +1,198 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Reflect State v1.00a                                       |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00b(GMT 0300 16-9-2017):                                               |
+#    - Fixed reflecting to nil battlers bug                                    |
+#    v1.00a(GMT 0800 27-1-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    None other than not claiming this script as created by anyone except      |
+#    DoubleX or his alias                                                      |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - none                                                                    |
+#    Knowledge:                                                                |
+#    - Usage of notetags                                                       |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Adds reflect state reflecting non certain hit skill and item from anyone|
+#      to enemies                                                              |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between ¡¿ Materials and ¡¿ Main. Save to take effect.            |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Scripts aliasing or rewriting method:                                     |
+#    - self.load_database under module DataManager                             |
+#    - invoke_item under class Scene_Battle                                    |
+#    may have compatibility issues with this script                            |
+#    Place this script above those aliasing any of these methods if possible   |
+#==============================================================================|
+
+$imported = {} if $imported.nil?
+$imported["DoubleX RMVXA Reflect State"] = true
+
+#------------------------------------------------------------------------------|
+#  * Notetag <reflect state> for states                                        |
+#    To make states to reflect non certain hit skill and item from anyone to   |
+#    enemies, put the above notetag into that state's notebox in the database. |
+#------------------------------------------------------------------------------|
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module Reflect_State
+
+#------------------------------------------------------------------------------|
+#  * REFLECT_PHYSICAL, default = false                                         |
+#    Reflect state applies to physical attacks                                 |
+#------------------------------------------------------------------------------|
+  REFLECT_PHYSICAL = false
+
+#------------------------------------------------------------------------------|
+#  * REFLECT_MAGICAL, default = true                                           |
+#    Reflect state applies to magical attacks                                  |
+#------------------------------------------------------------------------------|
+  REFLECT_MAGICAL = true
+
+#------------------------------------------------------------------------------|
+#  * REFLECT_TO_ENEMY_CASTER, default = true                                   |
+#    Reflect state always reflects skills and items back to their casters if   |
+#    they're enemies                                                           |
+#------------------------------------------------------------------------------|
+  REFLECT_TO_ENEMY_CASTER = true
+
+  end # Reflect_State
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module REGEXP
+    module STATE
+
+      REFLECT_STATE = /<(?:REFLECT_STATE|reflect state)>/i
+
+    end # STATE
+  end # REGEXP
+end # DoubleX_RMVXA
+
+module DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: load_database                                               |
+  #----------------------------------------------------------------------------|
+  class <<self; alias load_database_reflect_state load_database; end
+  def self.load_database
+    load_database_reflect_state
+    # This part is added by this script to load reflect state notetags
+    load_notetags_reflect_state
+  end # self.load_database
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_reflect_state                                   |
+  #----------------------------------------------------------------------------|
+  def self.load_notetags_reflect_state
+    for obj in $data_states
+        next if obj.nil?
+        obj.load_notetags_reflect_state
+    end
+  end # self.load_notetags_reflect_state
+
+end # DataManager
+
+class RPG::State < RPG::BaseItem
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_accessor :reflect_state
+
+  #----------------------------------------------------------------------------|
+  #  New common cache: load_notetags_reflect_state                             |
+  #----------------------------------------------------------------------------|
+  def load_notetags_reflect_state
+    @reflect_state = false
+    self.note.split(/[\r\n]+/).each { |line|
+      case line
+        when DoubleX_RMVXA::REGEXP::STATE::REFLECT_STATE
+        @reflect_state = true
+      end
+    }
+  end # load_notetags_reflect_state
+
+end # RPG::State
+
+class Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  New method: reflect_state?                                                |
+  #----------------------------------------------------------------------------|
+  def reflect_state?(state)
+    if state
+      state.each { |a|
+        return true if a.reflect_state
+      }
+    end
+    return false
+  end # reflect_state?
+
+end # Game_BattlerBase
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: invoke_item                                                 |
+  #----------------------------------------------------------------------------|
+  alias invoke_item_reflect_state invoke_item
+  def invoke_item(target, item)
+    # This part is rewritten by this script to handle reflect states
+    if target.reflect_state?(target.states) && (item.physical? && DoubleX_RMVXA::Reflect_State::REFLECT_PHYSICAL || item.magical? && DoubleX_RMVXA::Reflect_State::REFLECT_MAGICAL)
+      invoke_reflect_state(target, item)
+    else
+      invoke_item_reflect_state(target, item)
+    end
+    #
+  end # invoke_item
+
+  #----------------------------------------------------------------------------|
+  #  New method: invoke_reflect_state                                          |
+  #----------------------------------------------------------------------------|
+  def invoke_reflect_state(target, item)
+    if !@subject
+      invoke_item_reflect_state(target, item)
+    elsif @subject.opposite?(target)
+      if DoubleX_RMVXA::Reflect_State::REFLECT_TO_ENEMY_CASTER
+        @log_window.display_reflection(target, item)
+        apply_item_effects(apply_substitute(@subject, item), item)
+      else
+        @log_window.display_reflection(target, item)
+        apply_item_effects(apply_substitute(@subject.friends_unit.random_target, item), item)
+      end
+    else
+      new_target = @subject.opponents_unit.random_target
+      if new_target
+        @log_window.display_reflection(target, item)
+        apply_item_effects(apply_substitute(@subject.opponents_unit.random_target, item), item)
+      else
+        invoke_item_reflect_state(target, item)
+      end
+    end
+  end # invoke_reflect_state
+
+end # Scene_Battle
+
+#==============================================================================|

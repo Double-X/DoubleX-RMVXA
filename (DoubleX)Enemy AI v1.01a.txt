@@ -1,0 +1,531 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Enemy AI v1.01a                                            |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.01a(GMT 0200 18-2-2014):                                               |
+#    - Added instructions and examples of writting conditions in battle events |
+#    - Added attr_accessor :skill_id_used_time_hash under module Enemy_AI      |
+#    - Added method self.skill_used_times_reset under module Enemy_AI          |
+#    - Aliased method update, battle_start and use_item under class            |
+#      Scene_Battle                                                            |
+#    - Added method last_subject under class Scene_Battle                      |
+#    v1.00a(GMT 0700 9-2-2014):                                                |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    None other than not claiming this script as created by anyone except      |
+#    DoubleX or his alias                                                      |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - none                                                                    |
+#    Knowledge:                                                                |
+#    - Decent scripting knowledge                                              |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Allows users to set enemy actions triggered by game variables           |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between ¡¿ Materials and ¡¿ Main. Save to take effect.            |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Scripts aliasing method make_actions under class Game_Enemy may have      |
+#    compatibility issues with this script                                     |
+#    Place this script above those aliasing any of these methods if possible   |
+#==============================================================================|
+
+$imported = {} if $imported.nil?
+$imported["DoubleX RMVXA Enemy AI"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#  * This script is designed to be a tool for users with decent scripting      |
+#    knowledge to make custom enemy actions triggered by game variables.       |
+#    Each enemy in each troop has an associated varaible deciding their actions|
+#    to be used. Conditions should be written in battle events and actions     |
+#    should be written in this script. Action patterns should be ignored also. |
+#    Conditions can also be written in this script if users want or need to.   |
+#    - In short, this script bridges the gap between conditions and actions.   |
+#------------------------------------------------------------------------------|
+#  * Some useful stuffs                                                        |
+#    - $data_skills[x]                                                         |
+#      Skill with id x                                                         |
+#    - $game_switches[x]                                                       |
+#      Switch with id x                                                        |
+#    - $game_troop.members[x]                                                  |
+#      Troop member with index x                                               |
+#    - $game_variables[x]                                                      |
+#      Variable with id x                                                      |
+#    - SceneManager.scene.last_subject                                         |
+#      Script call returning the last action subject in the current battle     |
+#    - DoubleX_RMVXA::Enemy_AI.custom_conditions                               |
+#      Script call calling method custom_conditions under module Enemy_AI      |
+#      custom_conditions are conditions written by users in this script        |
+#    - DoubleX_RMVXA::Enemy_AI.skill_id_used_time_hash[x][y]                   |
+#      Number of times skill with id y + 1 used by troop member with index x   |
+#------------------------------------------------------------------------------|
+#  * Some battle event condition writing instructions                          |
+#    - Possible structure template of script checking all $game_troop.members  |
+#      $game_troop.members.each_index { |index|                                |
+#        if condition[index]                                                   |
+#          if deterministic                                                    |
+#            $game_variables[VARIABLE_ID_LIST[index]] = x                      |
+#          else                                                                |
+#            varaible_value_list = [v1, v2, v3, ..., vn]                       |
+#            value_probability_list = [p1, p2, p3, ..., pn]                    |
+#            varaible_value_list.each_with_index { |v, i|                      |
+#              return $game_variables[VARIABLE_ID_LIST[index]] if rand * 1.0 < value_probability_list[i]|
+#            }                                                                 |
+#          end                                                                 |
+#        end                                                                   |
+#      }                                                                       |
+#      condition[index] is the condition written by users and deterministic is |
+#      a truth value, game switch or custom method deciding if skill picking is|
+#      deterministic                                                           |
+#      If VARIABLE_SET_SKILL_ID_SWITCH_ID > 0 and                              |
+#      $game_switches[VARIABLE_SET_SKILL_ID_SWITCH_ID] is true, x and vi should|
+#      be the ids of skills to be used, else they should follow the mapping in |
+#      VARIABLE_VALUE_HASH                                                     |
+#    - Possible condition template of script checking all $game_troop.members  |
+#      custom_party_members = []                                               |
+#      $game_party.battle_members.each { |member|                              |
+#        custom_party_members.push(member) if condition                        |
+#      }                                                                       |
+#      custom_party_members is an array having specific current active party   |
+#      members while condition decides which active party members are included |
+#      custom_troop_members = []                                               |
+#      $game_troop.members.each { |member|                                     |
+#        custom_troop_members.push(member) if condition                        |
+#      }                                                                       |
+#      custom_troop_members is an array having specific current troop members  |
+#      while condition decides which troop members are included                |
+#      custom_members is either custom_party_members or custom_troop_members   |
+#      custom_members.each { |member|                                          |
+#        return true if member.status                                          |
+#      }                                                                       |
+#      return false                                                            |
+#      Return true if anyone in custom_members has true value of status        |
+#      custom_members.each { |member|                                          |
+#        return false if !member.status                                        |
+#      }                                                                       |
+#      return true                                                             |
+#      Return false if anyone in custom_members has false value of status      |
+#      status can be one of the default methods below or other custom methods: |
+#      Under class Game_BattlerBase                                            |
+#      state?(state_id) - battler has state with id state id?                  |
+#      death_state? - battler has death state?                                 |
+#      state_resist?(state_id) - battler resists state with id state id?       |
+#      skill_type_sealed?(stype_id) - battler can use skill type with id       |
+#                                     stype_id?                                |
+#      skill_sealed?(skill_id) - battler's skill with id skill_id is sealed?   |
+#      equip_wtype_ok?(wtype_id) - battler can equip weapon type with id       |
+#                                  wtype_id?                                   |
+#      equip_atype_ok?(atype_id) - battler can equip armor type with id        |
+#                                  atype_id?                                   |
+#      equip_type_fix?(etype_id) - battler's equip type with id etype_id is    |
+#                                  locked?                                     |
+#      equip_type_sealed?(etype_id) - battler's equip type with id etype_id is |
+#                                     sealed?                                  |
+#      dual_wield? - battler's slot typeis dual wield?                         |
+#      special_flag(flag_id) - battler has special flag with id flag_id?       |
+#      party_ability(ability_id) - battler has party_ability with id           |
+#      ability_id?                                                             |
+#      auto_battle? - battler has special flag auto battle?                    |
+#      guard? - battler has special flag guard and can move?                   |
+#      substitute?  - battler has special flag substitute and can move?        |
+#      preserve_tp? - battler has special flag preserve tp?                    |
+#      hidden? - battler's escaped?                                            |
+#      exist? - battler's not escaped?                                         |
+#      dead? - battler's dead?                                                 |
+#      alive? - battler's alive?                                               |
+#      normal? - battler has no restrictions from states?                      |
+#      inputable? - battler can input commands?(should be used by actors only) |
+#      movable? - battler can act?                                             |
+#      confusion? - battler has restrictions between the 1st and 3rd ones from |
+#                   states?                                                    |
+#      skill_cost_payable?(skill) - battler can pay skill skill's cost?        |
+#      occasion_ok?(item) - skill or item item can be used without checking    |
+#                           battler?                                           |
+#      usable_item_conditions_met?(item) - battler's possible to use item item?|
+#      skill_conditions_met?(skill) - battler can use skill skill?             |
+#      item_conditions_met?(item) - battler can use item item?                 |
+#      usable?(item) - battler can use skill or item item?                     |
+#      equippable?(item) - battler can equip item?                             |
+#                          (should be used by actors only)                     |
+#      attack_usable? - battler can use attack?                                |
+#      guard_usable? - battler can use guard?                                  |
+#      Under class Game_Battler                                                |
+#      state_addable?(state_id) - state with id state_id can be added to       |
+#      battler?                                                                |
+#      state_removed?(state_id) - state with id state_id removed from battler? |
+#      state_restrict?(state_id) - state with id state_id removed from battler |
+#                                  by restrictions?                            |
+#      buff?(param_id) - battler has buff on param with id param_id?           |
+#      debuff?(param_id) - battler has debuff on param with id param_id?       |
+#      buff_max?(param_id) - battler's buff on param with id param_id reaches  |
+#                            maximum level?                                    |
+#      debuff_max?(param_id) - battler's debuff on param with id param_id      |
+#                              reaches maximum level?                          |
+#      item_has_any_valid_effects?(user, item) - user's item has any valid     |
+#                                                effect on battler?            |
+#      opposite?(battler) - battler is hostile?                                |
+#      Under class Game_Actor                                                  |
+#      max_level? - actor's level is maximum?                                  |
+#      equip_change_ok?(slot_id) - actor can change equip in equip slot with id|
+#                                  slot_id?                                    |
+#      skill_wtype_ok?(skill) - actor has skill-required weapon for skill      |
+#                               skill?                                         |
+#      wtype_equipped?(wtype_id) - actor equipped weapon type with id wtype_id?|
+#      battle_member? - actor is in battle?                                    |
+#      skill_learn?(skill) - actor has learned skill skill?                    |
+#      Under class Game_Enemy(these methods shouldn't be used here actually)   |
+#      conditions_met?(action) - enemy's action action's conditions met?       |
+#      conditions_met_turns?(param1, param2) - enemy's action's turn conditions|
+#                                              met?                            |
+#      conditions_met_hp?(param1, param2) - enemy's action's hp conditions met?|
+#      conditions_met_mp?(param1, param2) - enemy's action's mp conditions met?|
+#      conditions_met_state?(param1, param2) - enemy's action's state          |
+#                                              conditions met?                 |
+#      conditions_met_party_level?(param1, param2) - enemy's action's party    |
+#                                                    level conditions met?     |
+#      conditions_met_switch?(param1, param2) - enemy's action's switch        |
+#                                               conditions met?                |
+#      action_valid?(action) - enemy's action action's valid?                  |
+#      status can also be one of these default methods or other custom methods |
+#      if used with comparison operator >, >=, ==, <=, < or !=, that is,       |
+#      greater than, greater than or equal to, equal to, less than or equal to,|
+#      less than or not equal to:                                              |
+#      Under class Game_BattlerBase                                            |
+#      hp - battler's hp                                                       |
+#      mp - battler's mp                                                       |
+#      tp - battler's tp                                                       |
+#      hp - battler's hp                                                       |
+#      mhp - battler's mhp                                                     |
+#      mmp - battler's mmp                                                     |
+#      atk - battler's atk                                                     |
+#      def - battler's def                                                     |
+#      mat - battler's mat                                                     |
+#      mdf - battler's mdf                                                     |
+#      agi - battler's agi                                                     |
+#      luk - battler's luk                                                     |
+#      hit - battler's hit                                                     |
+#      eva - battler's eva                                                     |
+#      cri - battler's cri                                                     |
+#      cev - battler's cev                                                     |
+#      mev - battler's mev                                                     |
+#      mrf - battler's mrf                                                     |
+#      cnt - battler's cnt                                                     |
+#      hrg - battler's hrg                                                     |
+#      mrg - battler's mrg                                                     |
+#      trg - battler's trg                                                     |
+#      tgr - battler's tgr                                                     |
+#      grd - battler's grd                                                     |
+#      rec - battler's rec                                                     |
+#      pha - battler's pha                                                     |
+#      mcr - battler's mcr                                                     |
+#      tcr - battler's tcr                                                     |
+#      pdr - battler's pdr                                                     |
+#      mdr - battler's mdr                                                     |
+#      fdr - battler's fdr                                                     |
+#      exr - battler's exr                                                     |
+#      element_rate(element_id) - battler's element with id element_id's rate  |
+#      debuff_rate(param_id) - battler's debuff param with id param_id's rate  |
+#      state_rate(state_id) - battler's state with id state_id's rate          |
+#      atk_states_rate(state_id) - battler's attack state with id state_id's   |
+#                                  rate                                        |
+#      atk_speed - battler's attack speed                                      |
+#      atk_times_add - battler's additional attack times                       |
+#      hp_rate - battler's hp rate                                             |
+#      mp_rate - battler's mp rate                                             |
+#      tp_rate - battler's tp rate                                             |
+#      confusion_level - battler's restriction number(4 returns 0 here)        |
+#      restriction - battler's largest restriction number                      |
+#      skill_mp_cost(skill) battler's skill skill's mp cost                    |
+#      skill_tp_cost(skill) battler's skill skill's tp cost                    |
+#      Under class Game_Battler                                                |
+#      
+#------------------------------------------------------------------------------|
+#  * Some battle event condition writing examples                              |
+#                                                                              |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module Enemy_AI
+
+  #----------------------------------------------------------------------------|
+  #  Add custom conditions here or in battle events                            |
+  #----------------------------------------------------------------------------|
+
+
+
+#------------------------------------------------------------------------------|
+
+  #----------------------------------------------------------------------------|
+  #  Enemy and variable lists                                                  |
+  #----------------------------------------------------------------------------|
+
+    # Game switch id getting rid of VARIABLE_VALUE_HASH and custom methods
+    # Sets actions of $game_troop.members[x] as skill with skill id being the
+    # value of $game_variables[VARIABLE_ID_LIST[x]] when
+    # $game_switches[VARIABLE_SET_SKILL_ID_SWITCH_ID] is true
+    VARIABLE_SET_SKILL_ID_SWITCH_ID = 0
+    # Example:
+    # VARIABLE_SET_SKILL_ID_SWITCH_ID = 1
+    # VARIABLE_ID_LIST = [1, 2, 3, 4, 5, 6, 7, 8]
+    # Sets actions of $game_troop.members[x] as skill with skill id being the
+    # value of $game_variables[x + 1] when $game_switches[1] is true
+
+    # (v1.01a+)Id list of enemies using custom action picking conditions
+    ENEMY_ID_LIST = [0]
+    # Example: [1, 2] includes enemy ids 1 and 2
+
+    # (v1.01a+)Set INCLUDE_ALL_ENEMY as true to get rid of ENEMY_ID_LIST
+    # All enemies will use custom action picking conditions
+    INCLUDE_ALL_ENEMY = false
+
+    # Id list of variables associated with enemy indices
+    # $game_troop.members[x] is associated with VARIABLE_ID_LIST[x]
+    # The size of the troops must not be greater than that of VARIABLE_ID_LIST
+    VARIABLE_ID_LIST = [0, 0, 0, 0, 0, 0, 0, 0]
+    # Example:
+    # VARIABLE_ID_LIST = [1, 2, 3, 4, 5, 6, 7, 8]
+    # includes variable ids 1 to 8
+    # $game_troop.members[x] is associated with $game_variables[x + 1]
+
+    # Value hash of variables with their ids in VARIABLE_ID_LIST
+    # Each value of a variable calls a method for its associated troop member
+    # This hash won't be used if $game_switches[VARIABLE_SET_SKILL_ID_SWITCH_ID]
+    # is true
+    VARIABLE_VALUE_HASH = {
+      VARIABLE_ID_LIST[0] => [],
+      VARIABLE_ID_LIST[1] => [],
+      VARIABLE_ID_LIST[2] => [],
+      VARIABLE_ID_LIST[3] => [],
+      VARIABLE_ID_LIST[4] => [],
+      VARIABLE_ID_LIST[5] => [],
+      VARIABLE_ID_LIST[6] => [],
+      VARIABLE_ID_LIST[7] => [],
+    }
+    # Example:
+    # VARIABLE_ID_LIST[0] => [1, 2],
+    # VARIABLE_ID_LIST[1] => [3, 4],
+    # VARIABLE_ID_LIST[2] => [5, 6],
+    # VARIABLE_ID_LIST[3] => [7, 8],
+    # VARIABLE_ID_LIST[4] => [9, 10],
+    # VARIABLE_ID_LIST[5] => [11, 12],
+    # VARIABLE_ID_LIST[6] => [13, 14],
+    # VARIABLE_ID_LIST[7] => [15, 16],
+    # Sets the values of $game_variables[VARIABLE_ID_LIST[x]] calling respective
+    # methods for $game_troops.members[x] as 2x + 1 and 2x + 2 respectively
+
+  #----------------------------------------------------------------------------|
+  #  Method name settings                                                      |
+  #----------------------------------------------------------------------------|
+
+    # Method names associated with variable value hash in VARIABLE_VALUE_HASH
+    # "self." + ENEMY_INDEX + "enemy index" + VARIABLE_VALUE + "variable value"
+    # Default of ENEMY_INDEX and VARIABLE_VALUE are "enemy_index_" and
+    # "_variable_value_" respectively
+    # These methods won't be called if
+    # $game_switches[VARIABLE_SET_SKILL_ID_SWITCH_ID] is true
+    ENEMY_INDEX = "enemy_index_"
+    VARIABLE_VALUE = "_variable_value_"
+    # Example: self.enemy_index_8_variable_value_0
+    # Method name associated with value 0 of variable associated with enemy
+    # index 8
+
+    # make_actions(enemy_index, skill_id) sets all actions of enemy with index
+    # being enemy_index to be skill with id skill_id
+    # Example: make_actions(8, 0)
+    # Sets all actions of enemy with index 8 to be skill with id 0
+
+    # make_action_list(enemy_index, skill_id_list) sets all actions of enemy
+    # with index being enemy_index to be skills with id in skill_id_list and
+    # @actions[i] will be set as
+    # $data_skills[skill_id_list[i % skill_id_list.size]]
+    # Example: make_action_list(8, [0, 1000])
+    # Sets all actions of enemy with index 8 to be skill with id 0 and 1000 and
+    # @actions will be $data_skills[0], $data_skills[1000], $data_skills[0], ...
+
+  #----------------------------------------------------------------------------|
+  #  Example methods of values of variables associated with enemy indices      |
+  #----------------------------------------------------------------------------|
+
+    # ENEMY_INDEX = "enemy_index_" and VARIABLE_VALUE = "_variable_value_" are
+    # used
+
+    # Method of value 0 of variable associated with enemy index 8
+    # This method sets all actions as skill with id 1
+    def self.enemy_index_8_variable_value_0
+      make_actions(8, 1)
+    end # self.enemy_index_8_variable_value_0
+
+    # Method of value 0 of variable associated with enemy index 9
+    # This method sets all actions as skills with id 1 and 2 and @actions will
+    # be $data_skills[1], $data_skills[2], $data_skills[1], ...
+    def self.enemy_index_9_variable_value_0
+      make_action_list(9, [1, 2])
+    end # self.enemy_index_9_variable_value_0
+
+#------------------------------------------------------------------------------|
+
+  #----------------------------------------------------------------------------|
+  #  Add custom action methods here                                            |
+  #----------------------------------------------------------------------------|
+
+
+
+#------------------------------------------------------------------------------|
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)Hash storing number of times skills used by troop members        |
+  #----------------------------------------------------------------------------|
+
+    # (v1.01a+)stores the number of times skills used by enemies
+    attr_accessor :skill_id_used_time_hash
+
+    # (v1.01a+)Creates skill_id_used_time_hash
+    @skill_id_used_time_hash = {}
+    8.times do |index|
+      @skill_id_used_time_hash[index] = []
+      999.times do
+        @skill_id_used_time_hash[index].push(0)
+      end
+    end
+
+    # (v1.01a+)Sets the all the number of times skills used by all enemies to 0
+    def self.skill_used_times_reset
+      8.times do |index|
+        @skill_id_used_time_hash[index].each { |skill_id|
+          skill_id = 0
+        }
+      end
+    end # self.skill_used_times_reset
+
+  #----------------------------------------------------------------------------|
+  #  Method calls of variable values of variables associated with enemy indices|
+  #----------------------------------------------------------------------------|
+
+    # Calls custom action methods for enemy with index enemy_index
+    # make_actions_enemy_ai is aliased from the original make_actions
+    def self.enemy_id_list(enemy_index)
+      if VARIABLE_SET_SKILL_ID_SWITCH_ID > 0 && $game_switches[VARIABLE_SET_SKILL_ID_SWITCH_ID]
+        make_actions(enemy_index, $game_variables[VARIABLE_ID_LIST[enemy_index]])
+      elsif VARIABLE_VALUE_HASH[VARIABLE_ID_LIST[enemy_index]] && VARIABLE_VALUE_HASH[VARIABLE_ID_LIST[enemy_index]].size > 0 && VARIABLE_VALUE_HASH[VARIABLE_ID_LIST[enemy_index]].find { |variable| variable == $game_variables[VARIABLE_ID_LIST[enemy_index]] }
+        eval(ENEMY_INDEX + enemy_index.to_s + VARIABLE_VALUE + $game_variables[VARIABLE_ID_LIST[enemy_index]].to_s)
+      else
+        $game_troop.members[enemy_index].make_actions_enemy_ai
+      end
+    end # self.enemy_id_list
+
+    # Sets actions of enemies with index enemy_index as skill with id skill_id
+    # make_ai_actions is a clone method under class Game_Enemy of make_actions under class Game_Battler
+    # current_action_list is a new method that returns @actions
+    def self.make_actions(enemy_index, skill_id)
+      $game_troop.members[enemy_index].make_ai_actions
+      $game_troop.members[enemy_index].current_action_list.size.times do |i|
+        $game_troop.members[enemy_index].current_action_list[i].set_skill(skill_id)
+      end
+    end # self.make_actions
+
+    # Sets actions of enemies with index enemy_index as skill with id in skill_id_list
+    # make_ai_actions is a clone method under class Game_Enemy of make_actions under class Game_Battler
+    # current_action_list is a new method that returns @actions
+    def self.make_action_list(enemy_index, skill_id_list)
+      $game_troop.members[enemy_index].make_ai_actions
+      $game_troop.members[enemy_index].current_action_list.size.times do |i|
+        $game_troop.members[enemy_index].current_action_list[i].set_skill(skill_id_list[i % skill_id_list.size])
+      end
+    end # self.make_action_list
+
+  end # Enemy_AI
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+class Game_Enemy < Game_Battler
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_actions                                                |
+  #----------------------------------------------------------------------------|
+  alias make_actions_enemy_ai make_actions
+  def make_actions
+    # This part is rewritten by this script to use custom action picking methods
+    DoubleX_RMVXA::Enemy_AI::INCLUDE_ALL_ENEMY || DoubleX_RMVXA::Enemy_AI::ENEMY_ID_LIST.size > 0 && DoubleX_RMVXA::Enemy_AI::ENEMY_ID_LIST.find{ |id| id == @enemy_id } ? DoubleX_RMVXA::Enemy_AI.enemy_id_list(@index) : make_actions_enemy_ai
+    #
+  end # make_actions
+
+  #----------------------------------------------------------------------------|
+  #  New method: make_ai_actions                                               |
+  #----------------------------------------------------------------------------|
+  def make_ai_actions
+    clear_actions
+    return unless movable?
+    @actions = Array.new(make_action_times) { Game_Action.new(self) }
+  end # make_ai_actions
+
+  #----------------------------------------------------------------------------|
+  #  New method: current_action_list                                           |
+  #----------------------------------------------------------------------------|
+  def current_action_list
+    @actions
+  end # current_action_list
+
+end # Game_Enemy
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)Alias method: update                                             |
+  #----------------------------------------------------------------------------|
+  alias update_enemy_ai update
+  def update
+    update_enemy_ai
+    # This part is added by this script to store the last non nil @subject
+    @last_subject = @subject if @subject && !BattleManager.judge_win_loss
+    #
+  end # update
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)Alias method: battle_start                                       |
+  #----------------------------------------------------------------------------|
+  alias battle_start_enemy_ai battle_start
+  def battle_start
+    # This part is added by this script to reset @skill_id_used_time_hash
+    DoubleX_RMVXA::Enemy_AI.skill_used_times_reset
+    #
+    battle_start_enemy_ai
+  end # battle_start
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)Alias method: use_item                                           |
+  #----------------------------------------------------------------------------|
+  alias use_item_enemy_ai use_item
+  def use_item
+    use_item_enemy_ai
+    # This part is added by this script to added the current skill used time of the current enemy by 1
+    DoubleX_RMVXA::Enemy_AI.skill_id_used_time_hash[@subject.index][@subject.current_action.item.id - 1] += 1 if @subject.enemy?
+    #
+  end # use_item
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)New method: last_subject                                         |
+  #----------------------------------------------------------------------------|
+  def last_subject
+    @last_subject
+  end # last_subject
+
+end # Scene_Battle
+
+#==============================================================================|

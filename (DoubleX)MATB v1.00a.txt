@@ -1,0 +1,489 @@
+#==============================================================================|
+#  ** Script Info                                                              |
+#------------------------------------------------------------------------------|
+#  * Script Name                                                               |
+#    DoubleX RMVXA Min ATB                                                     |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    To be the smallest ATB system script with the fewest features ever        |
+#------------------------------------------------------------------------------|
+#  * Terms Of Use                                                              |
+#    You shall keep this script's Script Info part's contents intact           |
+#    You shalln't claim that this script is written by anyone other than       |
+#    DoubleX or his aliases                                                    |
+#    None of the above applies to DoubleX or his aliases                       |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Abilities:                                                                |
+#    1. Little RGSS3 scripting proficiency to fully utilize this script        |
+#------------------------------------------------------------------------------|
+#  * Instructions                                                              |
+#    1. Open the script editor and put this script into an open slot between   |
+#       Materials and Main, save to take effect.                               |
+#------------------------------------------------------------------------------|
+#  * Links                                                                     |
+#    Script Usage 101:                                                         |
+#    1. forums.rpgmakerweb.com/index.php?/topic/32752-rmvxa-script-usage-101/  |
+#    2. rpgmakervxace.net/topic/27475-rmvxa-script-usage-101/                  |
+#    This script:                                                              |
+#    1. http://pastebin.com/PJtqgJ1y                                           |
+#    Mentioned Patreon Supporters:                                             |
+#    https://www.patreon.com/posts/71738797                                    |
+#------------------------------------------------------------------------------|
+#  * Authors                                                                   |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00a(GMT 0800 14-10-2015):                                              |
+#    1. 1st version of this script finished                                    |
+#==============================================================================|
+
+#==============================================================================|
+#  ** Script Call Info                                                         |
+#------------------------------------------------------------------------------|
+#  * Battler manipulations                                                     |
+#    1. matb_val                                                               |
+#       - Returns the battler's atb fill percentage                            |
+#    2. reset_matb_val                                                         |
+#       - Clears all battler's actions and empties the battler's atb bar also  |
+#==============================================================================|
+
+($doublex_rmvxa ||= {})[:MATB] = "v1.00a"
+
+#==============================================================================|
+#  ** Script Configurations                                                    |
+#     You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+
+  module MATB
+
+    # Sets the base atb fill time from empty to full as BASE_FILL_T seconds
+    # If BASE_FILL_T_VAR_ID is a natural number, the value of variable with id
+    # BASE_FILL_T_VAR_ID will be used instead of using BASE_FILL_T
+    BASE_FILL_T = 5
+    BASE_FILL_T_VAR_ID = 0
+
+    # Sets the maximum turn clock unit as MAX_TURN_UNIT
+    # If MAX_TURN_UNIT_VAR_ID is a natural number, the value of variable with id
+    # MAX_TURN_UNIT_VAR_ID will be used instead of using MAX_TURN_UNIT
+    MAX_TURN_UNIT = 5
+    MAX_TURN_UNIT_VAR_ID = 0
+
+    # Sets the 1st atb bar color as text color ATB_BAR_COLOR1
+    # If ATB_BAR_COLOR1_VAR_ID is a natural number, the value of variable with
+    # id ATB_BAR_COLOR1_VAR_ID will be used instead of using ATB_BAR_COLOR1
+    # The value of variable with id ATB_BAR_COLOR1_VAR_ID should remain the same
+    # during battles to ensure proper atb bar color displays
+    ATB_BAR_COLOR1 = 7
+    ATB_BAR_COLOR1_VAR_ID = 0
+
+    # Sets the 2nd atb bar color as text color ATB_BAR_COLOR2
+    # If ATB_BAR_COLOR2_VAR_ID is a natural number, the value of variable with
+    # id ATB_BAR_COLOR2_VAR_ID will be used instead of using ATB_BAR_COLOR2
+    # The value of variable with id ATB_BAR_COLOR2_VAR_ID should remain the same
+    # during battles to ensure proper atb bar color displays
+    ATB_BAR_COLOR2 = 8
+    ATB_BAR_COLOR2_VAR_ID = 0
+
+#==============================================================================|
+#  ** Script Implementations                                                   |
+#     You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+#  * Script Support Info:                                                      |
+#    1. Prerequisites                                                          |
+#       - Basic atb concept and default RMVXA battle system knowledge          |
+#       - Some RGSS3 scripting proficiency to fully comprehend this script     |
+#    2. Method documentation                                                   |
+#       - The 1st part describes why this method's rewritten/aliased for       |
+#         rewritten/aliased methods or what the method does for new methods    |
+#       - The 2nd part describes what the arguments of the method are          |
+#       - The 3rd part informs which version rewritten, aliased or created this|
+#         method                                                               |
+#       - The 4th part informs whether the method's rewritten or new           |
+#       - The 5th part describes how this method works for new methods only,   |
+#         and describes the parts added, removed or rewritten for rewritten or |
+#         aliased methods only                                                 |
+#       Example:                                                               |
+# #--------------------------------------------------------------------------| |
+# #  Why rewrite/alias/What this method does                                 | |
+# #--------------------------------------------------------------------------| |
+# # *argv: What these variables are                                            |
+# # &argb: What this block is                                                  |
+# def def_name(*argv, &argb) # Version X+; Rewrite/New                         |
+#   # Added/Removed/Rewritten to do something/How this method works            |
+#   def_name_code                                                              |
+#   #                                                                          |
+# end # def_name                                                               |
+#------------------------------------------------------------------------------|
+
+    def self.base_fill_t
+      return BASE_FILL_T if BASE_FILL_T_VAR_ID <= 0
+      $game_variables[BASE_FILL_T_VAR_ID]
+    end # base_fill_t
+
+    def self.max_turn_unit
+      return MAX_TURN_UNIT * Graphics.frame_rate if MAX_TURN_UNIT_VAR_ID <= 0
+      $game_variables[MAX_TURN_UNIT_VAR_ID] * Graphics.frame_rate
+    end # max_turn_unit
+
+    def self.atb_bar_color1
+      return ATB_BAR_COLOR1 if ATB_BAR_COLOR1_VAR_ID <= 0
+      $game_variables[ATB_BAR_COLOR1_VAR_ID]
+    end # atb_bar_color1
+
+    def self.atb_bar_color2
+      return ATB_BAR_COLOR2 if ATB_BAR_COLOR2_VAR_ID <= 0
+      $game_variables[ATB_BAR_COLOR2_VAR_ID]
+    end # atb_bar_color2
+
+  end # MATB
+
+end # DoubleX_RMVXA
+
+#------------------------------------------------------------------------------|
+#  * Reimplements the the whole battle flow to run the atb system              |
+#------------------------------------------------------------------------------|
+class << BattleManager # Edit
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  attr_reader :action_battlers # Read by Scene_Battle to execute actions
+  attr_writer :actor_index # Accessed by Scene_Battle to setup actors
+
+  #----------------------------------------------------------------------------|
+  #  Always lets actions to be executed whenever the atb frame update runs     |
+  #----------------------------------------------------------------------------|
+  def in_turn? # Rewrite
+    SceneManager.scene.matb_update? # Rewritten
+  end # in_turn?
+
+  #----------------------------------------------------------------------------|
+  #  Stops making battlers' actions when opening the party command window      |
+  #----------------------------------------------------------------------------|
+  alias input_start_matb input_start
+  def input_start
+    @phase = :input # Added
+    input_start_matb
+  end # input_start
+
+  alias battle_start_matb battle_start
+  def battle_start
+    battle_start_matb
+    matb_battle_start # Added
+  end # battle_start
+
+  def matb_battle_start # New
+    start = @preemptive ? :preempt : @surprise ? :surprise : :norm
+    ($game_party.battle_members + $game_troop.members).each { |mem|
+      mem.matb_start(start)
+    }
+  end # matb_battle_start
+
+  def matb_update? # New
+    return false if $game_party.all_dead? || $game_troop.all_dead? || 
+    $game_message.visible
+    @phase && @phase != :init
+  end # matb_update?
+
+  def matb_update # New
+    ($game_party.alive_members + $game_troop.alive_members).each { |mem|
+      mem.matb_update
+    }
+  end # matb_update
+
+end # BattleManager
+
+#------------------------------------------------------------------------------|
+#  * Reimplements the actor inputability check and fixes bugs and edge cases   |
+#------------------------------------------------------------------------------|
+class Game_BattlerBase # Edit
+
+  alias hide_matb hide
+  def hide
+    hide_matb
+    reset_matb_val # Added
+  end # hide
+
+  alias inputable_matb? inputable?
+  def inputable?
+    return false if @actions.all? { |act| act.item }
+    inputable_matb? && @actions.size > 0 && actor? # Rewritten
+  end # inputable?
+
+end # Game_BattlerBase
+
+#------------------------------------------------------------------------------|
+#  * Implements the battler's atb actions, control flows and logics            |
+#------------------------------------------------------------------------------|
+class Game_Battler < Game_BattlerBase # Edit
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  attr_accessor :matb_val_change # The atb value change flag
+  attr_reader :matb_val # The battler's atb value
+
+  def update_state_turns # Rewrite
+    matb_update_state_turns(2) # Rewritten
+  end # update_state_turns
+
+  alias initialize_matb initialize
+  def initialize
+    initialize_matb
+    # Added to fix nil action input index bugs and edge cases as well
+    clear_actions
+    @matb_val = 0.0
+    #
+  end # initialize
+
+  alias on_restrict_matb on_restrict
+  def on_restrict
+    on_restrict_matb
+    # Added to fix nil action battlers bugs and edge cases as well
+    reset_matb_val if BattleManager.action_battlers
+    #
+  end # on_restrict
+
+  alias make_actions_matb make_actions
+  def make_actions
+    make_actions_matb
+    # Added
+    return if BattleManager.action_battlers.include?(self)
+    BattleManager.action_battlers << self
+    #
+  end # make_actions
+
+  alias on_action_end_matb on_action_end
+  def on_action_end
+    on_action_end_matb
+    # Added
+    matb_update_state_turns(1)
+    reset_matb_val
+    #
+  end # on_action_end
+
+  alias on_turn_end_matb on_turn_end
+  def on_turn_end
+    on_turn_end_matb
+    remove_buffs_auto # Added
+  end # on_turn_end
+
+  #----------------------------------------------------------------------------|
+  #  Ensures battlers added after the battle starts will start with 0 atb value|
+  #----------------------------------------------------------------------------|
+  alias on_battle_end_matb on_battle_end
+  def on_battle_end
+    on_battle_end_matb
+    @matb_val = 0.0 # Added
+  end # on_battle_end
+
+  # start: The battle start type
+  def matb_start(start) # New
+    @matb_val = movable? && (start == :preempt && actor? || 
+    start == :surprise && enemy?) ? 100.0 : 0.0
+    @matb_val_change = true
+  end # matb_start
+
+  # timing: The state's auto removal timing
+  def matb_update_state_turns(timing) # New
+    states.each { |state|
+      next if state.auto_removal_timing != timing
+      @state_turns[state.id] -= 1 if @state_turns[state.id] > 0
+    }
+  end # matb_update_state_turns
+
+  def matb_update # New
+    return if @matb_val >= 100.0 || inputable? || restriction > 3
+    @matb_val_change = @matb_val != @matb_val += agi / 100.0
+    return unless @matb_val >= 100.0
+    @matb_val = 100.0
+    make_actions
+  end # matb_update
+
+  def reset_matb_val # New
+    @matb_val = 0.0
+    @matb_val_change = true
+    clear_actions
+    BattleManager.action_battlers.delete(self)
+    BattleManager.clear_actor if actor? && BattleManager.actor == self
+  end # reset_matb_val
+
+end # Game_Battler
+
+#------------------------------------------------------------------------------|
+#  * Resets all party members' atb values upon failed party escape attempts    |
+#------------------------------------------------------------------------------|
+class Game_Party < Game_Unit # Edit
+
+  alias clear_actions_matb clear_actions
+  def clear_actions
+    clear_actions_matb
+    members.each { |mem| mem.reset_matb_val } # Added
+  end # clear_actions
+
+end # Game_Party
+
+class Window_BattleStatus < Window_Selectable # Edit
+
+  def draw_gauge_area_with_tp(rect, actor) # Rewrite
+    # Rewritten
+    draw_actor_hp(actor, rect.x + 0, rect.y, 60)
+    draw_actor_mp(actor, rect.x + 64, rect.y, 60)
+    draw_actor_tp(actor, rect.x + 128, rect.y, 52)
+    draw_matb_bar(rect, actor, true) if actor
+    #
+  end # draw_gauge_area_with_tp
+
+  def draw_gauge_area_without_tp(rect, actor) # Rewrite
+    # Rewritten
+    draw_actor_hp(actor, rect.x + 0, rect.y, 72)
+    draw_actor_mp(actor, rect.x + 80, rect.y, 72)
+    draw_matb_bar(rect, actor, false) if actor
+    #
+  end # draw_gauge_area_without_tp
+
+  def refresh_matb_bars # New
+    display_tp = $data_system.opt_display_tp
+    item_max.times { |index|
+      next unless (actor = $game_party.battle_members[index]) && 
+      actor.matb_val_change
+      draw_matb_bar(gauge_area_rect(index), actor, display_tp)
+      actor.matb_val_change = false
+    }
+  end # refresh_matb_bars
+
+  # rect: The atb bar's rect
+  # actor: The atb bar's owner
+  # display_tp: The tp bar display flag
+  def draw_matb_bar(rect, actor, display_tp) # New
+    display_tp ? (x, w = rect.x + 184, 36) : (x, w = rect.x + 160, 60)
+    draw_gauge(x, rect.y, w, actor.matb_val / 100.0, 
+    text_color(DoubleX_RMVXA::MATB.atb_bar_color1), 
+    text_color(DoubleX_RMVXA::MATB.atb_bar_color2))
+    change_color(system_color)
+    draw_text(x, rect.y, 30, line_height, "AP")
+  end # draw_matb_bar
+
+end # Window_BattleStatus
+
+#------------------------------------------------------------------------------|
+#  * Reconstructs the the whole battle flow to control the atb system          |
+#------------------------------------------------------------------------------|
+class Scene_Battle < Scene_Base # Edit
+
+  #----------------------------------------------------------------------------|
+  #  New private instance variable                                             |
+  #----------------------------------------------------------------------------|
+  # @matb_turn_clock: The turn atb clock with seconds as the unit
+
+  def update_info_viewport # Rewrite
+    # Rewritten
+    move_info_viewport(@party_command_window.active ? 0 : matb_update? ? 64 : 128)
+    #
+  end # update_info_viewport
+
+  def turn_start # Rewrite
+    @party_command_window.close
+    @actor_command_window.close
+    @status_window.unselect
+    # Removed to stop shifting battle phase nor clearing subject
+    @log_window.wait
+    # Removed to stop clearing the log window
+  end # turn_start
+
+  def turn_end # Rewrite
+    ($game_party.battle_members + $game_troop.members).each { |mem|
+      mem.on_turn_end
+      refresh_status
+      @log_window.display_auto_affected_status(mem)
+      @log_window.wait_and_clear
+    }
+    # Added
+    @matb_turn_clock = 0
+    $game_troop.increase_turn
+    #
+    BattleManager.turn_end
+    process_event
+    # Removed to stop opening the party window
+  end # turn_end
+
+  def process_action # Rewrite
+    # Rewritten
+    return process_matb_act(true) if @subject
+    BattleManager.action_battlers.reject { |b| b.inputable? }.each { |b|
+      @subject = b
+      process_matb_act
+      @subject = nil
+    }
+    #
+  end # process_action
+
+  alias start_matb start
+  def start
+    start_matb
+    @matb_turn_clock = 0 # Added
+  end # start
+
+  alias update_matb update
+  def update
+    update_matb
+    matb_update if matb_update? # Added
+  end # update
+
+  alias update_message_open_matb update_message_open
+  def update_message_open
+    update_message_open_matb
+    # Added
+    return if $game_message.busy? || $game_troop.all_dead? || 
+    $game_party.all_dead? 
+    @status_window.open if @status_window.close?
+    #
+  end # update_message_open
+
+  def matb_update? # New
+    return false if scene_changing? || @spriteset.animation? || 
+    @actor_window.active || @enemy_window.active || @skill_window.active || 
+    @item_window.active || @actor_command_window.active || 
+    @party_command_window.active
+    BattleManager.matb_update?
+  end # matb_update?
+
+  def matb_update # New
+    turn_end if (@matb_turn_clock += 1) >= DoubleX_RMVXA::MATB.max_turn_unit
+    BattleManager.matb_update
+    list = BattleManager.action_battlers.select { |b| b.inputable? }.collect! { 
+    |b| b.index }
+    matb_update_windows(list) unless list.include?(@status_window.index)
+    @status_window.refresh_matb_bars
+  end # matb_update
+
+  # list: The list of indices of all the currently inputable actors
+  def matb_update_windows(list) # New
+    @status_window.unselect if @status_window.index >= 0
+    return if list.empty?
+    BattleManager.actor_index = list[0]
+    start_actor_command_selection
+  end # matb_update_windows
+
+  # forced: Whether the action's forced
+  def process_matb_act(forced = false) # New
+    while @subject.current_action
+      @subject.current_action.prepare
+      if @subject.current_action.valid?
+        @status_window.open
+        execute_action
+      end
+      @subject.remove_current_action
+      break if forced
+    end
+    process_action_end unless @subject.current_action
+  end # process_matb_act
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+#==============================================================================|

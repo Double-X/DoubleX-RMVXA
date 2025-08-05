@@ -1,0 +1,1001 @@
+#==============================================================================|
+#  ** Script Info                                                              |
+#------------------------------------------------------------------------------|
+#  * Script Name                                                               |
+#    DoubleX RMVXA Basic ATB                                                   |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    Aids other scripters to learn how a basic atb system script can be written|
+#------------------------------------------------------------------------------|
+#  * Terms Of Use                                                              |
+#    You shall keep this script's Script Info part's contents intact           |
+#    You shalln't claim that this script is written by anyone other than       |
+#    DoubleX or his aliases                                                    |
+#    None of the above applies to DoubleX or his aliases                       |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Abilities:                                                                |
+#    1. Little RGSS3 scripting proficiency to fully utilize this script        |
+#------------------------------------------------------------------------------|
+#  * Instructions                                                              |
+#    1. Open the script editor and put this script into an open slot between   |
+#       Materials and Main, save to take effect.                               |
+#------------------------------------------------------------------------------|
+#  * Author's Notes                                                            |
+#    1. This script's meant to be easy and simple to comprehend and utilize,   |
+#       meaning high level control nor freedom won't be given to users, and    |
+#       advanced scripting proficiencies won't be applied to this script.      |
+#    2. Readability's prioritized over almost everything else in this script to|
+#       aid scripters to learn how a basic atb system can be written.          |
+#    3. State's Auto-removal Timing as Action End becomes right after the state|
+#       owner executed all his/her/its actions to conform with the defaults    |
+#------------------------------------------------------------------------------|
+#  * FAQ                                                                       |
+#    Q1. Will this script be compatible with Victor Engine - Basic Module or   |
+#        Yanfly Engine Ace - Ace Battle Engine?                                |
+#    A1. Probably no, as there's Victor Engine - Active Time Battle, and I've  |
+#        been already supporting both CATB and ECATB scripts.                  |
+#    Q2. Why this script only has global settings and has no notetag at all?   |
+#    A2. To help scripters learn from this script, it's better to focus on the |
+#        core concepts and structures when implementing this script, while     |
+#        adding notetags as well might impede them from grapsing those basics. |
+#    Q3. May you please teach me scripting so I can fully utilize this script? |
+#    A3. You can ask me how to set specific settings to meet your specific     |
+#        needs, but it seems to me that there are many good scripting teachers |
+#        so you may want to ask them instead of me for learning scripting.     |
+#------------------------------------------------------------------------------|
+#  * Links                                                                     |
+#    Script Usage 101:                                                         |
+#    1. forums.rpgmakerweb.com/index.php?/topic/32752-rmvxa-script-usage-101/  |
+#    2. rpgmakervxace.net/topic/27475-rmvxa-script-usage-101/                  |
+#    How to write an atb system script:                                        |
+#    1. http://rpgmaker.net/articles/1127/                                     |
+#    This script:                                                              |
+#    1. http://pastebin.com/5xUZfbbB                                           |
+#    Video:                                                                    |
+#    1. https://www.youtube.com/watch?v=yBNftauefPQ                            |
+#    Mentioned Patreon Supporters:                                             |
+#    https://www.patreon.com/posts/71738797                                    |
+#------------------------------------------------------------------------------|
+#  * Authors                                                                   |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.02c(GMT 1100 5-8-2015):                                                |
+#    1. Fixed nil enemy selection and not executing all confirmed actions bug  |
+#    2. Further improved this script's compactness, efficiency and readability |
+#    v1.02b(GMT 1300 5-7-2015):                                                |
+#    1. Fixed hidden battlers and updating atb while game messages' showing bug|
+#    2. Improved this script's efficiency                                      |
+#    v1.02a(GMT 1200 1-7-2015):                                                |
+#    1. Lets users set the party escape speed in atb fill mode 1               |
+#    2. On action end now triggers when a battler processed all the actions    |
+#    v1.01a(GMT 1100 13-6-2015):                                               |
+#    1. Lets users select the starting atb value formulae                      |
+#    2. Fixed clearing empty log window upon turn start bug                    |
+#    3. Fixed failed party escape not costing anything bug                     |
+#       - This bug's still present in atb fill mode 1                          |
+#    4. Fixed enemies not executing actions under some conditions bug          |
+#    5. Simplified the actor input selection implementations                   |
+#    v1.00a(GMT 1400 10-6-2015):                                               |
+#    1. 1st version of this script finished                                    |
+#==============================================================================|
+
+#==============================================================================|
+#  ** Script Call Info                                                         |
+#------------------------------------------------------------------------------|
+#  * Battler manipulations                                                     |
+#    1. batb_val                                                               |
+#       - Returns the battler's atb fill percentage                            |
+#    2. reset_batb_val(reset)                                                  |
+#       - Clears all battler's actions                                         |
+#       - Empties the battler's atb bar as well if reset returns true          |
+#==============================================================================|
+
+($doublex_rmvxa ||= {})[:BATB] = "v1.02c"
+
+#==============================================================================|
+#  ** Script Configurations                                                    |
+#     You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+
+  module BATB
+
+    # Sets the base atb fill time from empty to full as BASE_FILL_T seconds
+    # If BASE_FILL_T_VAR_ID is a natural number, the value of variable with id
+    # BASE_FILL_T_VAR_ID will be used instead of using BASE_FILL_T
+    BASE_FILL_T = 5
+    BASE_FILL_T_VAR_ID = 0
+
+    # Sets the atb wait condition code as WAIT_COND_CODE
+    # If WAIT_COND_CODE_VAR_ID is a natural number, the value of variable with
+    # id WAIT_COND_CODE_VAR_ID will be used instead of using WAIT_COND_CODE
+    # Available atb wait condition codes:
+    # 0 - Wait only when an action's executing or a message's showing
+    # 1 - Wait when an animation's playing as well
+    # 2 - Wait when the target selection window's shown as well
+    # 3 - Wait when the skill/item selection window's shown as well
+    # 4 - Wait when players can input actions as well
+    WAIT_COND_CODE = 0
+    WAIT_COND_CODE_VAR_ID = 0
+
+    # Sets the code of the unit of the turn clock as TURN_UNIT_CODE
+    # If TURN_UNIT_CODE_VAR_ID is a natural number, the value of variable with
+    # id TURN_UNIT_CODE_VAR_ID will be used instead of using TURN_UNIT_CODE
+    # Available codes of the unit of the turn clock:
+    # 0 - Seconds
+    # 1 - Number of executed actions in the same turn
+    TURN_UNIT_CODE = 0
+    TURN_UNIT_CODE_VAR_ID = 0
+
+    # Sets the maximum turn clock unit as MAX_TURN_UNIT
+    # If MAX_TURN_UNIT_VAR_ID is a natural number, the value of variable with id
+    # MAX_TURN_UNIT_VAR_ID will be used instead of using MAX_TURN_UNIT
+    MAX_TURN_UNIT = 5
+    MAX_TURN_UNIT_VAR_ID = 0
+
+    # Sets the atb fill mode as ATB_FILL_MODE
+    # If ATB_FILL_MODE_VAR_ID is a natural number, the value of variable with id
+    # ATB_FILL_MODE_VAR_ID will be used instead of using ATB_FILL_MODE
+    # Available atb fill modes:
+    # 0 - Lets battlers input and execute actions when that battler's atb's full
+    #     Empties and refills that battler's atb right after executing actions
+    # 1 - Lets battlers input actions when that battler's atb's empty
+    #     Refills that battler's atb right after inputting actions
+    #     Let battlers execute actions when that battler's atb's full
+    #     Empties that battler's atb right after executing actions
+    # The value of variable with id ATB_FILL_MODE_VAR_ID should remain the same
+    # during battles to ensure proper atb fillings and action executions
+    ATB_FILL_MODE = 0
+    ATB_FILL_MODE_VAR_ID = 0
+
+    # (v1.01a+)Sets the starting atb value mode as ATB_START_MODE
+    # If ATB_START_MODE_VAR_ID is a natural number, the value of variable with
+    # id ATB_START_MODE_VAR_ID will be used instead of using ATB_START_MODE
+    # The starting atb value is always 0.0 for:
+    # - unmovable battlers
+    # - atb fill mode as 1
+    # - actors with start type surprise
+    # - enemies with start type preemptive
+    # The starting atb value is always 100.0 for:
+    # - movable actors with atb fill mode as 0 and start type preemptive
+    # - movable enemies with atb fill mode as 0 and start type surprise
+    # Available starting atb value mode for normal start:
+    # - agi is the battler's agi
+    # - param_max(6) is the maximum value of any battler's agi
+    # 0 - 0.0
+    # 1 - 100.0 * agi / param_max(6)
+    ATB_START_MODE = 0
+    ATB_START_MODE_VAR_ID = 0
+
+    # (v1.02a+)Sets the party escape invocation speed as PARTY_ESC_SPEED
+    # It'll only be used with ATB_FILL_MODE being 1
+    # With ATB_FILL_MODE being 1, if no actor would be able to act without the
+    # party escape attempt, that attempt will fail immediately
+    # If PARTY_ESC_SPEED_VAR_ID is a natural number, the value of variable with
+    # id PARTY_ESC_SPEED_VAR_ID will be used instead of using PARTY_ESC_SPEED
+    PARTY_ESC_SPEED = 0
+    PARTY_ESC_SPEED_VAR_ID = 0
+
+    # Sets the atb refill rate code as ATB_RATE_CODE
+    # If ATB_RATE_CODE_VAR_ID is a natural number, the value of variable with id
+    # ATB_RATE_CODE_VAR_ID will be used instead of using ATB_RATE_CODE
+    # Available atb refill rate code:
+    # - speed is
+    #   Battler's agi for atb fill mode 0
+    #   Battler's agi + batb_item_speed_sum for atb fill mode 1
+    # - batb_item_speed_sum is the sum of invocation speeds(+ attack speed for 
+    #   the attack skill) of all inputted skills/items
+    # - DoubleX_RMVXA::BATB.base_batb_fill_t is the base atb fill time
+    # - Graphics.frame_rate is the number of frames per second
+    # - BattleManager.batb_avg_agi is the average of all battler's agi
+    # 0 - speed * 100.0 / DoubleX_RMVXA::BATB.base_batb_fill_t / 
+    #     Graphics.frame_rate
+    # 1 - (formula in code 0) / BattleManager.batb_avg_agi
+    # 2 - Same as 1, except BattleManager.batb_avg_agi will always be
+    #     reevalauted per frame instead of just at the start of a battle
+    ATB_RATE_CODE = 1
+    ATB_RATE_CODE_VAR_ID = 0
+
+    # Sets the code of the reset atb mechanism as ATB_RESET_CODE
+    # If ATB_RESET_CODE_VAR_ID is a natural number, the value of variable with
+    # id ATB_RESET_CODE_VAR_ID will be used instead of using ATB_RESET_CODE
+    # Available codes of the atb reset mechanism:
+    # 0 - Freezes the atb refill while not movable
+    # 1 - Same as 0, except the atb will be emptied when becoming unmovable
+    ATB_RESET_CODE = 1
+    ATB_RESET_CODE_VAR_ID = 0
+
+    # Sets the 1st atb bar color as text color ATB_BAR_COLOR1
+    # If ATB_BAR_COLOR1_VAR_ID is a natural number, the value of variable with
+    # id ATB_BAR_COLOR1_VAR_ID will be used instead of using ATB_BAR_COLOR1
+    # The value of variable with id ATB_BAR_COLOR1_VAR_ID should remain the same
+    # during battles to ensure proper atb bar color displays
+    ATB_BAR_COLOR1 = 7
+    ATB_BAR_COLOR1_VAR_ID = 0
+
+    # Sets the 2nd atb bar color as text color ATB_BAR_COLOR2
+    # If ATB_BAR_COLOR2_VAR_ID is a natural number, the value of variable with
+    # id ATB_BAR_COLOR2_VAR_ID will be used instead of using ATB_BAR_COLOR2
+    # The value of variable with id ATB_BAR_COLOR2_VAR_ID should remain the same
+    # during battles to ensure proper atb bar color displays
+    ATB_BAR_COLOR2 = 8
+    ATB_BAR_COLOR2_VAR_ID = 0
+
+    # Sets the atb bar description text as ATB_BAR_TEXT
+    # If ATB_BAR_TEXT_VAR_ID is a natural number, the value of variable with id
+    # ATB_BAR_TEXT_VAR_ID will be used instead of using ATB_BAR_TEXT
+    # The value of variable with id ATB_BAR_TEXT_VAR_ID should remain the same
+    # during battles to ensure proper atb bar text displays
+    ATB_BAR_TEXT = "AP"
+    ATB_BAR_TEXT_VAR_ID = 0
+
+#==============================================================================|
+#  ** Script Implementations                                                   |
+#     You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+#  * Script Support Info:                                                      |
+#    1. Prerequisites                                                          |
+#       - Basic atb concept and default RMVXA battle system knowledge          |
+#       - Some RGSS3 scripting proficiency to fully comprehend this script     |
+#    2. Method documentation                                                   |
+#       - The 1st part describes why this method's rewritten/aliased for       |
+#         rewritten/aliased methods or what the method does for new methods    |
+#       - The 2nd part describes what the arguments of the method are          |
+#       - The 3rd part informs which version rewritten, aliased or created this|
+#         method                                                               |
+#       - The 4th part informs whether the method's rewritten or new           |
+#       - The 5th part describes how this method works for new methods only,   |
+#         and describes the parts added, removed or rewritten for rewritten or |
+#         aliased methods only                                                 |
+#       Example:                                                               |
+# #--------------------------------------------------------------------------| |
+# #  Why rewrite/alias/What this method does                                 | |
+# #--------------------------------------------------------------------------| |
+# # *argv: What these variables are                                            |
+# # &argb: What this block is                                                  |
+# def def_name(*argv, &argb) # Version X+; Rewrite/New                         |
+#   # Added/Removed/Rewritten to do something/How this method works            |
+#   def_name_code                                                              |
+#   #                                                                          |
+# end # def_name                                                               |
+#------------------------------------------------------------------------------|
+
+    #--------------------------------------------------------------------------|
+    #  Helper methods simplifying the uses of the configuration values         |
+    #--------------------------------------------------------------------------|
+
+    def self.wait_cond_code
+      return WAIT_COND_CODE if WAIT_COND_CODE_VAR_ID <= 0
+      $game_variables[WAIT_COND_CODE_VAR_ID]
+    end # wait_cond_code
+
+    def self.turn_unit_code
+      return TURN_UNIT_CODE if TURN_UNIT_CODE_VAR_ID <= 0
+      $game_variables[TURN_UNIT_CODE_VAR_ID]
+    end # turn_unit_code
+
+    def self.max_turn_unit
+      return MAX_TURN_UNIT if MAX_TURN_UNIT_VAR_ID <= 0
+      $game_variables[MAX_TURN_UNIT_VAR_ID]
+    end # max_turn_unit
+
+    def self.atb_fill_mode
+      return ATB_FILL_MODE if ATB_FILL_MODE_VAR_ID <= 0
+      $game_variables[ATB_FILL_MODE_VAR_ID]
+    end # atb_fill_mode
+
+    def self.atb_start_mode # v1.01a+
+      return ATB_START_MODE if ATB_START_MODE_VAR_ID <= 0
+      $game_variables[ATB_START_MODE_VAR_ID]
+    end # atb_start_mode
+
+    def self.party_esc_speed # v1.02a+
+      return PARTY_ESC_SPEED if PARTY_ESC_SPEED_VAR_ID <= 0
+      $game_variables[PARTY_ESC_SPEED_VAR_ID]
+    end # party_esc_speed
+
+    def self.atb_rate_code
+      return ATB_RATE_CODE if ATB_RATE_CODE_VAR_ID <= 0
+      $game_variables[ATB_RATE_CODE_VAR_ID]
+    end # atb_rate_code
+
+    def self.base_fill_t
+      return BASE_FILL_T if BASE_FILL_T_VAR_ID <= 0
+      $game_variables[BASE_FILL_T_VAR_ID]
+    end # base_fill_t
+
+    def self.atb_reset_code
+      return ATB_RESET_CODE if ATB_RESET_CODE_VAR_ID <= 0
+      $game_variables[ATB_RESET_CODE_VAR_ID]
+    end # atb_reset_code
+
+    def self.atb_bar_color1
+      return ATB_BAR_COLOR1 if ATB_BAR_COLOR1_VAR_ID <= 0
+      $game_variables[ATB_BAR_COLOR1_VAR_ID]
+    end # atb_bar_color1
+
+    def self.atb_bar_color2
+      return ATB_BAR_COLOR2 if ATB_BAR_COLOR2_VAR_ID <= 0
+      $game_variables[ATB_BAR_COLOR2_VAR_ID]
+    end # atb_bar_color2
+
+    def self.atb_bar_text
+      return ATB_BAR_TEXT if ATB_BAR_TEXT_VAR_ID <= 0
+      $game_variables[ATB_BAR_TEXT_VAR_ID]
+    end # atb_bar_text
+
+  end # BATB
+
+end # DoubleX_RMVXA
+
+#------------------------------------------------------------------------------|
+#  * Reimplements the the whole battle flow to run the atb system              |
+#------------------------------------------------------------------------------|
+class << BattleManager # Edit
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  attr_accessor :actor_index # Accessed by Scene_Battle to setup actors
+  attr_reader :action_battlers # Read by Scene_Battle to execute actions
+  attr_reader :batb_base # (v1.02c+)The base and global atb rate denominator
+  attr_reader :batb_esc # (v1.02a+)The party escape attempt flag
+  attr_writer :batb_can_esc # The party escape allowance flag
+
+  #----------------------------------------------------------------------------|
+  #  New private instance variable                                             |
+  #----------------------------------------------------------------------------|
+  # @batb_sum: The cached sum of all battlers' agi
+
+  #----------------------------------------------------------------------------|
+  #  Always lets actions to be executed at any frame                           |
+  #----------------------------------------------------------------------------|
+  def in_turn? # Rewrite
+    true # Rewritten
+  end # in_turn?
+
+  #----------------------------------------------------------------------------|
+  #  Stops making battlers' actions when opening the party command window      |
+  #----------------------------------------------------------------------------|
+  alias input_start_batb input_start
+  def input_start
+    @phase = :input # Added
+    input_start_batb
+  end # input_start
+
+  alias battle_start_batb battle_start
+  def battle_start
+    battle_start_batb
+    batb_battle_start # Added
+  end # battle_start
+
+  alias process_victory_batb process_victory
+  def process_victory
+    # Added
+    SceneManager.scene.close_batb_windows if SceneManager.scene_is?(Scene_Battle)
+    #
+    process_victory_batb
+  end # process_victory
+
+  #----------------------------------------------------------------------------|
+  #  Starts/Executes a party escape attempt only if it's allowed/ready         |
+  #----------------------------------------------------------------------------|
+  alias process_escape_batb process_escape
+  def process_escape
+    # Rewritten
+    return false unless @batb_can_esc
+    DoubleX_RMVXA::BATB.atb_fill_mode == 0 ? process_escape_batb : batb_esc_start
+    #
+  end # process_escape
+
+  alias process_defeat_batb process_defeat
+  def process_defeat
+    # Added
+    SceneManager.scene.close_batb_windows if SceneManager.scene_is?(Scene_Battle)
+    #
+    process_defeat_batb
+  end # process_defeat
+
+  #----------------------------------------------------------------------------|
+  #  Set all battlers' starting atb values using start types upon battle start |
+  #----------------------------------------------------------------------------|
+  def batb_battle_start # New
+    @batb_can_esc = true
+    @batb_esc = false
+    start = @preemptive ? :preempt : @surprise ? :surprise : :norm
+    ($game_party.battle_members + $game_troop.members).each { |mem|
+      mem.batb_start(start)
+    }
+  end # batb_battle_start
+
+  #----------------------------------------------------------------------------|
+  #  Checks if cases always disabling atb frame updates aren't met             |
+  #----------------------------------------------------------------------------|
+  def batb_update? # New
+    return false if $game_party.all_dead? || $game_troop.all_dead?
+    @phase && @phase != :init && !$game_message.visible
+  end # batb_update?
+
+  #----------------------------------------------------------------------------|
+  #  Updates all alive battlers' atb values and the party escape's statuses    |
+  #----------------------------------------------------------------------------|
+  def batb_update # New
+    set_batb_base
+    alive_mems = $game_party.alive_members
+    (alive_mems + $game_troop.alive_members).each { |b| b.batb_update }
+    # Checks if the party escape attempt can continue to charge/execute now
+    return unless @batb_can_esc && @batb_esc
+    return batb_esc_fail if DoubleX_RMVXA::BATB.atb_fill_mode == 0
+    return batb_esc_fail if @action_battlers.none? { |battler| battler.actor? }
+    batb_esc_end if alive_mems.any? { |battler| battler.batb_val >= 100.0 }
+    #
+  end # batb_update
+
+  #----------------------------------------------------------------------------|
+  #  Returns the base and global atb rate denominator applied to all battlers  |
+  #----------------------------------------------------------------------------|
+  def set_batb_base # v1.02c+; New
+    @batb_base = DoubleX_RMVXA::BATB.base_fill_t * Graphics.frame_rate
+    @batb_base *= batb_avg_agi if DoubleX_RMVXA::BATB.atb_rate_code != 0
+  end # batb_base_rate
+
+  #----------------------------------------------------------------------------|
+  #  Returns the cached or reevaluates the average of all alive battler's agi  |
+  #----------------------------------------------------------------------------|
+  def batb_avg_agi # New
+    return @batb_sum if @batb_sum && DoubleX_RMVXA::BATB.atb_rate_code != 2
+    mems = $game_party.alive_members + $game_troop.alive_members
+    @batb_sum = mems.inject(0) { |sum, battler| sum + battler.agi } / mems.size
+  end # batb_avg_agi
+
+  #----------------------------------------------------------------------------|
+  #  Starts the party escape attempt preparation for atb fill mode 1           |
+  #----------------------------------------------------------------------------|
+  def batb_esc_start # v1.02a+; New
+    $game_message.add(sprintf(Vocab::EscapeStart, $game_party.name))
+    Sound.play_escape
+    wait_for_message
+    @batb_esc = true
+    false
+  end # batb_esc_start
+
+  #----------------------------------------------------------------------------|
+  #  Executes the party escape attempt for atb fill mode 1                     |
+  #----------------------------------------------------------------------------|
+  def batb_esc_end # v1.02a+; New
+    @preemptive || rand < @escape_ratio ? process_abort : batb_esc_fail
+    wait_for_message
+  end # batb_esc_end
+
+  #----------------------------------------------------------------------------|
+  #  Processes the failed party escape attempt for atb fill mode 1             |
+  #----------------------------------------------------------------------------|
+  def batb_esc_fail # v1.02a+; New
+    @escape_ratio += 0.1
+    $game_message.add('\.' + Vocab::EscapeFailure)
+    $game_party.clear_actions
+    @batb_esc = false
+  end # batb_esc_fail
+
+end # BattleManager
+
+class Game_Action # Edit
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_accessor :batb_confirm # The action's confirmation flag
+
+  alias set_skill_batb set_skill
+  def set_skill(skill_id)
+    set_skill_batb(skill_id)
+    # Added
+    @batb_confirm ||= !@item.object.need_selection?
+    self
+    #
+  end # set_skill
+
+  alias set_item_batb set_item
+  def set_item(item_id)
+    set_item_batb(item_id)
+    # Added
+    @batb_confirm ||= !@item.object.need_selection?
+    self
+    #
+  end # set_item
+
+end # Game_Action
+
+#------------------------------------------------------------------------------|
+#  * Reimplements the actor inputability check and fixes bugs and edge cases   |
+#------------------------------------------------------------------------------|
+class Game_BattlerBase # Edit
+
+  alias hide_batb hide # v1.02b+
+  def hide
+    hide_batb
+    reset_batb_val # Added
+  end # hide
+
+  alias inputable_batb? inputable?
+  def inputable?
+    # Rewritten
+    return false unless inputable_batb? && @actions.size > 0 && actor?
+    !BattleManager.batb_esc && !@actions.all? { |act| act.batb_confirm }
+    #
+  end # inputable?
+
+  #----------------------------------------------------------------------------|
+  #  Sets the battler's starting atb value according to the battle start type  |
+  #----------------------------------------------------------------------------|
+  # start: The battle start type
+  def batb_start(start) # v1.02c+; New
+    return @batb_val = 0.0 if DoubleX_RMVXA::BATB.atb_start_mode == 0
+    return @batb_val = 0.0 if start == :surprise && actor?
+    return @batb_val = 0.0 if start == :preempt && enemy?
+    @batb_val = 100.0 * agi / param_max(6)
+    make_actions if @batb_val >= 100.0
+  end # batb_start
+
+end # Game_BattlerBase
+
+#------------------------------------------------------------------------------|
+#  * Implements the battler's atb actions, control flows and logics            |
+#------------------------------------------------------------------------------|
+class Game_Battler < Game_BattlerBase # Edit
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  attr_accessor :batb_val_change # The atb value change flag
+  attr_reader :batb_val # The battler's atb value
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02c+)New private instance variable                                    |
+  #----------------------------------------------------------------------------|
+  # @batb_speed: The cached speed sum of all skills/items to be executed
+
+  def update_state_turns # v1.02a+; Rewrite
+    batb_update_state_turns(2) # Rewritten
+  end # update_state_turns
+
+  alias initialize_batb initialize
+  def initialize
+    initialize_batb
+    # Added to fix nil action input index bugs and edge cases as well
+    clear_actions
+    @batb_val = 0.0
+    #
+  end # initialize
+
+  alias on_restrict_batb on_restrict
+  def on_restrict
+    on_restrict_batb
+    # Added to fix nil action battlers bugs and edge cases as well
+    return unless BattleManager.action_battlers
+    reset_batb_val(DoubleX_RMVXA::BATB.atb_reset_code == 0)
+    #
+  end # on_restrict
+
+  #----------------------------------------------------------------------------|
+  #  Marks that this battler becomes able to act as well                       |
+  #----------------------------------------------------------------------------|
+  alias make_actions_batb make_actions
+  def make_actions
+    make_actions_batb
+    # Added
+    return if BattleManager.action_battlers.include?(self)
+    BattleManager.action_battlers << self
+    #
+  end # make_actions
+
+  alias on_action_end_batb on_action_end
+  def on_action_end
+    on_action_end_batb
+    # Added
+    batb_update_state_turns(1)
+    reset_batb_val
+    #
+  end # on_action_end
+
+  alias on_turn_end_batb on_turn_end
+  def on_turn_end
+    on_turn_end_batb
+    remove_buffs_auto # Added
+  end # on_turn_end
+
+  #----------------------------------------------------------------------------|
+  #  Ensures battlers added after the battle starts will start with 0 atb value|
+  #----------------------------------------------------------------------------|
+  alias on_battle_end_batb on_battle_end
+  def on_battle_end
+    on_battle_end_batb
+    @batb_val = 0.0 # Added
+  end # on_battle_end
+
+  #----------------------------------------------------------------------------|
+  #  Sets the battler's starting atb value according to the battle start type  |
+  #----------------------------------------------------------------------------|
+  # start: The battle start type
+  def batb_start(start) # New
+    @batb_val_change = true
+    return @batb_val = 0.0 unless movable?
+    if DoubleX_RMVXA::BATB.atb_fill_mode == 1
+      @batb_val = 0.0
+      return make_actions
+    elsif start == :preempt && actor? || start == :surprise && enemy?
+      @batb_val = 100.0
+      return make_actions
+    end
+    super(start)
+  end # batb_start
+
+  #----------------------------------------------------------------------------|
+  #  Lets states with different auto removal timings to update turns separately|
+  #----------------------------------------------------------------------------|
+  # timing: The state's auto removal timing
+  def batb_update_state_turns(timing) # v1.02c+; New
+    states.each { |state|
+      next if state.auto_removal_timing != timing
+      @state_turns[state.id] -= 1 if @state_turns[state.id] > 0
+    }
+  end # update_state_turns
+
+  #----------------------------------------------------------------------------|
+  #  Increases the battler's atb value and makes actions in mode 0 if it's full|
+  #----------------------------------------------------------------------------|
+  def batb_update # New
+    return if @batb_val >= 100.0 || inputable? || restriction > 3
+    mode = DoubleX_RMVXA::BATB.atb_fill_mode
+    return make_actions if mode == 1 && @batb_val == 0.0 && @actions.empty?
+    @batb_val_change = @batb_val != @batb_val += batb_rate
+    return unless @batb_val >= 100.0
+    @batb_val = 100.0
+    make_actions if mode == 0
+  end # batb_update
+
+  #----------------------------------------------------------------------------|
+  #  Returns the atb rate using the current rate formula and cached speed sum  |
+  #----------------------------------------------------------------------------|
+  def batb_rate # New
+    rate = agi
+    @batb_speed ||= batb_speed # Caches the sum until the actions are cleared
+    rate += @batb_speed if DoubleX_RMVXA::BATB.atb_fill_mode == 1
+    rate < 0 ? 0 : rate * 100.0 / BattleManager.batb_base
+  end # batb_rate
+
+  #----------------------------------------------------------------------------|
+  #  Returns the invocation speed sum of all skills/items to be executed       |
+  #----------------------------------------------------------------------------|
+  def batb_speed # v1.02a+; New
+    return DoubleX_RMVXA::BATB.party_esc_speed if BattleManager.batb_esc
+    @actions.inject(0) { |sum, act|
+      act.item ? sum + act.item.speed + (act.attack? ? atk_speed : 0) : 0
+    }
+  end # batb_speed
+
+  #----------------------------------------------------------------------------|
+  #  Resets the battler's atb value to its min and clears all battler's actions|
+  #----------------------------------------------------------------------------|
+  # reset: The battler action reset flag
+  def reset_batb_val(reset = true) # New
+    if reset
+      @batb_val = 0.0
+      @batb_val_change = true
+    end
+    clear_actions
+    @batb_speed = nil # Clears the cached sum to be ready to cache new ones
+    BattleManager.action_battlers.delete(self)
+    BattleManager.clear_actor if actor? && BattleManager.actor == self
+  end # reset_batb_val
+
+end # Game_Battler
+
+#------------------------------------------------------------------------------|
+#  * Resets all party members' atb values upon failed party escape attempts    |
+#------------------------------------------------------------------------------|
+class Game_Party < Game_Unit # v1.01a+; Edit
+
+  #----------------------------------------------------------------------------|
+  #  Resets all party members' atb values as well                              |
+  #----------------------------------------------------------------------------|
+  alias clear_actions_batb clear_actions
+  def clear_actions
+    clear_actions_batb
+    members.each { |mem| mem.reset_batb_val } # Added
+  end # clear_actions
+
+end # Game_Party
+
+class Window_BattleStatus < Window_Selectable # Edit
+
+  #----------------------------------------------------------------------------|
+  #  Reserves enough space for the atb bars to be drawn as well                |
+  #----------------------------------------------------------------------------|
+  def draw_gauge_area_with_tp(rect, actor) # Rewrite
+    # Rewritten
+    draw_actor_hp(actor, rect.x + 0, rect.y, 60)
+    draw_actor_mp(actor, rect.x + 64, rect.y, 60)
+    draw_actor_tp(actor, rect.x + 128, rect.y, 52)
+    draw_batb_bar(rect, actor, true) if actor
+    #
+  end # draw_gauge_area_with_tp
+
+  #----------------------------------------------------------------------------|
+  #  Reserves enough space for the atb bars to be drawn as well                |
+  #----------------------------------------------------------------------------|
+  def draw_gauge_area_without_tp(rect, actor) # Rewrite
+    # Rewritten
+    draw_actor_hp(actor, rect.x + 0, rect.y, 72)
+    draw_actor_mp(actor, rect.x + 80,  rect.y, 72)
+    draw_batb_bar(rect, actor, false) if actor
+    #
+  end # draw_gauge_area_without_tp
+
+  #----------------------------------------------------------------------------|
+  #  Draws each actor's atb bar only if that actor's atb value's changed       |
+  #----------------------------------------------------------------------------|
+  def refresh_batb_bars # New
+    display_tp = $data_system.opt_display_tp
+    item_max.times { |index|
+      actor = $game_party.battle_members[index]
+      next unless actor && actor.batb_val_change
+      draw_batb_bar(gauge_area_rect(index), actor, display_tp)
+    }
+  end # refresh_batb_bars
+
+  # rect: The atb bar's rect
+  # actor: The atb bar's owner
+  # display_tp: The tp bar display flag
+  def draw_batb_bar(rect, actor, display_tp) # New
+    display_tp ? (x, w = rect.x + 184, 36) : (x, w = rect.x + 160, 60)
+    color1 = text_color(DoubleX_RMVXA::BATB.atb_bar_color1)
+    color2 = text_color(DoubleX_RMVXA::BATB.atb_bar_color2)
+    draw_gauge(x, rect.y, w, actor.batb_val / 100.0, color1, color2)
+    change_color(system_color)
+    draw_text(x, rect.y, 30, line_height, DoubleX_RMVXA::BATB.atb_bar_text)
+    actor.batb_val_change = false
+  end # draw_batb_bar
+
+end # Window_BattleStatus
+
+#------------------------------------------------------------------------------|
+#  * Reconstructs the the whole battle flow to control the atb system          |
+#------------------------------------------------------------------------------|
+class Scene_Battle < Scene_Base # Edit
+
+  #----------------------------------------------------------------------------|
+  #  New private instance variable                                             |
+  #----------------------------------------------------------------------------|
+  # @batb_turn_clock: The turn atb clock with both units
+
+  #----------------------------------------------------------------------------|
+  #  Moves the info viewport according to which windows are active             |
+  #----------------------------------------------------------------------------|
+  def update_info_viewport # Rewrite
+    # Rewritten
+    return move_info_viewport(0) if @party_command_window.active
+    windows = [@actor_window, @enemy_window, @skill_window, @item_window]
+    return move_info_viewport(128) if windows.any? { |window| window.visible }
+    return move_info_viewport(128) if @actor_command_window.active
+    move_info_viewport(64)
+    #
+  end # update_info_viewport
+
+  def turn_start # Rewrite
+    @party_command_window.close
+    @actor_command_window.close
+    @status_window.unselect
+    # Removed to stop shifting battle phase nor clearing subject
+    @log_window.wait
+    # (v1.01a+)Removed to stop clearing the log window
+  end # turn_start
+
+  def turn_end # Rewrite
+    ($game_party.battle_members + $game_troop.members).each { |battler|
+      battler.on_turn_end
+      refresh_status
+      @log_window.display_auto_affected_status(battler)
+      @log_window.wait_and_clear
+    }
+    $game_troop.increase_turn # Added
+    BattleManager.turn_end
+    process_event
+    # Removed to stop opening the party window
+  end # turn_end
+
+  #----------------------------------------------------------------------------|
+  #  Executes non forced actions of all actable battlers not trying to escape  |
+  #----------------------------------------------------------------------------|
+  def process_action # Rewrite
+    return if scene_changing?
+    # Rewritten
+    return process_batb_act(true) if @subject
+    esc = BattleManager.batb_esc
+    BattleManager.action_battlers.each { |battler|
+      next if esc && battler.actor?
+      next if battler.batb_val < 100.0 || battler.inputable?
+      @subject = battler
+      process_batb_act
+      @subject = nil
+    }
+    #
+  end # process_action
+
+  alias start_batb start
+  def start
+    start_batb
+    @batb_turn_clock = [0, 0] # Added
+  end # start
+
+  alias update_batb update
+  def update
+    update_batb
+    batb_update if !@spriteset.animation? && batb_update? # Added
+  end # update
+
+  alias update_for_wait_batb update_for_wait
+  def update_for_wait
+    update_for_wait_batb
+    batb_update if @spriteset.animation? && batb_update? # Added
+  end # update_for_wait
+
+  alias update_message_open_batb update_message_open
+  def update_message_open
+    update_message_open_batb
+    # Added
+    return if $game_message.busy?
+    return if $game_troop.all_dead? || $game_party.all_dead?
+    batb_update_message_open if @status_window.close?
+    #
+  end # update_message_open
+
+  alias refresh_status_batb refresh_status
+  def refresh_status
+    refresh_status_batb
+    # Added
+    windows = [@actor_window, @enemy_window, @skill_window, @item_window]
+    (windows + [@actor_command_window]).each { |w| w.refresh if w.visible }
+    #
+  end # refresh_status
+
+  alias command_guard_batb command_guard
+  def command_guard
+    # Added to fix nil actor and/or input bugs and edge cases as well
+    actor = BattleManager.actor
+    return unless actor && actor.input
+    actor.input.batb_confirm = true
+    #
+    command_guard_batb
+  end # command_guard
+
+  alias on_actor_ok_batb on_actor_ok
+  def on_actor_ok
+    # Added to fix nil actor and/or input bugs and edge cases as well
+    actor = BattleManager.actor
+    return unless actor && actor.input
+    actor.input.batb_confirm = true
+    #
+    on_actor_ok_batb
+  end # on_actor_ok
+
+  alias on_enemy_ok_batb on_enemy_ok
+  def on_enemy_ok
+    # Added to fix nil enemy, actor and/or input bugs and edge cases as well
+    return if $game_troop.all_dead?
+    actor = BattleManager.actor
+    return unless actor && actor.input
+    actor.input.batb_confirm = true
+    #
+    on_enemy_ok_batb
+  end # on_enemy_ok
+
+  #----------------------------------------------------------------------------|
+  #  Runs the atb frame update                                                 |
+  #----------------------------------------------------------------------------|
+  def batb_update # New
+    batb_update_turn(0)
+    BattleManager.batb_update
+    list = BattleManager.action_battlers.select { |b| b.actor? && b.inputable? }
+    list.collect! { |battler| battler.index }
+    batb_update_windows(list) unless list.include?(@status_window.index)
+    @status_window.refresh_batb_bars
+  end # batb_update
+
+  # list: The list of indices of all the currently inputable actors
+  def batb_update_windows(list) # New
+    if @status_window.index >= 0
+      batb_close_selection_windows
+    elsif list.empty?
+      @party_command_window.deactivate.close if @party_command_window.active
+      return
+    end
+    return if @party_command_window.active || list.empty?
+    BattleManager.actor_index = list[0]
+    start_actor_command_selection
+  end # batb_update_windows
+
+  def batb_close_selection_windows # v1.02c+; New
+    windows = [@actor_window, @enemy_window, @skill_window, @item_window]
+    @status_window.open.show if windows.any? { |window| window.visible }
+    (windows + [@actor_command_window]).each { |window|
+      window.hide.deactivate.close if window.active
+    }
+    @status_window.unselect
+  end # batb_close_selection_windows
+
+  def batb_update? # New
+    # Checks if atb frame update can be run and the wait conditions aren't met
+    return false if scene_changing? || !BattleManager.batb_update?
+    code = DoubleX_RMVXA::BATB.wait_cond_code
+    return true if code == 0
+    return false if @spriteset.animation?
+    return true if code == 1
+    return false if @actor_window.active || @enemy_window.active
+    return true if code == 2
+    return false if @skill_window.active || @item_window.active
+    code == 3 || !@actor_command_window.active && !@party_command_window.active
+    #
+  end # batb_update?
+
+  # forced: Whether the action's forced
+  def process_batb_act(forced = false) # New
+    while @subject.current_action
+      @subject.current_action.prepare
+      exec_batb_act if @subject.current_action.valid?
+      @subject.remove_current_action
+      break if forced
+    end
+    process_action_end unless @subject.current_action
+  end # process_batb_act
+
+  def exec_batb_act # New
+    @status_window.open
+    BattleManager.batb_can_esc = false
+    execute_action
+    BattleManager.batb_can_esc = true
+    batb_update_turn(1)
+  end # exec_batb_act
+
+  # code: The current turn atb clock unit code
+  def batb_update_turn(code) # New
+    # Increases the turn number and resets its atb clock when its max's reached
+    return unless code == DoubleX_RMVXA::BATB.turn_unit_code
+    @batb_turn_clock[code] += 1
+    max_clock = DoubleX_RMVXA::BATB.max_turn_unit
+    max_clock *= Graphics.frame_rate if code == 0
+    return unless @batb_turn_clock[code] >= max_clock
+    @batb_turn_clock[code] = 0
+    turn_end
+    #
+  end # batb_update_turn
+
+  #----------------------------------------------------------------------------|
+  #  Opens the actor or party command window according to the window statuses  |
+  #----------------------------------------------------------------------------|
+  def batb_update_message_open # New
+    @status_window.open
+    windows = [@actor_window, @enemy_window, @skill_window, @item_window]
+    return @actor_command_window.open if windows.any? { |window| window.active }
+    return @actor_command_window.open if @actor_command_window.active
+    @party_command_window.open if @party_command_window.active
+  end # batb_update_message_open
+
+  #----------------------------------------------------------------------------|
+  #  Closes all windows upon battle end                                        |
+  #----------------------------------------------------------------------------|
+  def close_batb_windows # New
+    windows = [@actor_window, @enemy_window, @skill_window, @item_window]
+    ([@actor_command_window, @party_command_window] + windows).each { |window|
+      window.hide.deactivate.close
+    }
+  end # close_batb_windows
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+#==============================================================================|

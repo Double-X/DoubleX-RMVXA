@@ -1,0 +1,283 @@
+#==============================================================================|
+#  ** Script Info                                                              |
+#------------------------------------------------------------------------------|
+#  * Script Name                                                               |
+#    DoubleX RMVXA Object Trace                                                |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    Traces all objects meeting some conditions linked to the queried object   |
+#    Designed as a bug diagnosis tool used by scripters with debug experience  |
+#------------------------------------------------------------------------------|
+#  * Example                                                                   |
+#    obj.inspect                                                               |
+#    - http://pastebin.com/kb1q1Dru                                            |
+#    obj.trace_obj(Proc); obj.obj_trace[Proc].inspect                          |
+#    - http://pastebin.com/PZ4KNbHv                                            |
+#------------------------------------------------------------------------------|
+#  * Terms Of Use                                                              |
+#    You shall keep this script's Script Info part's contents intact           |
+#    You shalln't claim that this script is written by anyone other than       |
+#    DoubleX or his aliases                                                    |
+#    None of the above applies to DoubleX or his aliases                       |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Abilities:                                                                |
+#    1. Basic knowledge of inspecting objects in Ruby                          |
+#    2. Some RGSS3 scripting proficiency to fully utilize this script          |
+#------------------------------------------------------------------------------|
+#  * Instructions                                                              |
+#    1. Open the script editor and put this script into an open slot between   |
+#       Materials and Main, save to take effect.                               |
+#------------------------------------------------------------------------------|
+#  * Links                                                                     |
+#    Script Usage 101:                                                         |
+#    1. forums.rpgmakerweb.com/index.php?/topic/32752-rmvxa-script-usage-101/  |
+#    2. rpgmakervxace.net/topic/27475-rmvxa-script-usage-101/                  |
+#    This script:                                                              |
+#    1. http://pastebin.com/pySjrKvh                                           |
+#    Mentioned Patreon Supporters:                                             |
+#    https://www.patreon.com/posts/71738797                                    |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.02a(GMT 0100 27-10-2015):                                              |
+#    1. Lets uers set the conditions and labels for tracing objects            |
+#    v1.01b(GMT 1300 13-7-2015):                                               |
+#    1. Fixed not tracing klass linked to klass linked to queried object bug   |
+#    2. Fixed some Script Call Info and Implementation documentation typos     |
+#    3. Added more info in Prerequisites and Script Call Info                  |
+#    4. Increased this script's compactness                                    |
+#    v1.01a(GMT 1300 6-7-2015):                                                |
+#    1. Instance methods can be traced as well                                 |
+#    v1.00b(GMT 0800 1-7-2015):                                                |
+#    1. Fixed object having Range and/or Structs not tracing klass properly bug|
+#    v1.00a(GMT 1200 27-6-2015):                                               |
+#    1. 1st version of this script finished                                    |
+#==============================================================================|
+
+#==============================================================================|
+#  ** Script Call Info                                                         |
+#     A path in the object trace will stop if it'd be cyclic                   |
+#------------------------------------------------------------------------------|
+#  * Object manipulations                                                      |
+#    1. trace_obj(cond, label)                                                 |
+#       - Traces all objects meeting cond method linked to this object         |
+#       - Labels all traced objects using label method                         |
+#       - cond and label are method symbols in Object Trace Condition Method   |
+#         and Object Trace Label Method respectively                           |
+#    2. obj_trace[cond]                                                        |
+#       - Returns all traced objects meeting cond method linked to this object |
+#       - cond is a method symbol in Object Trace Condition Method             |
+#    3. (v1.01a+)trace_idef                                                    |
+#       - Traces all instance methods linked to this object                    |
+#    4. (v1.01a+)idef_trace                                                    |
+#       - Returns the trace of all instance methods linked to this object      |
+#==============================================================================|
+
+($doublex_rmvxa ||= {})[:Obj_Trace] = "v1.02a"
+
+module DoubleX_RMVXA # v1.02a+
+
+  module Obj_Trace
+
+    #--------------------------------------------------------------------------|
+    #  Object Trace Condition Method                                           |
+    #  - Setups cond used by trace_obj(cond, label)                            |
+    #--------------------------------------------------------------------------|
+    # cond must be the symbol of a method taking the currently traced object as
+    # the only arguement
+    # The below examples are added to help you setup your own cond methods
+
+    # Checks if the currently traced object belongs to klass
+    def self.cond_klass(obj)
+        obj.is_a?(klass)
+    end # cond_klass
+
+    # Add your own cond methods here
+    
+
+    #--------------------------------------------------------------------------|
+    #  Object Trace Label Method                                               |
+    #  - Setups label used by trace_obj(cond, label)                           |
+    #--------------------------------------------------------------------------|
+    # label must be the symbol of a method taking the currently traced object as
+    # the only arguement
+    # The below examples are added to help you setup your own label methods
+
+    # Labels all traced objects using their class symbol
+    def self.label_klass(obj)
+        :"#{obj.class}"
+    end # label_klass
+
+    # Add your own label methods here
+    
+
+  end # Obj_Trace
+
+end # DoubleX_RMVXA
+
+#==============================================================================|
+#  ** Script Implementations                                                   |
+#     You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+#  * Script Support Info:                                                      |
+#    1. Prerequisites                                                          |
+#       - Solid understanding of inspecting objects in Ruby                    |
+#       - Decent RGSS3 scripting proficiency to fully comprehend this script   |
+#    2. Method documentation                                                   |
+#       - The 1st part describes why this method's rewritten/aliased for       |
+#         rewritten/aliased methods or what the method does for new methods    |
+#       - The 2nd part describes what the arguments of the method are          |
+#       - The 3rd part informs which version rewritten, aliased or created this|
+#         method                                                               |
+#       - The 4th part informs whether the method's rewritten or new           |
+#       - The 5th part informs whether the method's a real or potential hotspot|
+#       - The 6th part describes how this method works for new methods only,   |
+#         and describes the parts added, removed or rewritten for rewritten or |
+#         aliased methods only                                                 |
+#       Example:                                                               |
+# #--------------------------------------------------------------------------| |
+# #  Why rewrite/alias/What this method does                                 | |
+# #--------------------------------------------------------------------------| |
+# # *argv: What these variables are                                            |
+# # &argb: What this block is                                                  |
+# def def_name(*argv, &argb) # Version X+; Rewrite/New; Hotspot                |
+#   # Added/Removed/Rewritten to do something/How this method works            |
+#   def_name_code                                                              |
+#   #                                                                          |
+# end # def_name                                                               |
+#------------------------------------------------------------------------------|
+
+class Object # Edit
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  attr_reader :idef_trace # (v1.01a+)The trace of all linked instance methods
+  attr_reader :obj_trace # The traces of all objects linked to this object
+
+  # (v1.01a+)The list of symbols of all instance variables added by this script
+  OBJ_TRACE_IVAR = [:"@idef_trace", :"@obj_trace"]
+
+  def trace_idef # v1.01a+; New
+    # Stop tracing the object if the object trace path would be cyclic
+    @idef_trace ? return : @idef_trace = {}
+    #
+    trace_instance_idef
+    return trace_array_idef if is_a?(Array)
+    return trace_hash_idef if is_a?(Hash)
+    return trace_range_idef if is_a?(Range)
+    trace_struct_idef if is_a?(Struct)
+  end # trace_idef
+
+  def trace_instance_idef # v1.01a+; New
+    (instance_variables - OBJ_TRACE_IVAR).each { |ivar|
+      traverse_idef_tree(ivar, instance_variable_get(ivar))
+    }
+  end # trace_instance_idef
+
+  def trace_array_idef # v1.01a+; New
+    each_with_index { |val, index| traverse_idef_tree(index, val) }
+  end # trace_array_idef
+
+  def trace_hash_idef # v1.01a+; New
+    each { |key, val| traverse_idef_tree(key, val) }
+  end # trace_hash_idef
+
+  def trace_range_idef # v1.01a+; New
+    index = -1
+    each { |val| traverse_idef_tree(index += 1, val) }
+  end # trace_range_idef
+
+  def trace_struct_idef # v1.01a+; New
+    each_pair { |key, val| traverse_idef_tree(key, val) }
+  end # trace_struct_idef
+
+  #----------------------------------------------------------------------------|
+  #  Label and use all nonempty subtrees to form the original object trace tree|
+  #----------------------------------------------------------------------------|
+  # iks: The index/key/symbol of the object trace
+  # val: The object to be traced
+  def traverse_idef_tree(iks, val) # v1.01a+; New
+    # Recursively traverse the object trace tree using Depth First Search
+    unless (idefs = val.instance_methods).empty?
+      @idef_trace[iks] = [idefs]
+    end
+    val.trace_idef
+    return if (trace = val.idef_trace).empty?
+    (@obj_trace[iks] ||= []) << trace
+    #
+  end # traverse_idef_tree
+
+  # cond: The object trace condition method symbol taking the object as argument
+  # label: The object trace label method symbol taking the object as argument
+  def trace_obj(cond, label) # New
+    # Stop tracing the object if the object trace path would be cyclic
+    (@obj_trace ||= {})[cond] ? return : @obj_trace[cond] = {}
+    #
+    trace_instance_obj(cond, label)
+    return trace_array_obj(cond, label) if is_a?(Array)
+    return trace_hash_obj(cond, label) if is_a?(Hash)
+    return trace_range_obj(cond, label) if is_a?(Range)
+    trace_struct_obj(cond, label) if is_a?(Struct)
+  end # trace_obj
+
+  # cond: The object trace condition method symbol taking the object as argument
+  # label: The object trace label method symbol taking the object as argument
+  def trace_instance_obj(cond, label) # New
+    (instance_variables - OBJ_TRACE_IVAR).each { |ivar|
+      trace_all_obj(cond, label, ivar, instance_variable_get(ivar))
+    }
+  end # trace_instance_obj
+
+  # cond: The object trace condition method symbol taking the object as argument
+  # label: The object trace label method symbol taking the object as argument
+  def trace_array_obj(cond, label) # New
+    each_with_index { |val, index| trace_all_obj(cond, label, index, val) }
+  end # trace_array_obj
+
+  # cond: The object trace condition method symbol taking the object as argument
+  # label: The object trace label method symbol taking the object as argument
+  def trace_hash_obj(cond, label) # New
+    each { |key, val| trace_all_obj(cond, label, key, val) }
+  end # trace_hash_obj
+
+  # cond: The object trace condition method symbol taking the object as argument
+  # label: The object trace label method symbol taking the object as argument
+  def trace_range_obj(cond, label) # v1.00b+; New
+    # Embeds the klass traces of all ranges linking to this object
+    index = -1
+    each { |val| trace_all_obj(cond, label, index += 1, val) }
+    #
+  end # trace_range_obj
+
+  # cond: The object trace condition method symbol taking the object as argument
+  # label: The object trace label method symbol taking the object as argument
+  def trace_struct_obj(cond, label) # v1.00b+; New
+    each_pair { |key, val| trace_all_obj(cond, label, key, val) }
+  end # trace_struct_obj
+
+  #----------------------------------------------------------------------------|
+  #  Label and use all nonempty subtrees to form the original object trace tree|
+  #----------------------------------------------------------------------------|
+  # cond: The object trace condition method symbol taking the object as argument
+  # label: The object trace label method symbol taking the object as argument
+  # iks: The index/key/symbol of the object trace
+  # val: The object to be traced
+  def trace_all_obj(cond, label, iks, val) # v1.01a+; New
+    # Recursively traverse the object trace tree using Depth First Search
+    ot = DoubleX_RMVXA::Obj_Trace
+    @obj_trace[cond][iks] = [ot.send(label, val)] if ot.send(cond, val)
+    val.trace_obj(cond, label)
+    return if (trace = val.obj_trace[cond]).empty?
+    (@obj_trace[cond][iks] ||= []) << trace
+    #
+  end # trace_all_obj
+
+end # Object
+
+#------------------------------------------------------------------------------|
+
+#==============================================================================|

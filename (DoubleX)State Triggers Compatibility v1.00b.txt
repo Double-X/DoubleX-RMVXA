@@ -1,0 +1,353 @@
+#==============================================================================|
+#  ** Script Info                                                              |
+#------------------------------------------------------------------------------|
+#  * Script Name                                                               |
+#    DoubleX RMVXA State Triggers Compatibility                                |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    Fixes compatibility issues in DoubleX RMVXA State Triggers                |
+#    Scripts Addressed:                                                        |
+#    1. DoubleX RMVXA Dynamic Data                                             |
+#    2. Mr.Bubble's Tactics Ogre PSP Crafting System                           |
+#    3. Theolized Sideview Battle System                                       |
+#    4. Tsukihime's Instance Items                                             |
+#------------------------------------------------------------------------------|
+#  * Terms Of Use                                                              |
+#    You shall keep this script's Script Info part's contents intact           |
+#    You shalln't claim that this script is written by anyone other than       |
+#    DoubleX or his aliases                                                    |
+#    None of the above applies to DoubleX or his aliases                       |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    1. DoubleX RMVXA State Triggers                                           |
+#------------------------------------------------------------------------------|
+#  * Instructions                                                              |
+#    1. Open the script editor and put this script into an open slot between   |
+#       Materials and Main, save to take effect.                               |
+#------------------------------------------------------------------------------|
+#  * Links                                                                     |
+#    Script Usage 101:                                                         |
+#    1. forums.rpgmakerweb.com/index.php?/topic/32752-rmvxa-script-usage-101/  |
+#    2. rpgmakervxace.net/topic/27475-rmvxa-script-usage-101/                  |
+#    This script:                                                              |
+#    1. http://pastebin.com/7YR3Z0bP                                           |
+#------------------------------------------------------------------------------|
+#  * Authors                                                                   |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00b(GMT 1300 5-6-2015):                                                |
+#    1. Fixed instance items' state triggers lambdas not cleared nor reset bug |
+#    v1.00a(GMT 0800 30-5-2015):                                               |
+#    1. 1st version of this script finished                                    |
+#==============================================================================|
+
+($doublex_rmvxa ||= {})[:State_Triggers_Compatibility] = "v1.00b"
+
+#==============================================================================|
+#  ** Script Implementations                                                   |
+#     You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+#  * Script Support Info:                                                      |
+#    1. Prerequisites                                                          |
+#       - Decent understanding of how the addressed scripts work               |
+#    2. Method documentation                                                   |
+#       - The 1st part informs which version rewritten, aliased or created this|
+#         method                                                               |
+#       - The 2nd part informs whether the method's rewritten, aliased or new  |
+#       - The 3rd part describes what the method does for new methods only     |
+#       - The 4th part describes what the arguments of the method are          |
+#       - The 5th part describes how this method works for new methods only,   |
+#         and describes the parts added or rewritten for rewritten or aliased  |
+#         methods only                                                         |
+#       Example:                                                               |
+# #----------------------------------------------------------------------------|
+# #  (Version X+)Rewrite/Alias/New method: def_name                            |
+# #  - What this method does                                                   |
+# #----------------------------------------------------------------------------|
+# # *args: What these arguments are                                            |
+# def def_name(*args)                                                          |
+#   # How this method works                                                    |
+#   def_name_code                                                              |
+#   #                                                                          |
+# end # def_name                                                               |
+#------------------------------------------------------------------------------|
+
+if $doublex_rmvxa[:State_Triggers]
+
+if $doublex_rmvxa[:Dynamic_Data] || $imported["TH_InstanceItems"] || 
+$imported[:TSBS]
+
+  # Stores the object lambda clearance and reset methods
+  CLEAR_RESET_STATE_TRIGGER_LAMBDAS = %Q(
+def clear_state_triggers_lambdas(obj, copy = true)
+  #{$imported["BubsTOCrafting"] ? %Q(
+  if copy && obj.ingredient_list
+    obj.ingredient_list.each { |ingredient|
+      clear_state_triggers_lambdas(ingredient) if ingredient.is_a?(RPG::State)
+    }
+  end
+  ) : %Q()}
+  obj.state_triggers = {}
+end
+
+def reset_state_triggers_lambdas(obj, copy = true)
+  #{$imported["BubsTOCrafting"] ? %Q(
+  if copy && obj.ingredient_list
+    obj.ingredient_list.each { |ingredient|
+      reset_state_triggers_lambdas(ingredient) if ingredient.is_a?(RPG::State)
+    }
+  end
+  ) : %Q()}
+  obj.reset_notetags_state_triggers
+end
+  )
+
+end # if $doublex_rmvxa[:Dynamic_Data] || $imported["TH_InstanceItems"] || 
+# $imported[:TSBS]
+
+if $imported["TH_InstanceItems"]
+
+#------------------------------------------------------------------------------|
+#  * (v1.00b+)Edit module: DataManager                                         |
+#------------------------------------------------------------------------------|
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: save_game_without_rescue                                    |
+  #----------------------------------------------------------------------------|
+  alias save_game_without_rescue_state_triggers_1 save_game_without_rescue
+  def save_game_without_rescue
+    # Added to clear and reset all state triggers lambda before and after saving
+    [InstanceManager.weapons, InstanceManager.armors, 
+     InstanceManager.items].each { |data|
+      data.each_value { |obj| clear_state_triggers_lambdas(obj) if obj }
+    }
+    $game_party.clear_state_triggers_lambdas
+    save_game_without_rescue_state_triggers_1
+    [InstanceManager.weapons, InstanceManager.armors, 
+     InstanceManager.items].each { |data|
+      data.each_value { |obj| reset_state_triggers_lambdas(obj) if obj }
+    }
+    $game_party.reset_state_triggers_lambdas
+    #
+  end # save_game_without_rescue
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: extract_save_contents                                       |
+  #----------------------------------------------------------------------------|
+  alias extract_save_contents_state_triggers_1 extract_save_contents
+  def extract_save_contents(contents)
+    extract_save_contents_state_triggers_1(contents)
+    # Added to restore all state triggers lambdas after loading
+    [InstanceManager.weapons, InstanceManager.armors, 
+     InstanceManager.items].each { |data|
+      data.each_value { |obj| reset_state_triggers_lambdas(obj) if obj }
+    }
+    $game_party.reset_state_triggers_lambdas
+    #
+  end # extract_save_contents
+
+  #----------------------------------------------------------------------------|
+  #  New methods                                                               |
+  #  - Clears and resets all lambdas contained by the passed object            |
+  #----------------------------------------------------------------------------|
+  module_eval(CLEAR_RESET_STATE_TRIGGER_LAMBDAS)
+
+end # DataManager
+
+#------------------------------------------------------------------------------|
+#  * Edit module: InstanceManager                                              |
+#------------------------------------------------------------------------------|
+
+class << InstanceManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: make_full_copy                                              |
+  #----------------------------------------------------------------------------|
+  alias make_full_copy_state_triggers make_full_copy
+  def make_full_copy(obj)
+    # Added to clear all lambdas right before using marshal
+    state = obj.is_a?(RPG::State)
+    clear_state_triggers_lambdas(obj) if state
+    #
+    clone = make_full_copy_state_triggers(obj)
+    # Added to reset all lambdas right after using marshal
+    reset_state_triggers_lambdas(obj) if state
+    reset_state_triggers_lambdas(clone) if state
+    #
+    clone
+  end # make_full_copy
+
+  #----------------------------------------------------------------------------|
+  #  New methods                                                               |
+  #  - Clears and resets all lambdas contained by the passed object            |
+  #----------------------------------------------------------------------------|
+  module_eval(CLEAR_RESET_STATE_TRIGGER_LAMBDAS)
+
+end # InstanceManager
+
+#------------------------------------------------------------------------------|
+#  * (v1.00b+)Edit class: Game_Party                                           |
+#------------------------------------------------------------------------------|
+
+class Game_Party < Game_Unit
+
+  #----------------------------------------------------------------------------|
+  #  New method: clear_state_triggers_lambdas                                  |
+  #  - Clears all stored lambdas as notetag values of all instance items       |
+  #----------------------------------------------------------------------------|
+  def clear_state_triggers_lambdas
+    [@item_list, @weapon_list, @armor_list].each { |data|
+      data.each { |obj| clear_state_triggers_lambdas(obj) if obj }
+    }
+  end # clear_state_triggers_lambdas
+
+  #----------------------------------------------------------------------------|
+  #  New method: reset_state_triggers_lambdas                                  |
+  #  - Resets all stored lambdas as notetag values of all instance items       |
+  #----------------------------------------------------------------------------|
+  def reset_state_triggers_lambdas
+    [@item_list, @weapon_list, @armor_list].each { |data|
+      data.each { |obj| reset_state_triggers_lambdas(obj) if obj }
+    }
+  end # reset_state_triggers_lambdas
+
+  #----------------------------------------------------------------------------|
+  #  New methods                                                               |
+  #  - Clears and resets all lambdas contained by the passed object            |
+  #----------------------------------------------------------------------------|
+  module_eval(CLEAR_RESET_STATE_TRIGGER_LAMBDAS)
+
+end # Game_Party
+
+end # if $imported["TH_InstanceItems"]
+
+if $imported[:TSBS]
+
+#------------------------------------------------------------------------------|
+#  Alias method: copy                                                          |
+#------------------------------------------------------------------------------|
+alias copy_state_triggers copy
+def copy(obj)
+  # Added to clear all lambdas right before using marshal
+  state = obj.is_a?(RPG::State)
+  clear_state_triggers_lambdas(obj) if state
+  #
+  clone = copy_state_triggers(obj)
+  # Added to reset all lambdas right after using marshal
+  reset_state_triggers_lambdas(obj) if state
+  reset_state_triggers_lambdas(clone) if state
+  #
+  clone
+end # copy
+
+#------------------------------------------------------------------------------|
+#  New methods                                                                 |
+#  - Clears and resets all lambdas contained by the passed object              |
+#------------------------------------------------------------------------------|
+eval(CLEAR_RESET_STATE_TRIGGER_LAMBDAS)
+
+end # $imported[:TSBS]
+
+if $doublex_rmvxa[:Dynamic_Data]
+
+#------------------------------------------------------------------------------|
+#  * Edit module: DataManager                                                  |
+#------------------------------------------------------------------------------|
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: save_game_without_rescue                                    |
+  #----------------------------------------------------------------------------|
+  alias save_game_without_rescue_state_triggers_2 save_game_without_rescue
+  def save_game_without_rescue(index)
+    # Added to clear all state triggers lambdas before saving
+    $data_states.each { |obj| clear_state_triggers_lambdas(obj, false) if obj }
+    #
+    save_game_without_rescue_state_triggers_2(index)
+    # Added to restore all state triggers lambdas after saving
+    $data_states.each { |obj| reset_state_triggers_lambdas(obj, false) if obj }
+    #
+  end # save_game_without_rescue
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: extract_save_contents                                       |
+  #----------------------------------------------------------------------------|
+  alias extract_save_contents_state_triggers_2 extract_save_contents
+  def extract_save_contents(contents)
+    extract_save_contents_state_triggers_2(contents)
+    # Added to restore all state triggers lambdas after loading
+    $data_states.each { |obj| reset_state_triggers_lambdas(obj, false) if obj }
+    #
+  end # extract_save_contents
+
+  #----------------------------------------------------------------------------|
+  #  New methods                                                               |
+  #  - Clears and resets all lambdas contained by the passed object            |
+  #----------------------------------------------------------------------------|
+  module_eval(CLEAR_RESET_STATE_TRIGGER_LAMBDAS)
+
+end # DataManager
+
+#------------------------------------------------------------------------------|
+#  * Edit class: RPG::State                                                    |
+#------------------------------------------------------------------------------|
+
+class RPG::State < RPG::BaseItem
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_accessor :state_triggers_string # Stores the notetag values as strings
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: load_notetags_state_triggers                                |
+  #----------------------------------------------------------------------------|
+  alias load_notetags_state_triggers_compatibility load_notetags_state_triggers
+  def load_notetags_state_triggers
+    load_notetags_state_triggers_compatibility
+    # Added to store all notetag values in the string form as well
+    @state_triggers_string = {}
+    st = "DoubleX_RMVXA::State_Triggers::"
+    @note.split(/[\r\n]+/).each { |line|
+      next unless line =~ /<(\w+) state trigger:\s*(\w+)\s*,\s*(\w+)\s*>/
+      @state_triggers_string[$1.to_sym] ||= []
+      @state_triggers_string[$1.to_sym].push(
+      [eval("#{st}#{$2}"), eval("#{st}#{$3}")])
+    }
+    #
+  end # load_notetags_state_triggers
+
+  #----------------------------------------------------------------------------|
+  #  New method: reset_notetags_state_triggers                                 |
+  #  - Resets all lambdas used by the notetag values of the passed notetag     |
+  #----------------------------------------------------------------------------|
+  def reset_notetags_state_triggers
+    # Uses stored strings of notetag values to reset the lambdas
+    @state_triggers_string.each { |timing, triggers|
+      @state_triggers[timing] = triggers.collect { |trigger|
+        eval("-> battler { battler.instance_exec { #{trigger} } }")
+      }
+    }
+    #
+  end # reset_notetags_state_triggers
+
+end # RPG::State
+
+end # if $doublex_rmvxa[:Dynamic_Data]
+
+#------------------------------------------------------------------------------|
+
+else
+
+  # Informs users that they didn't place State Triggers above this script
+  msgbox("To use DoubleX RMVXA State Triggers Compatibility, " + 
+         "put it below:\n DoubleX RMVXA State Triggers\n but above Main")
+
+end # if $doublex_rmvxa[:State_Triggers]
+
+#==============================================================================|

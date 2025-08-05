@@ -1,0 +1,109 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Reflect State Compatibility Fix v1.00a                     |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00a (GMT 1000 27-1-2014):                                              |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    Same as that of Yami Engine Symphony - Battle Symphony except that you    |
+#    must also give Yami, Yanfly, Nessiah and EvilEagles credit(you should do  |
+#    these anyway) if you give DoubleX or his alias credit                     |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Reflect State                                             |
+#    Knowledge:                                                                |
+#    That of using scripts                                                     |
+#    - DoubleX RMVXA Reflect State                                             |
+#    - Yami Engine Symphony - Battle Symphony                                  |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Fixes compatibility issues of DoubleX RMVXA Reflect State               |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot below the script:                                               |
+#    - Yami Engine Symphony - Battle Symphony                                  |
+#    - DoubleX RMVXA Reflect State                                             |
+#    but above ¡¿ Main. Save to take effect.                                    |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Same as those of:                                                         |
+#    - DoubleX RMVXA Reflect State                                             |
+#    - Yami Engine Symphony - Battle Symphony                                  |
+#==============================================================================|
+
+$imported = {} if $imported.nil?
+$imported["DoubleX RMVXA Reflect State Compatibility Fix"] = true
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["DoubleX RMVXA Reflect State"]
+
+if $imported["YES-BattleSymphony"]
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: invoke_item                                               |
+  #----------------------------------------------------------------------------|
+  def invoke_item(target, item)
+    # This part is rewritten by this script to handle reflect states
+    if !@invoke_reflect && target.reflect_state?(target.states) && (item.physical? && DoubleX_RMVXA::Reflect_State::REFLECT_PHYSICAL || item.magical? && DoubleX_RMVXA::Reflect_State::REFLECT_MAGICAL)
+      @invoke_reflect = true
+      invoke_reflect_state(target, item)
+    else
+      @invoke_reflect = false
+      invoke_item_reflect_state(target, item)
+    end
+    #
+  end # invoke_item
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: invoke_reflect_state                                          |
+  #----------------------------------------------------------------------------|
+  def invoke_reflect_state(target, item)
+    @log_window.display_reflection(target, item)
+    # This part is rewritten by this script to fix compatibility issues with Yami Engine Symphony - Battle Symphony
+    last_subject = @subject
+    @reflect_subject = target
+    @subject = target
+    @subject.backup_actions
+    @subject.make_actions
+    if item.is_a?(RPG::Skill); @subject.current_action.set_skill(item.id)
+      else; @subject.current_action.set_item(item.id); end
+    actions_list = SYMPHONY::DEFAULT_ACTIONS::REFLECT_ACTION
+    if last_subject.opposite?(target)
+      if DoubleX_RMVXA::Reflect_State::REFLECT_TO_ENEMY_CASTER
+        reflect_subject = last_subject
+      else
+        reflect_subject = last_subject.friends_unit.random_target
+      end
+    else
+      reflect_subject = last_subject.opponents_unit.random_target
+    end
+    perform_actions_list(actions_list, [reflect_subject])
+    @subject.clear_actions
+    @subject = last_subject
+    @reflect_subject.restore_actions
+    @reflect_subject = nil
+    @log_window.display_action_results(reflect_subject, item)
+    refresh_status
+    perform_collapse_check(reflect_subject)
+    perform_collapse_check(target)
+    #
+  end # invoke_reflect_state
+
+end # Scene_Battle
+end # if $imported["YES-BattleSymphony"]
+
+#------------------------------------------------------------------------------|
+
+end # if $imported["DoubleX RMVXA Reflect State"]
+
+#==============================================================================|

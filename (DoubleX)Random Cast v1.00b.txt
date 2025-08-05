@@ -1,0 +1,330 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Random Cast v1.00b                                         |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00b(GMT 1500 14-7-2015):                                               |
+#    - Improved this script's readability                                      |
+#    v1.00a(GMT 0800 26-8-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    None other than not claiming this script as created by anyone except      |
+#    DoubleX or his alias                                                      |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - none                                                                    |
+#    Knowledge:                                                                |
+#    - Use of notetags                                                         |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Lets users cast random skills on targetswhen the current skill hits them|
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between ¡¿ Materials and ¡¿ Main. Save to take effect.            |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Scripts rewriting Vocab CounterAttack or aliasing or rewriting method:    |
+#    - load_database under module DataManager                                  |
+#    - apply_item_effects under class Scene_Battle                             |
+#    may have compatibility issues with this script                            |
+#    Place this script above those aliasing any of these method if possible    |
+#==============================================================================|
+
+($doublex_rmvxa ||= {})["Random Cast"] = 10002
+
+#------------------------------------------------------------------------------|
+#  * Notetag <random cast: id, cp, cr, cs, cc> for states(1), weapons(2),      |
+#    armors(3), enemies(4), actors(4), classes(5) and skills(6):(the larger the|
+#    number, the higher the priority)                                          |
+#    To make a battler has cp% chance to cast skill with id id and cr% cost    |
+#    to a target when the current skill of that battler hits that target, put  |
+#    the above notetag into the related actor's, class's, skill's, equip's,    |
+#    enemy's or state's notebox in the database.                               |
+#    Setting cs as 0 and 1 makes cr negative and positive respectively         |
+#    cc is the random cast condition explained in the below user editable zone |
+#    Skills invoked via random cast only hit that target an only hit once      |
+#    That target can't counter nor reflect those skills.                       |
+#    If more than 1 such notetag is placed in the same actor's, class's,       |
+#    skill's, equip's, nemy's or state's notebox, the 1st notetag meeting its  |
+#    requirements will be used and all the others will be ignored. All those   |
+#    noteboxes will be scanned from the 1st line to the last line.             |
+#------------------------------------------------------------------------------|
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module Random_Cast
+
+#------------------------------------------------------------------------------|
+#  * Random Cast Condition(cc in random cast notetag):                         |
+#    To make <random cast: id, cp, cr, cs, cc> work, the requirements in cc    |
+#    must be met. These requirements are ruby scripts like those in events.    |
+#    The below CCX are examples of writing such codes and abtracting them in   |
+#    random cast notetags to aid users in understanding and using cc there.    |
+#    To use CCX, set the value of cc in random cast notetag as CCX.            |
+#    Users can set their own CCX(or whatever names they set) to be used by cc. |
+#    CCX names must start with letters and only have alphanumeric characters.  |
+#    CCX is evaluated in the new method random_cast under class Game_Battler.  |
+#------------------------------------------------------------------------------|
+
+    # CC1, default = "true"
+    # cc is always true
+    CC1 = "true"
+
+    # CC2, default = "item.id != database.random_cast_id[index]"
+    # cc is true if and only if the current skill id isn't equal to id
+    CC2 = "item.id != database.random_cast_id[index]"
+
+    # CC3, default = "!item.physical? && !item.magical?"
+    # cc is true if and only if the current skill isn't physical nor magical
+    CC3 = "!item.physical? && !item.magical?"
+
+    # CC4, default = CC2 + " || " + CC3
+    # cc is true if and only if CC2 or CC3 is true
+    CC4 = CC2 + " || " + CC3
+
+    # CC5, default = "actor? && [x, y, z].include?(id)"
+    # cc is true if and only if the caster is an actor with id x, y or z
+    CC5 = "actor? && [x, y, z].include?(id)"
+
+    # CC6, default = "(" + CC4 + ") && " + CC5
+    # cc is true if and only if CC4 and CC5 is true
+    CC6 = "(" + CC4 + ") && " + CC5
+
+    # CC7, default = "!" + CC6
+    # cc is true if and only if CC6 is false
+    CC7 = "!" + CC6
+
+    # CC8, default = "enemy? && self.enemy_id == x"
+    # cc is true if and only if the caster is an enemy with id x
+    CC8 = "enemy? && self.enemy_id == x"
+
+    # CC9, default =  "rand(999) < luk"
+    # cc is true if and only if the random number(0 - 998) isn't small than luk
+    CC9 = "rand(999) < luk"
+
+  end # Random_Cast
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+module Vocab
+
+  RandomCast = "%s randomly casts %s!"
+
+end # Vocab
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: load_database                                               |
+  #----------------------------------------------------------------------------|
+  alias load_database_random_cast load_database
+  def load_database
+    load_database_random_cast
+    # Added to load random cast notetags
+    load_notetags_random_cast
+    #
+  end # load_database
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_random_cast                                     |
+  #----------------------------------------------------------------------------|
+  def load_notetags_random_cast
+    [$data_actors, $data_classes, $data_skills, $data_weapons, $data_armors, 
+    $data_enemies, $data_states].each { |data|
+      data.each { |obj| obj.load_notetags_random_cast if obj }
+    }
+  end # load_notetags_random_cast
+
+end # DataManager
+
+class RPG::BaseItem
+
+  include DoubleX_RMVXA::Random_Cast
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  ["id", "chance", "cost", "sign", "condition"].each { |data|
+    eval("attr_reader :random_cast_#{data}")
+  }
+  attr_reader :random_cast_note
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_random_cast                                     |
+  #----------------------------------------------------------------------------|
+  def load_notetags_random_cast
+    ["id", "chance", "cost", "sign", "condition"].each { |data|
+      eval("@random_cast_#{data} = []")
+    }
+    @random_cast_note = 0
+    @note.split(/[\r\n]+/).each { |line|
+      case line
+      when /<(?:RANDOM_CAST|random cast):[ ](\w+(?:\s*,\s*\w+)*)>/i
+        chance = id = 0
+        condition = cost = sign = nil
+        $1.scan(/\w+/).each_with_index { |input, index|
+          if index == 0
+            id = input.to_i if input.to_i > 0
+          elsif index == 1
+            chance = input.to_f / 100.0 if input.to_f > 0
+          elsif index == 2
+            cost = input.to_f / 100.0
+          elsif index == 3
+            sign = input.to_i if input.to_i == 0 || input.to_i == 1
+          elsif index == 4
+            condition = eval(input.to_s)
+          else
+            break
+          end
+        }
+        if id != 0 && chance != 0 && cost && sign && condition
+          ["id", "chance", "cost", "sign", "condition"].each { |data|
+            eval("@random_cast_#{data} << #{data}")
+          }
+          @random_cast_note += 1
+        end
+      end
+    }
+  end # load_notetags_random_cast
+
+end # RPG::BaseItem
+
+class Game_Battler < Game_BattlerBase
+
+  include DoubleX_RMVXA::Random_Cast
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  ["id", "chance", "cost", "sign", "condition"].each { |data|
+    eval("attr_reader :random_cast_#{data}")
+  }
+
+  #----------------------------------------------------------------------------|
+  #  New method: set_random_cast                                               |
+  #----------------------------------------------------------------------------|
+  def set_random_cast(item)
+    ["id", "chance", "cost", "sign", "condition"].each_with_index { |data, i|
+      eval("@random_cast_#{data} = #{i > 1 ? "nil" : "0"}")
+    }
+    states.each { |state| random_cast(state, item) }
+    return if random_cast?
+    if actor?
+      [weapons, armors].each { |es|
+        next unless es
+        es.each { |e| random_cast(e, item) }
+        return if random_cast?
+      }
+      random_cast(actor, item)
+      return if random_cast?
+      random_cast(self.class, item)
+      return if random_cast?
+    elsif enemy?
+      random_cast(enemy, item)
+      return if random_cast?
+    end
+    random_cast(item, item) if item
+  end # set_random_cast
+
+  #----------------------------------------------------------------------------|
+  #  New method: random_cast                                                   |
+  #----------------------------------------------------------------------------|
+  def random_cast(database, item)
+    database.random_cast_note.times { |index|
+      next unless random_cast_payable?(database.random_cast_id[index], 
+      database.random_cast_cost[index], database.random_cast_sign[index])
+      next unless eval(database.random_cast_condition[index])
+      next if rand >= database.random_cast_chance[index]
+      return ["id", "chance", "cost", "sign", "condition"].each { |data|
+        eval("@random_cast_#{data} = database.random_cast_#{data}[index]")
+      }
+    }
+  end # random_cast
+
+  #----------------------------------------------------------------------------|
+  #  New method: random_cast_payable?                                          |
+  #----------------------------------------------------------------------------|
+  def random_cast_payable?(skill_id, cost_rate, cost_sign)
+    rate = cost_rate * (cost_sign * 2 - 1)
+    return false if tp < (skill_tp_cost($data_skills[skill_id]) * rate).to_i
+    mp >= (skill_mp_cost($data_skills[skill_id]) * rate).to_i
+  end # random_cast_payable?
+
+  #----------------------------------------------------------------------------|
+  #  New method: random_cast?                                                  |
+  #----------------------------------------------------------------------------|
+  def random_cast?
+    @random_cast_id != 0 && @random_cast_chance != 0 && @random_cast_cost
+  end # random_cast?
+
+  #----------------------------------------------------------------------------|
+  #  New method: use_random_cast                                               |
+  #----------------------------------------------------------------------------|
+  def use_random_cast(item)
+    rate = @random_cast_cost * (@random_cast_sign * 2 - 1)
+    @mp -= (skill_mp_cost(item) * rate).to_i
+    @tp -= (skill_tp_cost(item) * rate).to_i
+    item.effects.each {|effect| item_global_effect_apply(effect) }
+  end # use_random_cast
+
+end # Game_Battler
+
+class Window_BattleLog < Window_Selectable
+
+  #----------------------------------------------------------------------------|
+  #  New method: display_random_cast                                           |
+  #----------------------------------------------------------------------------|
+  def display_random_cast(target, item)
+    add_text(sprintf(Vocab::RandomCast, target.name, item.name))
+    wait
+    back_one
+  end # display_random_cast
+
+end # Window_BattleLog
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: apply_item_effects                                          |
+  #----------------------------------------------------------------------------|
+  alias apply_item_effects_random_cast apply_item_effects
+  def apply_item_effects(target, item)
+    apply_item_effects_random_cast(target, item)
+    # Added to apply random cast if target is hit and random_cast? is true
+    return unless item.is_a?(RPG::Skill) && target.result.hit?
+    apply_random_cast(target, item) unless @subject.magic_reflection
+    #
+  end # apply_item_effects_random_cast
+
+  #----------------------------------------------------------------------------|
+  #  New method: apply_random_cast                                             |
+  #----------------------------------------------------------------------------|
+  def apply_random_cast(target, item)
+    @subject.set_random_cast(item)
+    return unless @subject.random_cast?
+    random_cast = $data_skills[@subject.random_cast_id]
+    @log_window.display_random_cast(@subject, random_cast)
+    @subject.use_random_cast(random_cast)
+    refresh_status
+    show_animation([target], random_cast.animation_id)
+    target.item_apply(@subject, random_cast)
+    refresh_status
+    @log_window.display_action_results(target, random_cast)
+  end # apply_random_cast
+
+end # Scene_Battle
+
+#==============================================================================|

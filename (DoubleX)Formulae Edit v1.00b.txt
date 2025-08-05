@@ -1,0 +1,151 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Formulae Edit v1.00b                                       |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00b(GMT 1200 21-7-2015):                                               |
+#    - Compatible with DoubleX RMVXA Substitute Edit                           |
+#    - Increased this script's compatibility, efficiency and flexibility       |
+#    v1.00a(GMT 0300 30-1-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    None other than not claiming this script as created by anyone except      |
+#    DoubleX or his alias                                                      |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - none                                                                    |
+#    Knowledge:                                                                |
+#    - nothing special                                                         |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Allows users to modify some gameplay formulae                           |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To install this script, Open the script editor and put this script into an|
+#    open slot between ¡¿ Materials and ¡¿ Main. Save to take effect.            |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Scripts aliasing or rewriting method:                                     |
+#    - self.make_escape_ratio under module BattleManager                       |
+#    - item_apply, apply_critical or luk_effect_rate under class Game_Battler  |
+#    or having varaible @user may have compatibility issues with this script   |
+#    Place this script above those aliasing any of these methods if possible   |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Formulae Edit"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module Formulae_Edit
+
+    #--------------------------------------------------------------------------|
+    #  The following formula sets the value of Esc_Ratio, which is the initial |
+    #  escape ratio. It'll be the same as the default if it's set to           |
+    #  "1.5 - 1.0 * $game_troop.agi / $game_party.agi". $game_troop.agi and    |
+    #  $game_party.agi are the average agi of the game troop and game party    |
+    #  respectively at the start of a battle.                                  |
+    #--------------------------------------------------------------------------|
+    Esc_Ratio = "0.5 + 1.0 * ($game_party.agi - $game_troop.agi) / ($game_party.agi + $game_troop.agi)"
+
+    #--------------------------------------------------------------------------|
+    #  The following formula sets the value of Cri_Dmg, which is the critical  |
+    #  damage. It'll be the same as the default if it's set to "damage * 3".   |
+    #  damage is the damage before applying the critical damage expression.    |
+    #--------------------------------------------------------------------------|
+    Cri_Ally = "damage *= 3 + (@user.luk + luk) * 1.00 / param_max(7)"
+    Cri_Enemy = "damage *= 3 + (@user.luk - luk) * 1.00 / param_max(7)"
+    Cri_Dmg = "opposite?(@user) ? #{Cri_Enemy} : #{Cri_Ally}"
+    #--------------------------------------------------------------------------|
+    #  Cri_Ally/Enemy = "damage *= 3 + (@user.luk +- luk) * 1.00 / param_max(7)"|
+    #  (this script's default) is similar to the damage formula of items or    |
+    #  skills in the database but a.luk is replaced by @user.luk and b.luk is  |
+    #  replaced by luk. Ex-parameters and Sp-parameters can also be used.      |
+    #--------------------------------------------------------------------------|
+
+    #--------------------------------------------------------------------------|
+    #  The following formula sets the value of Luk_Rate, which is the luck     |
+    #  effect rate. It'll be the same as the default if it's set to            |
+    #  "[1.0 + (user.luk - luk) * 0.001, 0.0].max". It's similar to the damage |
+    #  formula of items or skills in the database but a.luk is replaced by     |
+    #  user.luk and b.luk is replaced by luk. Ex-parameters and Sp-parameters  |
+    #  can also be used.                                                       |
+    #--------------------------------------------------------------------------|
+    Luk_Rate = "[1.0 + 1.0 * (user.luk - luk) / param_max(7), 0.0].max"
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+  FORMULAE_EDIT = %Q(
+  def apply_critical(damage)
+    #{DoubleX_RMVXA::Formulae_Edit::Cri_Dmg}
+    @user = nil
+    damage
+  end
+
+  def luk_effect_rate(user)
+    #{DoubleX_RMVXA::Formulae_Edit::Luk_Rate}
+  end
+  )
+
+  end # Formulae_Edit
+end # DoubleX_RMVXA
+
+class << BattleManager
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: make_escape_ratio                                         |
+  #----------------------------------------------------------------------------|
+  def make_escape_ratio
+    # Rewritten to return the escape ratio formula
+    @escape_ratio = eval(DoubleX_RMVXA::Formulae_Edit::Esc_Ratio)
+    #
+  end # make_escape_ratio
+
+end # BattleManager
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: item_apply                                                |
+  #----------------------------------------------------------------------------|
+  def item_apply(user, item)
+    @result.clear
+    @result.used = item_test(user, item)
+    @result.missed = (@result.used && rand >= item_hit(user, item))
+    @result.evaded = (!@result.missed && rand < item_eva(user, item))
+    return unless @result.hit?
+    # Added to be compatible with DoubleX RMVXA Substitute Edit
+    if $imported["DoubleX RMVXA Substitute Edit"]
+      if SceneManager.scene_is?(Scene_Battle)
+        substitute = SceneManager.scene.apply_substitute(self, item)
+        return substitute.item_apply(user, item) if substitute != self
+      end
+    end
+    #
+    unless item.damage.none?
+      @result.critical = (rand < item_cri(user, item))
+      # Added to allow param and xparam to be used
+      @user = user if @result.critical
+      #
+      make_damage_value(user, item)
+      execute_damage(user)
+    end
+    item.effects.each {|effect| item_effect_apply(user, item, effect) }
+    item_user_effect(user, item)
+  end # item_apply
+
+  module_eval(DoubleX_RMVXA::Formulae_Edit::FORMULAE_EDIT)
+
+end # Game_Battler
+
+#==============================================================================|

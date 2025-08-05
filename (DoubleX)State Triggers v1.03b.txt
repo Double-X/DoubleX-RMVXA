@@ -1,0 +1,368 @@
+#==============================================================================|
+#  ** Script Info                                                              |
+#------------------------------------------------------------------------------|
+#  * Script Name                                                               |
+#    DoubleX RMVXA State Triggers                                              |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    Sets some states to trigger additional effects when conditions are met    |
+#------------------------------------------------------------------------------|
+#  * Terms Of Use                                                              |
+#    You shall keep this script's Script Info part's contents intact           |
+#    You shalln't claim that this script is written by anyone other than       |
+#    DoubleX or his aliases                                                    |
+#    None of the above applies to DoubleX or his aliases                       |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Abilities:                                                                |
+#    1. Decent RGSS3 scripting proficiency to fully utilize this script        |
+#------------------------------------------------------------------------------|
+#  * Instructions                                                              |
+#    1. Open the script editor and put this script into an open slot between   |
+#       Materials and Main, save to take effect.                               |
+#------------------------------------------------------------------------------|
+#  * Links                                                                     |
+#    Script Usage 101:                                                         |
+#    1. forums.rpgmakerweb.com/index.php?/topic/32752-rmvxa-script-usage-101/  |
+#    2. rpgmakervxace.net/topic/27475-rmvxa-script-usage-101/                  |
+#    This script:                                                              |
+#    1. http://www.rpgmakervxace.net/topic/31374-doublex-rmvxa-state-triggers/ |
+#    Mentioned Patreon Supporters:                                             |
+#    https://www.patreon.com/posts/71738797                                    |
+#------------------------------------------------------------------------------|
+#  * Authors                                                                   |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.03b(GMT 1400 10-5-2016):                                               |
+#    1. timing while won't replace but will combine the state's existing       |
+#       features with all stax meeting the corresponding stcx                  |
+#    v1.03a(GMT 1500 9-5-2016):                                                |
+#    1. adding the timing while to <timing state trigger: stcx, stax>          |
+#    v1.02a(GMT 1300 26-2-2016):                                               |
+#    1. stcx and stax take the state calling them as an argument as well       |
+#    v1.01b(GMT 0300 7-11-2015):                                               |
+#    1. Notetag values are now symbols of methods in the configuration regions |
+#    2. This script doesn't need DoubleX RMVXA State Triggers Compatibility to |
+#       be compatible with all its addressed scripts                           |
+#    3. Further improved this script's compatibility, efficiency and simplicity|
+#    v1.01a(GMT 1100 8-5-2015):                                                |
+#    1. Lets users use state triggers with timings set by them                 |
+#    v1.00g(GMT 1600 4-5-2015):                                                |
+#    1. Improved this script's efficiency                                      |
+#    v1.00f(GMT 0300 25-4-2015):                                               |
+#    1. Improved this script's effectiveness                                   |
+#    v1.00e(GMT 1400 21-4-2015):                                               |
+#    1. Further improved this script's robustness                              |
+#    v1.00d(GMT 1500 14-4-2015):                                               |
+#    1. Improved this script's robustness                                      |
+#    v1.00c(GMT 0200 12-4-2015):                                               |
+#    1. Fixed triggering remove actions upon adding state resists bug          |
+#    2. Fixed not triggering remove actions upon death, escape and recovery bug|
+#    v1.00b(GMT 1400 11-4-2015):                                               |
+#    1. Fixed not supporting multiple notetags on the same state bug           |
+#    v1.00a(GMT 1100 11-4-2015):                                               |
+#    1. 1st version of this script finished                                    |
+#==============================================================================|
+
+#==============================================================================|
+#  ** Notetag Info                                                             |
+#------------------------------------------------------------------------------|
+#  * State Notetags:                                                           |
+#    1. <timing state trigger: stcx, stax>                                     |
+#       - Sets a state to trigger stax when timing and stcx are met            |
+#       - timing can be add, turn, remove or custom timings set by you         |
+#       - add means the state's just added                                     |
+#       - turn means the state's remaining turn's just reduced by 1            |
+#       - remove means the state's just removed                                |
+#       - while means the stax effects are active as long as the state's active|
+#       - timing must only consist of alphanumeric characters                  |
+#       - stcx can be set in State Trigger Condition Notetag Values            |
+#       - stax can be set in State Trigger Action Notetag Values               |
+#==============================================================================|
+
+#==============================================================================|
+#  ** Script Call Info                                                         |
+#------------------------------------------------------------------------------|
+#  * Battler manipulations                                                     |
+#    1. exec_state_triggers(state_id, timing)                                  |
+#       - Executes all state triggers with timing timing of state with id      |
+#         state_id                                                             |
+#    2. state_trigger_features(state, timing)                                  |
+#       - Returns an array of features returned by all stax meeting stcx with  |
+#         timing timing of state                                               |
+#       - This script call's not supposed to work with timing add, turn nor    |
+#         remove but supposed to work with timing while                        |
+#==============================================================================|
+
+($doublex_rmvxa ||= {})[:State_Triggers] = "v1.03b"
+
+#==============================================================================|
+#  ** Script Configurations                                                    |
+#     You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+
+  module State_Triggers
+
+    #--------------------------------------------------------------------------|
+    #  State Trigger Condition Notetag Values                                  |
+    #  - Setups stcx used by this script's notetags                            |
+    #--------------------------------------------------------------------------|
+    # stcx are read at:
+    # 1. RPG::State
+    #    - (@state_triggers[$1.downcase.to_sym] ||= []).push(
+    #      [$2.downcase, $3.downcase]) in load_state_triggers_notes
+    # stcx are used at:
+    # 1. Game_BattlerBase
+    #    - st.send(trigger[0], self, state) in state_trigger_features
+    # 2. Game_Battler
+    #    - st.send(trigger[1], self) if st.send(trigger[0], self) in
+    #      exec_state_triggers
+    # stcx are strings names of methods under DoubleX_RMVXA::State_Triggers
+    # stcx names can only use alphanumeric characters and can't use uppercase
+    # letters
+    # battler is the battler calling the stcx
+    # state is the state using the stcx
+    # The below stcx are examples added to help you set your stcx
+    # You can freely use, rewrite and/or delete these examples
+
+    # Sets the state trigger condition as always true
+    def self.stc1(battler, state)
+      true
+    end
+
+    # Sets the state trigger condition as always false
+    def self.stc2(battler, state)
+      false
+    end
+
+    # Sets the state trigger condition as needing switch with id x to be on
+    def self.stc3(battler, state)
+      $game_switches[x]
+    end
+
+    # Sets the state trigger condition as needing the state using this stcx to
+    # have its number of remaining turns greater than x
+    def self.stc4(battler, state)
+      battler.instance_exec { @state_turns[state_id] > x }
+    end
+
+    # Adds new stcx here
+    
+
+    #--------------------------------------------------------------------------|
+    #  State Trigger Action Notetag Values                                     |
+    #  - Setups stax used by this script's notetags                            |
+    #--------------------------------------------------------------------------| 
+    # stax are read at:
+    # 1. RPG::State
+    #    - (@state_triggers[$1.downcase.to_sym] ||= []).push(
+    #      [$2.downcase, $3.downcase]) in load_state_triggers_notes
+    # stax are used at:
+    # 1. Game_BattlerBase
+    #    - }.collect! { |trigger| st.send(trigger[1], self, state) }.flatten! in
+    #      state_trigger_features
+    # 2. Game_Battler
+    #    - st.send(trigger[1], self) if st.send(trigger[0], self) in
+    #      exec_state_triggers
+    # stax are strings of names of methods under DoubleX_RMVXA::State_Triggers
+    # stax names can only use alphanumeric characters and can't use uppercase
+    # letters
+    # battler is the battler calling the stax
+    # state is the state using the stax
+    # If the timing using the stax is while, the stax must return an array of
+    # RPG::BaseItem::Feature
+    # You can refer to Game_BattlerBase and RPG::BaseItem::Feature for more info
+    # The below stax are examples added to help you set your stax
+    # You can freely use, rewrite and/or delete these examples
+
+    # Sets the state trigger action as what Special Effect Escape does
+    # This stax's not supposed to work with the timing while as it doesn't
+    # return an array of RPG::BaseItem::Feature
+    def self.sta1(battler, state)
+      battler.hide
+    end
+
+    # Sets the state trigger action as calling common event with id
+    # common_event_id
+    # This stax's not supposed to work with the timing while as it doesn't
+    # return an array of RPG::BaseItem::Feature
+    def self.sta2(battler, state)
+      $game_temp.reserve_common_event(common_event_id)
+    end
+
+    # Sets the state trigger action as executing damage equal to the value of
+    # game variable with id x to self with type equal to that of skill with id
+    # equal to y
+    # This stax's not supposed to work with the timing while as it doesn't
+    # return an array of RPG::BaseItem::Feature
+    def self.sta3(battler, state)
+      battler.result.clear
+      battler.result.make_damage($game_variables[x], $data_skills[y])
+      battler.execute_damage(battler)
+    end
+
+    # Sets the state trigger action as multiplying the battler's atk by x * 100%
+    # This stax's supposed to work with the timing while as it returns an array
+    # of RPG::BaseItem::Feature
+    def self.sta4(battler, state)
+      [RPG::BaseItem::Feature.new(21, 2, x)]
+    end
+
+    # Adds new stax here
+    
+
+  end # State_Triggers
+
+end # DoubleX_RMVXA
+
+#==============================================================================|
+#  ** Script Implementations                                                   |
+#     You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+#  * Script Support Info:                                                      |
+#    1. Prerequisites                                                          |
+#       - Some RGSS3 scripting proficiency to fully comprehend this script     |
+#    2. Method documentation                                                   |
+#       - The 1st part describes why this method's rewritten/aliased for       |
+#         rewritten/aliased methods or what the method does for new methods    |
+#       - The 2nd part describes what the arguments of the method are          |
+#       - The 3rd part informs which version rewritten, aliased or created this|
+#         method                                                               |
+#       - The 4th part informs whether the method's rewritten or new           |
+#       - The 5th part informs whether the method's a real or potential hotspot|
+#       - The 6th part describes how this method works for new methods only,   |
+#         and describes the parts added, removed or rewritten for rewritten or |
+#         aliased methods only                                                 |
+#       Example:                                                               |
+# #--------------------------------------------------------------------------| |
+# #  Why rewrite/alias/What this method does                                 | |
+# #--------------------------------------------------------------------------| |
+# # *argv: What these variables are                                            |
+# # &argb: What this block is                                                  |
+# def def_name(*argv, &argb) # Version X+; Rewrite/New; Hotspot                |
+#   # Added/Removed/Rewritten to do something/How this method works            |
+#   def_name_code                                                              |
+#   #                                                                          |
+# end # def_name                                                               |
+#------------------------------------------------------------------------------|
+
+class << DataManager # Edit
+
+  alias load_database_state_triggers load_database
+  def load_database(*argv, &argb)
+    load_database_state_triggers(*argv, &argb)
+    $data_states.each { |obj| obj.load_state_triggers_notes if obj } # Added
+  end # load_database
+
+end # DataManager
+
+class RPG::State < RPG::BaseItem # Edit
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_accessor :state_triggers # The storage of all state trigger notetags
+
+  def load_state_triggers_notes
+    # Stores all timing, stcx and stax triples from matching lines sequentially
+    @state_triggers = {}
+    @note.split(/[\r\n]+/).each { |line|
+      next unless line =~ /< *(\w+) +state +trigger *: *(\w+) *, *(\w+) *>/i
+      (@state_triggers[$1.downcase.to_sym] ||= []).push(
+      [$2.downcase.to_sym, $3.downcase.to_sym])
+    }
+    #
+  end # load_state_triggers_notes
+
+end # RPG::State
+
+class Game_BattlerBase # Edit
+
+  alias all_features_state_triggers all_features
+  def all_features(*argv, &argb) # v1.03a+
+    # Rewritten to use features returned by stax for states meeting any stcx
+    states.inject([]) {|r, obj|
+      r + state_trigger_features(obj, :while)
+    } + all_features_state_triggers(*argv, &argb)
+    #
+  end # all_features
+
+  alias erase_state_triggers erase_state
+  def erase_state(state_id, &argb)
+    # Added to store the state existence flag right before it's erased
+    trigger = @states.include?(state_id)
+    #
+    erase_state_triggers(state_id, &argb)
+    # Added to trigger the remove actions when the remove conditions are met
+    exec_state_triggers(state_id, :remove) if trigger
+    #
+  end # erase_state
+
+  # state: The state having its features returned by stax collected
+  # timing: The timing of the state collecting features returned by stax
+  def state_trigger_features(state, timing) # v1.03a+
+    return [] unless triggers = state.state_triggers[timing]
+    st = DoubleX_RMVXA::State_Triggers
+    # Collects all features returned by stax meeting stcx with timing timing
+    triggers.select { |trigger|
+      st.send(trigger[0], self, state)
+    }.collect! { |trigger| st.send(trigger[1], self, state) }.flatten!
+    #
+  end # state_trigger_features
+
+end # Game_BattlerBase
+
+class Game_Battler < Game_BattlerBase # Edit
+
+  alias clear_states_triggers clear_states
+  def clear_states(*argv, &argb)
+    # Added to store the state array right before it's cleared
+    last_states = @states
+    #
+    clear_states_triggers(*argv, &argb)
+    # Added to trigger the remove actions when the remove conditions are met
+    return unless last_states
+    last_states.each { |state_id| exec_state_triggers(state_id, :remove) }
+    #
+  end # clear_states
+
+  alias reset_state_counts_state_triggers reset_state_counts
+  def reset_state_counts(state_id, &argb)
+    reset_state_counts_state_triggers(state_id, &argb)
+    # Added to trigger the add actions when the add conditions are met
+    exec_state_triggers(state_id, :add) if @states.include?(state_id)
+    #
+  end # reset_state_counts
+
+  alias update_state_turns_state_triggers update_state_turns
+  def update_state_turns(*argv, &argb)
+    update_state_turns_state_triggers(*argv, &argb)
+    # Added to trigger the turn actions when the turn conditions are met
+    @states.each { |state_id| exec_state_triggers(state_id, :turn) }
+    #
+  end # update_state_turns
+
+  #----------------------------------------------------------------------------|
+  #  Triggers each state action when each respective condition's met           |
+  #----------------------------------------------------------------------------|
+  # state_id: The id of the state triggering its actions
+  # timing: The timing of the state triggering its actions
+  def exec_state_triggers(state_id, timing) # New
+    # Evaluates each stcx to see if its corresponding stax should be evaluated
+    state = $data_states[state_id]
+    return unless triggers = state.state_triggers[timing]
+    st = DoubleX_RMVXA::State_Triggers
+    triggers.each { |trigger|
+      st.send(trigger[1], self, state) if st.send(trigger[0], self, state)
+    }
+    #
+  end # exec_state_triggers
+
+end # Game_Battler
+
+#------------------------------------------------------------------------------|
+
+#==============================================================================|

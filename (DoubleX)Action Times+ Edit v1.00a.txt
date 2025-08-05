@@ -1,0 +1,64 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Action Times+ Edit v1.00a                                  |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00a (GMT 1200 3-1-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    None other than not claiming this script as created by anyone except      |
+#    DoubleX or his alias                                                      |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - none                                                                    |
+#    Knowledge:                                                                |
+#    - nothing special                                                         |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Alters the effect of having multiple Action Times+ to be taking their   |
+#      sum and each 100% of it is converted to 1 additional action time        |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between ¡¿ Materials and ¡¿ Main. Save to take effect.            |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Scripts aliasing or rewriting method make_action_times under class        |
+#    Game_Battler may have compatibility issues with this script               |
+#    Place this script above those aliasing this method if possible            |
+#==============================================================================|
+
+$imported = {} if $imported.nil?
+$imported["DoubleX RMVXA Action Times+ Edit"] = true
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: make_action_times                                         |
+  #----------------------------------------------------------------------------|
+  def make_action_times
+    # This part is rewritten by this script to convert the sum of all p into action_times
+    action_chance = 0
+    action_times = 1
+    action_plus_set.inject(1) {|r, p|
+      action_chance += p
+      if action_chance >= 1
+        action_times += 1
+        action_chance -= 1
+      end
+    }
+    rand < action_chance ? action_times + 1 : action_times
+    #
+  end # make_action_times
+
+end # Game_Battler
+
+#==============================================================================|

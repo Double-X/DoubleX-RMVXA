@@ -1,0 +1,571 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Intercept Magic v1.03b                                     |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.03b(GMT 1500 14-7-2015):                                               |
+#    - Improved this script's efficiency and readability                       |
+#    v1.03a(GMT 1000 7-12-2014):                                               |
+#    - Added <ally intercept>, <enemy intercept> and <intercept chance>notetags|
+#    v1.02b(GMT 1000 27-7-2014):                                               |
+#    - Fixed crashes with Intercept_MP_Limit or Intercept_TP_Limit being true  |
+#    v1.02a(GMT 0700 21-6-2014):                                               |
+#    - Added <hit intercept mp> and <hit intercept tp> notetags                |
+#    v1.01a(GMT 0200 8-4-2014):                                                |
+#    - Allows users to set intercept animations                                |
+#    v1.00b(GMT 0900 7-4-2014):                                                |
+#    - Fixed intercept magic not working on allies' skills bug                 |
+#    v1.00a(GMT 0700 5-4-2014):                                                |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    None other than not claiming this script as created by anyone except      |
+#    DoubleX or his alias                                                      |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - none                                                                    |
+#    Knowledge:                                                                |
+#    - Use of notetags                                                         |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Allows users to set states that intercepts magic under some conditions  |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between ¡¿ Materials and ¡¿ Main. Save to take effect.            |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Scripts aliasing or rewriting method:                                     |
+#    - self.load_database under module DataManager                             |
+#    - add_state under class Game_Battler                                      |
+#    - use_item under class Scene_Battle                                       |
+#    may have compatibility issues with this script                            |
+#    Place this script above those aliasing any of these method if possible    |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Intercept Magic"] = true
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module Intercept_Magic
+
+#------------------------------------------------------------------------------|
+#  * Notetag <intercept tier: x> for skills and states:                        |
+#    - Allows battlers having states with this notetag to intercept skills with|
+#      this notetag(x must be greater than 0 in order for this notetag to work)|
+#    - If the intercept tier of the states is greater than or equal to that of |
+#      the skills, those skills will be intercepted if other conditions are met|
+#    - If more than 1 battler can intercept a skill, the one having any        |
+#      intercept state for the shortest time will intercept the skill          |
+#    - This notetag needs <ally intercept> or <enemy intercept> to be present  |
+#      to work(they can be used together to let any battler be the interceptor)|
+#------------------------------------------------------------------------------|
+#  * Notetag <intercept mp> for skills and states:                             |
+#    - Interceptors having states with this notetag absorb mp equal to the mp  |
+#      cost of the skills intercepted if those skills also have this notetag   |
+#    - Put this notetag below <intercept tier: x> to make this notetag work    |
+#------------------------------------------------------------------------------|
+#  * Notetag <intercept tp> for skills and states:                             |
+#    - Interceptors having states with this notetag absorb tp equal to the tp  |
+#      cost of the skills intercepted if those skills also have this notetag   |
+#    - Put this notetag below <intercept tier: x> to make this notetag work    |
+#------------------------------------------------------------------------------|
+#  * (v1.02a+)Notetag <hit intercept mp> for skills and states:                |
+#    - Failed interceptions due to Intercept_MP_Limit will cause the skill to  |
+#      only hit the interceptor if both the skills and states have this notetag|
+#------------------------------------------------------------------------------|
+#  * (v1.02a+)Notetag <hit intercept tp> for skills and states:                |
+#    - Failed interceptions due to Intercept_TP_Limit will cause the skill to  |
+#      only hit the interceptor if both the skills and states have this notetag|
+#------------------------------------------------------------------------------|
+#  * (v1.03a+)Notetag <ally intercept> for skills and states:                  |
+#    - Interceptors having states with this notetag can intercept skills with  |
+#      this notetag if their users are allies and other conditions are met     |
+#    - Putting this notetag above <enemy intercept> means allies will always   |
+#      intercept the skills if enemies can also intercept them                 |
+#    - The ordering of <ally intercept> and <enemy intercept> in skills to be  |
+#      intercepted will be used if intercepting states also has those notetags |
+#    - Put this notetag below <intercept tier: x> to make this notetag work    |
+#------------------------------------------------------------------------------|
+#  * (v1.03a+)Notetag <enemy intercept> for skills and states:                 |
+#    - Interceptors having states with this notetag can intercept skills with  |
+#      this notetag if their users are enemies and other conditions are met    |
+#    - Putting this notetag above <ally intercept> means enemies will always   |
+#      intercept the skills if allies can also intercept them                  |
+#    - The ordering of <ally intercept> and <enemy intercept> in skills to be  |
+#      intercepted will be used if intercepting states also has those notetags |
+#    - Put this notetag below <intercept tier: x> to make this notetag work    |
+#------------------------------------------------------------------------------|
+#  * (v1.03a+)Notetag <intercept chance: x> for skills and states:             |
+#    - Interceptors having states with this notetag have a x% chance to        |
+#      intercept skills that can be intercepted if other conditions are met    |
+#    - Skills that can be intercepted with this notetag have a x% chance to be |
+#      intercepted by interceptors if other conditions are met                 |
+#    - The real chance of success is that of intercepting states multiplied by |
+#      that of skills to be intercepted                                        |
+#    - If this notetag is absent, the chance of success will be 100%           |
+#------------------------------------------------------------------------------|
+
+#------------------------------------------------------------------------------|
+#  * (v1.01a+)Intercept_Animation_Id, default = 0                              |
+#    Animations with id Intercept_Animation_Id will be played upon interception|
+#    if 0 < Intercept_Animation_Id < 1000                                      |
+#------------------------------------------------------------------------------|
+  Intercept_Animation_Id = 0
+
+#------------------------------------------------------------------------------|
+#  * Intercept_SE, default = RPG::SE.new(File, Volume, Pitch)                  |
+#    SE file File with volume Volume and pitch Pitch will be played upon       |
+#    successful interceptions                                                  |
+#------------------------------------------------------------------------------|
+  # File is a SE file without specifying its extension and with or without
+  # specifying its path
+  # Volume and Pitch range from 1 to 100 and 5 to 200 respectively
+  # Setting Intercept_SE as nil or false will disable this feature
+  Intercept_SE = RPG::SE.new("Absorb1", 80, 100)
+
+#------------------------------------------------------------------------------|
+#  * Intercept_Times_Limit, default = 0                                        |
+#    Intercept states will worn off after its battlers intercepted             |
+#    Intercept_Times_Limit skills(0 here means no such limit)                  |
+#------------------------------------------------------------------------------|
+  Intercept_Times_Limit = 0
+
+#------------------------------------------------------------------------------|
+#  * (v1.02a+)Count_Fail_Intercept, default = true                             |
+#    Failed interceptions will also be counted for Intercept_Times_Limit       |
+#------------------------------------------------------------------------------|
+  Count_Fail_Intercept = true
+
+#------------------------------------------------------------------------------|
+#  * Intercept_MP_Limit, default = true                                        |
+#    If Intercept_MP_Limit is true and the interceptors' MP will be greater    |
+#    than their MMP after intercepting a skill, that skill can't be intercepted|
+#------------------------------------------------------------------------------|
+  Intercept_MP_Limit = true
+
+#------------------------------------------------------------------------------|
+#  * Intercept_TP_Limit, default = true                                        |
+#    If Intercept_TP_Limit is true and the interceptors' TP will be greater    |
+#    than their max TP value after intercepting a skill, that skill can't be   |
+#    intercepted                                                               |
+#------------------------------------------------------------------------------|
+  Intercept_TP_Limit = true
+
+#------------------------------------------------------------------------------|
+#  * Intercept_Learnt_Skill, default = true                                    |
+#    Battlers can only intercept skills that they're learnt                    |
+#------------------------------------------------------------------------------|
+  Intercept_Learnt_Skill = true
+
+#------------------------------------------------------------------------------|
+#  * Intercept_Usable_Skill, default = true                                    |
+#    Battlers can only intercept skills that they can use at the moment        |
+#------------------------------------------------------------------------------|
+  Intercept_Usable_Skill = true
+
+#------------------------------------------------------------------------------|
+#  * Intercept_Learn_Skill, default = false                                    |
+#    Successful interceptions causes interceptors to learn intercepted skills  |
+#------------------------------------------------------------------------------|
+  Intercept_Learn_Skill = false
+
+#------------------------------------------------------------------------------|
+#  * Intercept_MCR, default = true                                             |
+#    The MP absorbed by the interceptor will be the actual MP used by the users|
+#    of the skills intercepted If Intercept_MCR is true                        |
+#------------------------------------------------------------------------------|
+  Intercept_MCR = true
+
+  end # Intercept_Magic
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+class << DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: load_database                                               |
+  #----------------------------------------------------------------------------|
+  alias load_database_intercept_magic load_database
+  def load_database
+    load_database_intercept_magic
+    # Added to load intercept magic notetags
+    load_notetags_intercept_magic
+    #
+  end # load_database
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_intercept_magic                                 |
+  #----------------------------------------------------------------------------|
+  def load_notetags_intercept_magic
+    [$data_skills, $data_states].each { |data|
+      data.each { |obj| obj.load_notetags_intercept_magic if obj }
+    }
+  end # load_notetags_intercept_magic
+
+end # DataManager
+
+class RPG::BaseItem
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  attr_accessor :intercept_tier
+  attr_accessor :intercept_mp
+  attr_accessor :intercept_tp
+  attr_accessor :hit_intercept_mp
+  attr_accessor :hit_intercept_tp
+  attr_accessor :battler_intercept
+  attr_accessor :intercept_chance
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_intercept_magic                                 |
+  #----------------------------------------------------------------------------|
+  def load_notetags_intercept_magic
+    im = DoubleX_RMVXA::Intercept_Magic
+    @intercept_tier = 0
+    @intercept_chance =100
+    @battler_intercept = {}
+    @intercept_mp = @intercept_tp = false
+    @hit_intercept_mp = @hit_intercept_tp = false
+    @note.split(/[\r\n]+/).each { |line|
+      case line
+      when /<(?:INTERCEPT_TIER|intercept tier):[ ]*(\d+)>/i
+        @intercept_tier = $1.to_i if $1.to_i > @intercept_tier
+      when /<(?:INTERCEPT_MP|intercept mp)>/i
+        @intercept_mp ||= @intercept_tier > 0
+      when /<(?:INTERCEPT_TP|intercept tp)>/i
+        @intercept_tp ||= @intercept_tier > 0
+      when /<(?:HIT_INTERCEPT_MP|hit intercept mp)>/i
+        @hit_intercept_mp ||= im::Intercept_MP_Limit && @intercept_mp
+      when /<(?:HIT_INTERCEPT_TP|hit intercept tp)>/i
+        @hit_intercept_tp ||= im::Intercept_TP_Limit && @intercept_tp
+      when /<(?:ALLY_INTERCEPT|ally intercept)>/i
+        @battler_intercept[:ally] = true
+      when /<(?:ENEMY_INTERCEPT|enemy intercept)>/i
+        @battler_intercept[:enemy] = true
+      when /<(?:INTERCEPT_CHANCE|intercept chance):[ ]*(\d+)>/i
+        @intercept_chance = $1.to_i if $1.to_i < @intercept_chance
+      end
+    }
+    @intercept_chance /= 100.0
+  end # load_notetags_intercept_magic
+
+end # RPG::BaseItem
+
+module Vocab
+
+  InterceptMagic = "%s intercepts the skill!"
+  LearnInterceptMagic = "%s learns the intercepted skill!"
+  FailInterceptMagic = "%s fails to intercept the skill!"
+
+end # Vocab
+
+class Game_Temp
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_accessor :skill_interceptor
+
+  #----------------------------------------------------------------------------|
+  #  (v1.03b+)Alias method: initialize                                         |
+  #----------------------------------------------------------------------------|
+  alias initialize_intercept_magic initialize
+  def initialize
+    initialize_intercept_magic
+    # Added to initialize the array storing all skill interceptors
+    @skill_interceptor = []
+    #
+  end # initialize
+
+  #----------------------------------------------------------------------------|
+  #  New method: intercept_order                                               |
+  #----------------------------------------------------------------------------|
+  def intercept_order(subject)
+    @skill_interceptor.each_with_index { |battler, index|
+      return index + 1 if battler == subject
+    }
+  end # intercept_order
+
+end # Game_Temp
+
+class Game_Action
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02a+)New method: fail_intercept                                       |
+  #----------------------------------------------------------------------------|
+  def fail_intercept(target)
+    return [target] if item.for_user?
+    return [target] * item.number_of_targets if item.for_random?
+    if item.for_one?
+      return [target] * (1 + (attack? ? subject.atk_times_add.to_i : 0))
+    end
+    return [target] * opponents_unit.alive_members.size if item.for_opponent?
+    return [target] * friends_unit.dead_members.size if item.for_dead_friend?
+    [target] * friends_unit.alive_members.size
+  end # fail_intercept
+
+end # Game_Action
+
+class Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  attr_accessor :intercept_order
+  attr_accessor :intercept_times
+
+  #----------------------------------------------------------------------------|
+  #  (v1.03b+)Alias method: initialize                                         |
+  #----------------------------------------------------------------------------|
+  alias initialize_intercept_magic initialize
+  def initialize
+    initialize_intercept_magic
+    # Added to initialize the order of this battler among all interceptors
+    @intercept_order = 0
+    #
+  end # initialize
+
+  #----------------------------------------------------------------------------|
+  #  New method: intercept_magic                                               |
+  #----------------------------------------------------------------------------|
+  def intercept_magic(notetag)
+    if @states
+      intercept_magic = notetag == :tier ? 0 : notetag == :key ? [] : false
+      @states.each { |state|
+        case notetag
+        when :tier
+          if $data_states[state].intercept_tier > intercept_magic
+            intercept_magic = $data_states[state].intercept_tier
+          end
+        when :key
+          $data_states[state].battler_intercept.each_key { |key|
+            intercept_magic << key unless intercept_magic.include?(key)
+          }
+        when :mp
+          return true if $data_states[state].intercept_mp
+        when :tp
+          return true if $data_states[state].intercept_tp
+        when :hit_mp
+          return true if $data_states[state].hit_intercept_mp
+        when :hit_tp
+          return true if $data_states[state].hit_intercept_tp
+        when :chance
+          return true if rand < $data_states[state].intercept_chance
+        end
+      }
+    end
+    intercept_magic
+  end # intercept_magic
+
+  #----------------------------------------------------------------------------|
+  #  New method: remove_intercept_states                                       |
+  #----------------------------------------------------------------------------|
+  def remove_intercept_states
+    @states.delete_if { |state| $data_states[state].intercept_tier > 0 }
+    @intercept_times = 0
+    $game_temp.skill_interceptor.delete(self) if @intercept_order > 0
+    @intercept_order = 0
+  end # remove_intercept_states
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02a+)New method: intercept_mp_tp                                      |
+  #----------------------------------------------------------------------------|
+  def intercept_mp_tp(notetag, item, user = nil)
+    if notetag == :mp
+      return item.mp_cost unless DoubleX_RMVXA::Intercept_Magic::Intercept_MCR
+      return (item.mp_cost * user.mcr).to_i
+    elsif notetag == :tp
+      return item.tp_cost
+    end
+    mmp > tp ? mmp + 1 : tp + 1
+  end # intercept_mp_tp
+
+end # Game_BattlerBase
+
+class Game_Battler < Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: add_state                                                   |
+  #----------------------------------------------------------------------------| 
+  alias add_state_intercept_magic add_state
+  def add_state(state_id)
+    add_state_intercept_magic(state_id)
+    # Added to set the intercept order
+    add_intercept_states(state_id) if $data_states[state_id].intercept_tier > 0
+    #
+  end # add_state
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02a+)New method: add_intercept_states                                 |
+  #----------------------------------------------------------------------------|
+  def add_intercept_states(state_id)
+    if (interceptor = $game_temp.skill_interceptor).include?(self)
+      interceptor.delete(self)
+    end
+    interceptor << self
+    @intercept_order = $game_temp.intercept_order(self)
+  end # add_intercept_states
+
+end # Game_Battler
+
+class Game_Unit
+
+  #----------------------------------------------------------------------------|
+  #  New method: intercept_magic                                               |
+  #----------------------------------------------------------------------------| 
+  def intercept_magic(user, item, key)
+    return nil unless is_a?(Game_Party) || is_a?(Game_Troop)
+    im = DoubleX_RMVXA::Intercept_Magic
+    intercept_member = nil
+    members.each { |member|
+      next if member.intercept_magic(:tier) < item.intercept_tier
+      next unless member.intercept_magic(:key).include?(key)
+      next if im::Intercept_MP_Limit && item.intercept_mp && 
+      member.intercept_magic(:mp) && (!item.hit_intercept_mp || 
+      !member.intercept_magic(:hit_mp)) && 
+      member.intercept_mp_tp(:mp, item, user) > member.mmp - member.mp
+      next if im::Intercept_TP_Limit && item.intercept_tp && 
+      member.intercept_magic(:tp) && (!item.hit_intercept_tp || 
+      !member.intercept_magic(:hit_tp)) && 
+      member.intercept_mp_tp(:tp, item) > member.max_tp - member.tp
+      next if im::Intercept_Learnt_Skill && member.actor? && 
+      !member.skill_learn?(item)
+      next if im::Intercept_Usable_Skill && !member.usable?(item)
+      next unless member.intercept_magic(:chance)
+      next if intercept_member && 
+      intercept_member.intercept_order >= member.intercept_order
+      intercept_member = member
+    }
+    intercept_member
+  end # intercept_magic
+
+end # Game_Unit
+
+class Window_BattleLog < Window_Selectable
+
+  #----------------------------------------------------------------------------|
+  #  New method: display_intercept_item                                        |
+  #----------------------------------------------------------------------------| 
+  def display_intercept_item(target)
+    if (im = DoubleX_RMVXA::Intercept_Magic)::Intercept_SE
+      im::Intercept_SE.play
+    end
+    add_text(sprintf(Vocab::InterceptMagic, target.name))
+  end # display_intercept_item
+
+  #----------------------------------------------------------------------------|
+  #  New method: display_learn_intercept_item                                  |
+  #----------------------------------------------------------------------------| 
+  def display_learn_intercept_item(target)
+    add_text(sprintf(Vocab::LearnInterceptMagic, target.name))
+  end # display_learn_intercept_item
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02a+)New method: display_fail_intercept_item                          |
+  #----------------------------------------------------------------------------| 
+  def display_fail_intercept_item(target)
+    add_text(sprintf(Vocab::FailInterceptMagic, target.name))
+  end # display_fail_intercept_item
+
+end # Window_BattleLog
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: use_item                                                    |
+  #----------------------------------------------------------------------------| 
+  alias use_item_intercept_magic use_item
+  def use_item
+    # Rewritten to intercept magic when conditions are met
+    item = @subject.current_action.item
+    unless item.is_a?(RPG::Skill) && item.intercept_tier > 0
+      return use_item_intercept_magic
+    end
+    return use_item_intercept_magic unless rand < item.intercept_chance
+    interceptor = nil
+    item.battler_intercept.each_key { |key|
+      interceptor ||= 
+      @subject.friends_unit.intercept_magic(@subject, item, key) if key == :ally
+      next if key != :enemy
+      interceptor ||= 
+      @subject.opponents_unit.intercept_magic(@subject, item, key)
+    }
+    interceptor ? intercept_magic(interceptor, item) : use_item_intercept_magic
+    #
+  end # use_item
+
+  #----------------------------------------------------------------------------|
+  #  New method: intercept_magic                                               |
+  #----------------------------------------------------------------------------| 
+  def intercept_magic(target, item)
+    @log_window.display_use_item(@subject, item)
+    @subject.use_item(item)
+    refresh_status
+    target.intercept_times ||= 0
+    if item.hit_intercept_mp && target.intercept_magic(:hit_mp) && 
+    target.intercept_mp_tp(:mp, item, @subject) > target.mmp - target.mp || 
+    item.hit_intercept_tp && target.intercept_magic(:hit_tp) && 
+    target.intercept_mp_tp(:tp, item) > target.max_tp - target.tp
+      fail_intercept(target, item)
+    else
+      success_intercept(target, item)
+    end
+    if (im = DoubleX_RMVXA::Intercept_Magic)::Intercept_Times_Limit > 0 && 
+    target.intercept_times >= im::Intercept_Times_Limit
+      target.remove_intercept_states
+    end
+    refresh_status
+  end # intercept_magic
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02a+)New method: fail_intercept                                       |
+  #----------------------------------------------------------------------------| 
+  def fail_intercept(target, item)
+    @log_window.display_fail_intercept_item(target)
+    if DoubleX_RMVXA::Intercept_Magic::Count_Fail_Intercept
+      target.intercept_times += 1
+    end
+    targets = @subject.current_action.fail_intercept(target).compact
+    targets.each {|target| item.repeats.times { invoke_item(target, item) } }
+  end # fail_intercept
+
+  #----------------------------------------------------------------------------|
+  #  (v1.02a+)New method: success_intercept                                    |
+  #----------------------------------------------------------------------------| 
+  def success_intercept(target, item)
+    im = DoubleX_RMVXA::Intercept_Magic
+    @log_window.display_intercept_item(target)
+    if im::Intercept_Animation_Id > 0 && im::Intercept_Animation_Id < 1000
+      show_animation([target], im::Intercept_Animation_Id)
+    end
+    target.intercept_times += 1
+    if item.intercept_mp && target.intercept_magic(:mp)
+      target.mp += target.intercept_mp_tp(:mp, item, @subject)
+      target.mp = target.mmp if target.mp > target.mmp
+    end
+    if item.intercept_tp && target.intercept_magic(:tp)
+      target.tp += target.intercept_mp_tp(:tp, item)
+      target.tp = target.max_tp if target.tp > target.max_tp
+    end
+    return unless im::Intercept_Learn_Skill
+    return unless target.actor? && target.skill_learn?(item)
+    target.learn_skill(item.id)
+    @log_window.display_learn_intercept_item(target)
+  end # success_intercept
+
+end # Scene_Battle
+
+#==============================================================================|

@@ -1,0 +1,219 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Dynamic Cost v1.00a                                        |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00a(GMT 0900 9-8-2014):                                                |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    None other than not claiming this script as created by anyone except      |
+#    DoubleX or his alias                                                      |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - none                                                                    |
+#    Knowledge:                                                                |
+#    - Use of notetags                                                         |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Lets users alter the skill's mp or tp cost via custom formulae          |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between ¡¿ Materials and ¡¿ Main. Save to take effect.            |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Scripts rewriting or aliasing method:                                     |
+#    - self.load_database under module DataManager                             |
+#    - skill_mp_cost or skill_tp_cost under class Game_BattlerBase             |
+#    may have compatibility issues with this script                            |
+#    Place this script above those aliasing any of these method if possible    |
+#==============================================================================|
+
+$imported = {} if $imported.nil?
+$imported["DoubleX RMVXA Dynamic Cost"] = true
+
+#------------------------------------------------------------------------------|
+#  * Notetag <dynamic mp: string> for skills:                                  |
+#    To add numerical values evaluated from string to its skill's mp cost, put |
+#    the above notetag into that skill's notebox in the database. This notetag |
+#    only takes effects on users having states with <dynamic mp> notetag.      |
+#    string supports numeric constants and (needs scripting knowledge)methods  |
+#    currently applicable to the current user trying to use this skill.        |
+#------------------------------------------------------------------------------|
+#  * Notetag <dynamic tp: string> for skills:                                  |
+#    To add numerical values evaluated from string to its skill's tp cost, put |
+#    the above notetag into that skill's notebox in the database. This notetag |
+#    only takes effects on users having states with <dynamic tp> notetag.      |
+#    string supports numeric constants and (needs scripting knowledge)methods  |
+#    currently applicable to the current user trying to use this skill.        |
+#------------------------------------------------------------------------------|
+#  * Notetag <dynamic mp> for states:                                          |
+#    To make dynamic mp costs applicable to a battler, add a state with this   |
+#    notetag added to its notebox in the database to that battler.             |
+#------------------------------------------------------------------------------|
+#  * Notetag <dynamic tp> for states:                                          |
+#    To make dynamic tp costs applicable to a battler, add a state with this   |
+#    notetag added to its notebox in the database to that battler.             |
+#------------------------------------------------------------------------------|
+
+#==============================================================================|
+#  ** You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module Dynamic_Cost
+
+#------------------------------------------------------------------------------|
+#  * Multiply_MCR, default = true                                              |
+#    The numerical values evaluated from string in skills' dynamic mp notetags |
+#    will be multiplied by user's mcr before being added to their mp costs.    |
+#------------------------------------------------------------------------------|
+    Multiply_MCR = true
+
+  end # Dynamic_Cost
+end # DoubleX_RMVXA
+
+#==============================================================================|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+  module REGEXP
+    module SKILL
+
+      DYNAMIC_MP = /<(?:DYNAMIC_MP|dynamic mp):[ ]*(.+)>/i
+      DYNAMIC_TP = /<(?:DYNAMIC_TP|dynamic tp):[ ]*(.+)>/i
+
+    end # SKILL
+
+    module STATE
+
+      DYNAMIC_MP = /<(?:DYNAMIC_MP|dynamic mp)>/i
+      DYNAMIC_TP = /<(?:DYNAMIC_TP|dynamic tp)>/i
+
+    end # STATE
+
+  end # REGEXP
+end # DoubleX_RMVXA
+
+module DataManager
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: self.load_database                                          |
+  #----------------------------------------------------------------------------|
+  class <<self; alias load_database_dynamic_cost load_database; end
+  def self.load_database
+    load_database_dynamic_cost
+    # This part is added by this script to load dynamic cost notetags
+    load_notetags_dynamic_cost
+    #
+  end # self.load_database
+
+  #----------------------------------------------------------------------------|
+  #  New method: self.load_notetags_dynamic_cost                               |
+  #----------------------------------------------------------------------------|
+  def self.load_notetags_dynamic_cost
+    for group in [$data_skills, $data_states]
+      for obj in group
+        next if obj.nil?
+        obj.load_notetags_dynamic_cost
+      end
+    end
+  end # self.load_notetags_dynamic_cost
+
+end # DataManager
+
+class RPG::Skill
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  attr_accessor :dynamic_mp
+  attr_accessor :dynamic_tp
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_dynamic_cost                                    |
+  #----------------------------------------------------------------------------|
+  def load_notetags_dynamic_cost
+    @dynamic_mp = "0"
+    @dynamic_tp = "0"
+    self.note.split(/[\r\n]+/).each { |line|
+      case line
+        when DoubleX_RMVXA::REGEXP::SKILL::DYNAMIC_MP
+          @dynamic_mp = $1.to_s
+        when DoubleX_RMVXA::REGEXP::SKILL::DYNAMIC_TP
+          @dynamic_tp = $1.to_s
+      end
+    }
+  end # load_notetags_dynamic_cost
+
+end # RPG::Skill
+
+class RPG::State
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variables                                             |
+  #----------------------------------------------------------------------------|
+  attr_accessor :dynamic_mp
+  attr_accessor :dynamic_tp
+
+  #----------------------------------------------------------------------------|
+  #  New method: load_notetags_dynamic_cost                                    |
+  #----------------------------------------------------------------------------|
+  def load_notetags_dynamic_cost
+    @dynamic_mp = false
+    @dynamic_tp = false
+    self.note.split(/[\r\n]+/).each { |line|
+      case line
+        when DoubleX_RMVXA::REGEXP::STATE::DYNAMIC_MP
+          @dynamic_mp = true
+        when DoubleX_RMVXA::REGEXP::STATE::DYNAMIC_TP
+          @dynamic_tp = true
+      end
+    }
+  end # load_notetags_dynamic_cost
+
+end # RPG::State
+
+class Game_BattlerBase
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: skill_mp_cost                                               |
+  #----------------------------------------------------------------------------|
+  alias skill_mp_cost_dynamic_cost skill_mp_cost
+  def skill_mp_cost(skill)
+    skill_mp_cost_dynamic_cost(skill) + (dynamic_cost("mp") ? dynamic_skill_mp_cost(skill) : 0)
+  end # skill_mp_cost
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: skill_tp_cost                                               |
+  #----------------------------------------------------------------------------|
+  alias skill_tp_cost_dynamic_cost skill_tp_cost
+  def skill_tp_cost(skill)
+    skill_tp_cost_dynamic_cost(skill) + (dynamic_cost("tp") ? eval("(" + skill.dynamic_tp + ").to_i") : 0)
+  end # skill_mp_cost
+
+  #----------------------------------------------------------------------------|
+  #  New method: dynamic_skill_mp_cost                                         |
+  #----------------------------------------------------------------------------|
+  def dynamic_skill_mp_cost(skill)
+    eval("((" + skill.dynamic_mp + ")" + (DoubleX_RMVXA::Dynamic_Cost::Multiply_MCR ? " * mcr" : "") + ").to_i")
+  end # dynamic_skill_mp_cost
+
+  #----------------------------------------------------------------------------|
+  #  New method: dynamic_cost                                                  |
+  #----------------------------------------------------------------------------|
+  def dynamic_cost(cost)
+    states.each { |state| return true if eval("state.dynamic_" + cost) }
+    false
+  end # dynamic_cost
+
+end # Game_BattlerBase
+
+#==============================================================================|

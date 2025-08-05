@@ -1,0 +1,440 @@
+#==============================================================================|
+#  ** Script Info                                                              |
+#------------------------------------------------------------------------------|
+#  * Script Name                                                               |
+#    DoubleX RMVXA Pixel Movement                                              |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    Lets users set the smallest number of pixel covered per move command      |
+#------------------------------------------------------------------------------|
+#  * Terms Of Use                                                              |
+#    You shall keep this script's Script Info part's contents intact           |
+#    You shalln't claim that this script is written by anyone other than       |
+#    DoubleX or his aliases                                                    |
+#    None of the above applies to DoubleX or his aliases                       |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Abilities:                                                                |
+#    1. Little RGSS3 scripting proficiency to fully utilize this script        |
+#------------------------------------------------------------------------------|
+#  * Instructions                                                              |
+#    1. Open the script editor and put this script into an open slot between   |
+#       Materials and Main, save to take effect.                               |
+#------------------------------------------------------------------------------|
+#  * Links                                                                     |
+#    Script Usage 101:                                                         |
+#    1. forums.rpgmakerweb.com/index.php?/topic/32752-rmvxa-script-usage-101/  |
+#    2. rpgmakervxace.net/topic/27475-rmvxa-script-usage-101/                  |
+#    This script:                                                              |
+#    1. http://pastebin.com/RPF8dDDR                                           |
+#    Mentioned Patreon Supporters:                                             |
+#    https://www.patreon.com/posts/71738797                                    |
+#------------------------------------------------------------------------------|
+#  * Authors                                                                   |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.01a(GMT 1600 14-8-2015):                                               |
+#    1. Lets users set a key/script call to set a char to have integer coors   |
+#    2. Fixed event triggered by player touch not triggering bug               |
+#    3. Fixed encounters simply not working bug                                |
+#    4. Fixed the bullet through paper problem when moving diagonally          |
+#    5. Found the origin of the starting map not passable bug with either      |
+#       vehicle's starting positions being uninitialized by users              |
+#    6. Increased this script's correctness, effectiveness and efficiency      |
+#    7. Little RGSS3 scripting proficiency's needed to fully utilize the script|
+#    v1.00a(GMT 1600 12-8-2015):                                               |
+#    1. 1st version of this script finished                                    |
+#==============================================================================|
+
+#==============================================================================|
+#  ** (v1.01a+)Script Call Info                                                |
+#------------------------------------------------------------------------------|
+#  * Character manipulations                                                   |
+#    1. pixel_movement_nearest_tile                                            |
+#       - Sets the x and y psotions of the char to be their nearest integers   |
+#==============================================================================|
+
+($doublex_rmvxa ||= {})[:Pixel_Movement] = "v1.01a"
+
+#==============================================================================|
+#  ** Script Configurations                                                    |
+#     You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+
+  module Pixel_Movement
+
+    # Sets the global minimum pixel covered per move command as MIN_PIXEL_MOVE
+    # It must return a natural number
+    # If an object moves faster than MIN_PIXEL_MOVE per frame, that object's
+    # original speed will be used instead
+    # Errors might come if MIN_PIXEL_MOVE is increased during the game execution
+    # If MIN_PIXEL_MOVE_VAR_ID is a natural number, the value of variable with
+    # id MIN_PIXEL_MOVE_VAR_ID will be used instead of using MIN_PIXEL_MOVE
+    MIN_PIXEL_MOVE = 1
+    MIN_PIXEL_MOVE_VAR_ID = 0
+
+    # (v1.01a+)Sets the key to set the player's x and y positions as their
+    # nearest integers as NEAREST_TILE_KEY
+    # It must return a symbol and should return a keymap binding symbol
+    # Using a custom keymap binding script might help setting NEAREST_TILE_KEY
+    # If NEAREST_TILE_KEY_VAR_ID is a natural number, the value of variable with
+    # id NEAREST_TILE_KEY_VAR_ID will be used instead of using NEAREST_TILE_KEY
+    NEAREST_TILE_KEY = :X
+    NEAREST_TILE_KEY_VAR_ID = 0
+
+#==============================================================================|
+#  ** Script Implementations                                                   |
+#     You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+#  * Script Support Info:                                                      |
+#    1. Prerequisites                                                          |
+#       - Basic knowledge of pixel movement                                    |
+#       - Some RGSS3 scripting proficiency to fully comprehend this script     |
+#    2. Method documentation                                                   |
+#       - The 1st part describes why this method's rewritten/aliased for       |
+#         rewritten/aliased methods or what the method does for new methods    |
+#       - The 2nd part describes what the arguments of the method are          |
+#       - The 3rd part informs which version rewritten, aliased or created this|
+#         method                                                               |
+#       - The 4th part informs whether the method's rewritten or new           |
+#       - The 5th part describes how this method works for new methods only,   |
+#         and describes the parts added, removed or rewritten for rewritten or |
+#         aliased methods only                                                 |
+#       Example:                                                               |
+# #--------------------------------------------------------------------------| |
+# #  Why rewrite/alias/What this method does                                 | |
+# #--------------------------------------------------------------------------| |
+# # *argv: What these variables are                                            |
+# # &argb: What this block is                                                  |
+# def def_name(*argv, &argb) # Version X+; Rewrite/New                         |
+#   # Added/Removed/Rewritten to do something/How this method works            |
+#   def_name_code                                                              |
+#   #                                                                          |
+# end # def_name                                                               |
+#------------------------------------------------------------------------------|
+
+    #--------------------------------------------------------------------------|
+    #  Helper methods simplifying the uses of the configuration value          |
+    #--------------------------------------------------------------------------|
+
+    def self.min_pixel_move
+      return MIN_PIXEL_MOVE if MIN_PIXEL_MOVE_VAR_ID <= 0
+      $game_variables[MIN_PIXEL_MOVE_VAR_ID]
+    end # min_pixel_move
+
+    def self.nearest_tile_key # v1.01a+
+      return NEAREST_TILE_KEY if NEAREST_TILE_KEY_VAR_ID <= 0
+      $game_variables[NEAREST_TILE_KEY_VAR_ID]
+    end # nearest_tile_key
+
+  end # Pixel_Movement
+
+end # DoubleX_RMVXA
+
+class Game_Map # Edit
+
+  def x_with_direction(x, d) # Rewrite
+    # Rewritten
+    return x + DoubleX_RMVXA::Pixel_Movement.min_pixel_move / 32.0 if d == 6
+    return x - DoubleX_RMVXA::Pixel_Movement.min_pixel_move / 32.0 if d == 4
+    x
+    #
+  end # x_with_direction
+
+  def y_with_direction(y, d) # Rewrite
+    # Rewritten
+    return y + DoubleX_RMVXA::Pixel_Movement.min_pixel_move / 32.0 if d == 2
+    return y - DoubleX_RMVXA::Pixel_Movement.min_pixel_move / 32.0 if d == 8
+    y
+    #
+  end # y_with_direction
+
+  def round_x_with_direction(x, d) # Rewrite
+    round_x(x_with_direction(x, d)) # Rewritten
+  end # round_x_with_direction
+
+  def round_y_with_direction(y, d) # Rewrite
+    round_y(y_with_direction(y, d)) # Rewritten
+  end # round_y_with_direction
+
+  def valid?(x, y) # Rewrite
+    x >= 0 && x <= width - 1 && y >= 0 && y <= height - 1 # Rewritten
+  end # valid?
+
+  #----------------------------------------------------------------------------|
+  #  Uses a unit bounding square to detect overlapped tiles instead            |
+  #----------------------------------------------------------------------------|
+  alias layered_tiles_flag_pixel_movement? layered_tiles_flag?
+  def layered_tiles_flag?(x, y, bit, &argb)
+    # Rewritten
+    (x == (x = x.to_i) ? [x] : [x, x + 1]).each { |xi|
+      (y == (y = y.to_i) ? [y] : [y, y + 1]).each { |yi|
+        return true if layered_tiles_flag_pixel_movement?(x, y, bit, &argb)
+      }
+    }
+    false
+    #
+  end # layered_tiles_flag?
+
+end # Game_Map
+
+class Game_CharacterBase # Edit
+
+  #----------------------------------------------------------------------------|
+  #  New private instance variables                                            |
+  #----------------------------------------------------------------------------|
+  # @pixel_movement_diff: The movement distance of the current frame
+  # @pixel_movement_dist: The accumulated movement distance
+
+  #----------------------------------------------------------------------------|
+  #  Uses a unit bounding square to detect character collisions instead        |
+  #----------------------------------------------------------------------------|
+  def pos?(x, y) # Rewrite
+    # Rewritten to regard just touching as edges as colliding
+    x + 1 >= @x && x <= @x + 1 && y + 1 >= @y && y <= @y + 1
+    #
+  end # pos?
+
+  #----------------------------------------------------------------------------|
+  #  Uses a unit bounding square to detect character collisions instead        |
+  #----------------------------------------------------------------------------|
+  def pos_nt?(x, y) # Rewrite
+    # Rewritten to regard just touching the edges as not colliding
+    !@through && x + 1 > @x && x < @x + 1 && y + 1 > @y && y < @y + 1
+    #
+  end # pos_nt?
+
+  #----------------------------------------------------------------------------|
+  #  Uses a unit bounding square to detect character collisions instead        |
+  #----------------------------------------------------------------------------|
+  def passable?(x, y, d) # Rewrite
+    x2 = $game_map.round_x_with_direction(x, d)
+    y2 = $game_map.round_y_with_direction(y, d)
+    # Rewritten to check if all overlapped tiles are valid and passable as well
+    xs = x2 == (x2i = x2.to_i) ? [x2i] : [x2i, x2i + 1]
+    ys = y2 == (y2i = y2.to_i) ? [y2i] : [y2i, y2i + 1]
+    xs.each { |xi|
+      ys.each { |yi| return false unless $game_map.valid?(xi, yi) }
+    }
+    return true if @through || debug_through?
+    (x == (x = x.to_i) ? [x] : [x, x + 1]).each { |xi|
+      (y == (y = y.to_i) ? [y] : [y, y + 1]).each { |yi|
+        return false unless map_passable?(xi, yi, d)
+      }
+    }
+    rd = reverse_dir(d)
+    xs.each { |xi|
+      ys.each { |yi| return false unless map_passable?(xi, yi, rd) }
+    }
+    #
+    !collide_with_characters?(x2, y2)
+  end # passable?
+
+  #----------------------------------------------------------------------------|
+  #  Prevents an event from being falsely considered as colliding with itself  |
+  #----------------------------------------------------------------------------|
+  def collide_with_events?(x, y) # Rewrite
+    return true if is_a?(Game_Event)
+    ($game_map.events_xy_nt(x, y) - [self]).any? { |e| e.normal_priority? }
+  end # collide_with_events?
+
+  def move_straight(d, turn_ok = true) # Rewrite
+    @move_succeed = passable?(@x, @y, d)
+    if @move_succeed
+      set_direction(d)
+      @x = $game_map.round_x_with_direction(@x, d)
+      @y = $game_map.round_y_with_direction(@y, d)
+      @real_x = $game_map.x_with_direction(@x, reverse_dir(d))
+      @real_y = $game_map.y_with_direction(@y, reverse_dir(d))
+      # Rewritten to prevent character from being locked into impassable places
+      set_pixel_movement_min
+      last_x = @real_x
+      last_y = @real_y
+      pixel_movement_straight(last_x, last_y, d) unless passable?(@x, @y, d)
+      @pixel_movement_diff = ((@x - last_x) ** 2 + (@y - last_y) ** 2) ** 0.5
+      @pixel_movement_dist += @pixel_movement_diff
+      while @pixel_movement_dist >= 1
+        increase_steps
+        @pixel_movement_dist -= 1
+      end
+      #
+    elsif turn_ok
+      set_direction(d)
+      check_event_trigger_touch_front
+    end
+  end # move_straight
+
+  def move_diagonal(horz, vert) # Rewrite
+    @move_succeed = diagonal_passable?(@x, @y, horz, vert)
+    if @move_succeed
+      @x = $game_map.round_x_with_direction(@x, horz)
+      @y = $game_map.round_y_with_direction(@y, vert)
+      @real_x = $game_map.x_with_direction(@x, reverse_dir(horz))
+      @real_y = $game_map.y_with_direction(@y, reverse_dir(vert))
+      # Rewritten to prevent character from being locked into impassable places
+      set_pixel_movement_min
+      set_pixel_movement_diagonal(horz, vert)
+      @pixel_movement_diff = ((@x - @real_x) ** 2 + (@y - @real_y) ** 2) ** 0.5
+      @pixel_movement_dist += @pixel_movement_diff
+      while @pixel_movement_dist >= 1
+        increase_steps
+        @pixel_movement_dist -= 1
+      end
+      #
+      increase_steps
+    end
+    set_direction(horz) if @direction == reverse_dir(horz)
+    set_direction(vert) if @direction == reverse_dir(vert)
+  end # move_diagonal
+
+  alias init_private_members_pixel_movement init_private_members
+  def init_private_members(*argv, &argb)
+    init_private_members_pixel_movement(*argv, &argb)
+    @pixel_movement_diff = @pixel_movement_dist = 0 # Added
+  end # init_private_members
+
+  #----------------------------------------------------------------------------|
+  #  Checks if events collide with the players as well                         |
+  #----------------------------------------------------------------------------|
+  alias collide_with_characters_pixel_movement? collide_with_characters?
+  def collide_with_characters?(x, y)
+    return true if $game_player != self && $game_player.pos_nt?(x, y) # Added
+    collide_with_characters_pixel_movement?(x, y)
+  end # collide_with_characters?
+
+  #----------------------------------------------------------------------------|
+  #  Sets the number of pixel covered per frame to be at least that of the char|
+  #----------------------------------------------------------------------------|
+  def set_pixel_movement_min # New
+    dpf = distance_per_frame
+    if @x > @real_x
+      @x = [@real_x + dpf, $game_map.width - 1].min if @x < @real_x + dpf
+    elsif @x < @real_x
+      @x = [@real_x - dpf, 0].max if @x > @real_x - dpf
+    end
+    if @y > @real_y
+      @y = [@real_y + dpf, $game_map.height - 1].min if @y < @real_y + dpf
+    elsif @y < @real_y
+      @y = [@real_y - dpf, 0].max if @y > @real_y - dpf
+    end
+  end # set_pixel_movement_min
+
+  #----------------------------------------------------------------------------|
+  #  Prevents the character from being locked into an impassable place         |
+  #----------------------------------------------------------------------------|
+  # last_x : The real x coordinate right before moving straight
+  # last_y : The real y coordinate right before moving straight
+  # d: The movement direction
+  def pixel_movement_straight(last_x, last_y, d) # New
+    mpm = DoubleX_RMVXA::Pixel_Movement.min_pixel_move / 32.0
+    # Uses a binary search to find the point making the char to become passable
+    while (@x - last_x).abs > mpm || (@y - last_y).abs > mpm
+      @real_x = (@x + last_x) / 2
+      @real_y = (@y + last_y) / 2
+      if passable?(@real_x, @real_y, d)
+        last_x = @real_x
+        next last_y = @real_y
+      end
+      @x = @real_x
+      @y = @real_y
+    end
+    #
+    @real_x = @x
+    @real_y = @y
+  end # pixel_movement_straight
+
+  #----------------------------------------------------------------------------|
+  #  Fixes the bullet through paper problem when moving diagonally             |
+  #----------------------------------------------------------------------------|
+  # horz: The horizontal direction component
+  # vert: The vertical direction component
+  def set_pixel_movement_diagonal(horz, vert) # New
+    # Sets the maximum number of pixels covered that are still passable
+    mpm = DoubleX_RMVXA::Pixel_Movement.min_pixel_move / 32.0
+    xi = @real_x
+    yi = @real_y
+    xs = (@x - @real_x) / (@x - @real_x).abs
+    ys = (@y - @real_y) / (@y - @real_y).abs
+    while xi * xs <= @x * xs && yi * ys <= @y * ys && 
+    diagonal_passable?(xi, yi, horz, vert)
+      xi += mpm * xs
+      yi += mpm * ys
+    end
+    @x = xi
+    @y = yi
+    #
+  end # set_pixel_movement_diagonal
+
+  #----------------------------------------------------------------------------|
+  #  Tries to set the real x and y positions to be their nearest integers      |
+  #----------------------------------------------------------------------------|
+  def pixel_movement_nearest_tile # v1.01a+; New
+    test_x = ((@x * 2).to_i + 1) / 2
+    test_y = ((@y * 2).to_i + 1) / 2
+    [2, 4, 6, 8].each { |d| return unless passable?(test_x, test_y, d) }
+    @x = test_x
+    @y = test_y
+  end # pixel_movement_nearest_tile
+
+end # Game_CharacterBase
+
+class Game_Player < Game_Character # v1.01a+; Edit
+
+  def update # Rewrite
+    last_real_x = @real_x
+    last_real_y = @real_y
+    last_moving = moving?
+    move_by_input
+    super
+    update_scroll(last_real_x, last_real_y)
+    update_vehicle
+    # Rewritten
+    unless $game_map.interpreter.running?
+      moving? ? pixel_movement_update : update_nonmoving(last_moving)
+    end
+    #
+    @followers.update
+    # Added
+    return unless Input.trigger?(DoubleX_RMVXA::Pixel_Movement.nearest_tile_key)
+    pixel_movement_nearest_tile
+    #
+  end # update
+
+  # last_moving: The moving flag at the last frame
+  def update_nonmoving(last_moving) # Rewrite
+    # Rewritten
+    return if last_moving && check_touch_event
+    movable? && Input.trigger?(:C) && (get_on_off_vehicle || check_action_event)
+    #
+  end # update_nonmoving
+
+  alias move_by_input_pixel_movement move_by_input
+  def move_by_input
+    # Added
+    @pixel_movement_diff = ((@x - @real_x) ** 2 + (@y - @real_y) ** 2) ** 0.5
+    #
+    move_by_input_pixel_movement
+  end # move_by_input
+
+  alias encounter_progress_value_pixel_movement encounter_progress_value
+  def encounter_progress_value
+    encounter_progress_value_pixel_movement * @pixel_movement_diff # Rewritten
+  end # encounter_progress_value
+
+  def moving? # New
+    @pixel_movement_diff != 0
+  end # moving?
+
+  def pixel_movement_update # New
+    $game_party.on_player_walk
+    check_touch_event || update_encounter
+  end # pixel_movement_update
+
+end # Game_Player
+
+#------------------------------------------------------------------------------|
+
+#==============================================================================|

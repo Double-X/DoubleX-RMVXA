@@ -1,0 +1,282 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Encounter Step v1.01a                                      |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.01a(GMT 1200 21-7-2014):                                               |
+#    - Lets users set when encounter times will be automatically updated       |
+#    v1.00a(GMT 0700 23-6-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    None other than not claiming this script as created by anyone except      |
+#    DoubleX or his alias                                                      |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - none                                                                    |
+#    Knowledge:                                                                |
+#    - Use of script calls                                                     |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Lets users get and set encounter steps and times per region per map     |
+#      Those values are permanently stored even after changing maps            |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot between ¡¿ Materials and ¡¿ Main. Save to take effect.            |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    Scripts aliasing or rewriting method:                                     |
+#    - self.process_victory, self.process_abort or self.process_defeat under   |
+#      module BattleManager                                                    |
+#    - setup or encounter_step under class Game_Map                            |
+#    - update under class Game_Player                                          |
+#    - update_encounter under class Scene_Map                                  |
+#    may have compatibility issues with this script                            |
+#    Place this script above those aliasing any of these methods if possible   |
+#==============================================================================|
+
+$imported = {} if $imported.nil?
+$imported["DoubleX RMVXA Encounter Step"] = true
+
+#------------------------------------------------------------------------------|
+#  * Script call: $game_system.update_encounter = [result, result, ..., result]|
+#    Sets which random encounter results automatically update encounter times  |
+#    result can be either :win, :lose or :abort meaning winning, losing or     |
+#    aborting random encounters respectively                                   |
+#    For example:                                                              |
+#    [:win] means only winning random encounters automatically updates the     |
+#    encounter times while [:win, :abort] means aborting also does so          |
+#------------------------------------------------------------------------------|
+#  * Script call: $game_map.get_encounter_steps(region_id)                     |
+#    Gets the permanently stored value of encounter steps of region with id    |
+#    region_id of the current map if 0 <= region_id <= 63                      |
+#------------------------------------------------------------------------------|
+#  * Script call: $game_map.set_encounter_steps(region_id, steps)              |
+#    Sets the permanently stored value of encounter steps of the region with id|
+#    region_id of the current map as steps if 0 <= region_id <= 63             |
+#------------------------------------------------------------------------------|
+#  * Script call: $game_map.update_encounter_steps(region_id)                  |
+#    Sets the steps average of the current map as the permanently stored value |
+#    of encounter steps of region with id region_id of the current map         |
+#    It doesn't change the steps average data of the current map loaded so     |
+#    the steps average of the current map will be reset after its setup        |
+#    It'll do nothing unless 0 <= region id <= 63                              |
+#------------------------------------------------------------------------------|
+#  * Script call: $game_map.get_encounter_times(region_id)                     |
+#    Gets the permanently stored value of encounter times of region with id    |
+#    region_id of the current map if 0 <= region_id <= 63                      |
+#------------------------------------------------------------------------------|
+#  * Script call: $game_map.set_encounter_times(region_id, times)              |
+#    Sets the permanently stored value of encounter times of the region with id|
+#    region_id of the current map as times if 0 <= region_id <= 63             |
+#------------------------------------------------------------------------------|
+#  * Script call: $game_map.update_encounter_times(region_id)                  |
+#    Adds 1 to the permanently stored value of encounter times of region with  |
+#    id region_id of the current map                                           |
+#    It'll possibly be called automatically after every random encounter unless|
+#    the current region id isn't within 0 - 63                                 |
+#    Whether it'll be called depends on if the result of the random encounter  |
+#    is included in $game_system.update_encounter                              |
+#    It'll do nothing unless 0 <= region id <= 63                              |
+#------------------------------------------------------------------------------|
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+module BattleManager
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)Alias method: self.process_victory                               |
+  #----------------------------------------------------------------------------|
+  class <<self; alias process_victory_encounter_step process_victory; end
+  def self.process_victory
+    # This part is added by this script to update encounter times upon victory if users want to
+    update_encounter_times(:win)
+    #
+    process_victory_encounter_step
+  end # self.process_victory
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)Alias method: self.process_abort                                 |
+  #----------------------------------------------------------------------------|
+  class <<self; alias process_abort_encounter_step process_abort; end
+  def self.process_abort
+    # This part is added by this script to update encounter times upon abort if users want to
+    update_encounter_times(:abort)
+    #
+    process_abort_encounter_step
+  end # self.process_abort
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)Alias method: self.process_defeat                                |
+  #----------------------------------------------------------------------------|
+  class <<self; alias process_defeat_encounter_step process_defeat; end
+  def self.process_defeat
+    # This part is added by this script to update encounter times upon defeat if users want to
+    update_encounter_times(:lose)
+    #
+    process_defeat_encounter_step
+  end # self.process_defeat
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)New method: self.update_encounter_times                          |
+  #----------------------------------------------------------------------------|
+  def self.update_encounter_times(symbol)
+    $game_system.update_encounter ||= []
+    $game_temp.random_encounter ||= false
+    $game_map.update_encounter_times($game_player.region_id) if $game_temp.random_encounter && $game_system.update_encounter.include?(symbol)
+  end # self.update_encounter_times
+
+end # BattleManager
+
+class Game_Temp
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)New public instance variable                                     |
+  #----------------------------------------------------------------------------|
+  attr_accessor :random_encounter
+
+end # Game_Temp
+
+class Game_System
+
+  #----------------------------------------------------------------------------|
+  #  (v1.01a+)New public instance variable                                     |
+  #----------------------------------------------------------------------------|
+  attr_accessor :update_encounter
+
+end # Game_System
+
+class Game_Map
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: setup                                                       |
+  #----------------------------------------------------------------------------|
+  alias setup_encounter_step setup
+  def setup(map_id)
+    setup_encounter_step(map_id)
+    # This part is added by this script to setup encounter steps and times hashes
+    encounter_step_setup
+    #
+  end # setup
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: encounter_step                                              |
+  #----------------------------------------------------------------------------|
+  alias encounter_step_encounter_step encounter_step
+  def encounter_step
+    # This part is rewritten by this script to set the encounter step as that of the current region of the current map
+    @encounter_steps[@map_id][$game_player.region_id] && $game_player.region_id >=0 && $game_player.region_id <= 63 ? @encounter_steps[@map_id][$game_player.region_id] : encounter_step_encounter_step
+    #
+  end # encounter_step
+
+  #----------------------------------------------------------------------------|
+  #  New method: encounter_step_setup                                          |
+  #----------------------------------------------------------------------------|
+  def encounter_step_setup
+    @encounter_steps ||= {}
+    @encounter_times ||= {}
+    @encounter_steps[@map_id] ||= {}
+    @encounter_times[@map_id] ||= {}
+    (0..63).each { |region_id|
+      @encounter_steps[@map_id][region_id] ||= encounter_step
+      @encounter_times[@map_id][region_id] ||= 0
+    }
+  end # encounter_step_setup
+
+  #----------------------------------------------------------------------------|
+  #  New method: get_encounter_steps                                           |
+  #----------------------------------------------------------------------------|
+  def get_encounter_steps(region_id)
+    return encounter_step_encounter_step if region_id < 0 || region_id > 63
+    @encounter_steps[@map_id][region_id.to_i]
+  end # get_encounter_steps
+
+  #----------------------------------------------------------------------------|
+  #  New method: set_encounter_steps                                           |
+  #----------------------------------------------------------------------------|
+  def set_encounter_steps(region_id, steps)
+    return if region_id < 0 || region_id > 63
+    @encounter_steps[@map_id][region_id.to_i] = steps.to_i
+  end # set_encounter_steps
+
+  #----------------------------------------------------------------------------|
+  #  New method: update_encounter_steps                                        |
+  #----------------------------------------------------------------------------|
+  def update_encounter_steps(region_id)
+    return if region_id < 0 || region_id > 63
+    @map.encounter_step = @encounter_steps[@map_id][region_id.to_i]
+  end # update_encounter_steps
+
+  #----------------------------------------------------------------------------|
+  #  New method: get_encounter_times                                           |
+  #----------------------------------------------------------------------------|
+  def get_encounter_times(region_id)
+    return 0 if region_id < 0 || region_id > 63
+    @encounter_times[@map_id][region_id.to_i]
+  end # get_encounter_times
+
+  #----------------------------------------------------------------------------|
+  #  New method: set_encounter_times                                           |
+  #----------------------------------------------------------------------------|
+  def set_encounter_times(region_id, times)
+    return if region_id < 0 || region_id > 63
+    @encounter_times[@map_id][region_id.to_i] = times.to_i
+  end # set_encounter_times
+
+  #----------------------------------------------------------------------------|
+  #  New method: update_encounter_times                                        |
+  #----------------------------------------------------------------------------|
+  def update_encounter_times(region_id)
+    return if region_id < 0 || region_id > 63
+    @encounter_times[@map_id][region_id.to_i] += 1
+  end # update_encounter_times
+
+end # Game_Map
+
+class Game_Player < Game_Character
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: update                                                      |
+  #----------------------------------------------------------------------------|
+  alias update_encounter_step update
+  def update
+    # This part is added by this script to store the last region id
+    last_encounter_steps = $game_map.encounter_step
+    last_region_id = region_id
+    #
+    update_encounter_step
+    # This part is added by this script to update encounter count if the current region id changes and it's within 1 - 63 after change
+    @encounter_count -= last_encounter_steps - $game_map.encounter_step if $game_map.encounter_step != last_encounter_steps && region_id != last_region_id && region_id >= 0 && region_id <= 63
+    #
+  end # update
+
+  #----------------------------------------------------------------------------|
+  #  New method: encounter?                                                    |
+  #----------------------------------------------------------------------------|
+  def encounter?
+    !$game_map.interpreter.running? && !$game_system.encounter_disabled && @encounter_count <= 0 && $data_troops[make_encounter_troop_id]
+  end # encounter?
+
+end # Game_Player
+
+class Scene_Map < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: update_encounter                                            |
+  #----------------------------------------------------------------------------|
+  alias encounter_step_update_encounter update_encounter
+  def update_encounter
+    # This part is added by this script to mark the encounter as a random encounter
+    $game_temp.random_encounter = $game_player.encounter?
+    #
+    encounter_step_update_encounter
+  end # update_encounter
+
+end # Scene_Map
+
+#==============================================================================|

@@ -1,0 +1,372 @@
+#==============================================================================|
+#  ** Script Info                                                              |
+#------------------------------------------------------------------------------|
+#  * Script Name                                                               |
+#    DoubleX RMVXA Basic ATB Delay                                             |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    Aids other scripters to learn how a basic atb system addon can be written |
+#------------------------------------------------------------------------------|
+#  * Terms Of Use                                                              |
+#    You shall keep this script's Script Info part's contents intact           |
+#    You shalln't claim that this script is written by anyone other than       |
+#    DoubleX or his aliases                                                    |
+#    None of the above applies to DoubleX or his aliases                       |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    1. DoubleX RMVXA Basic ATB                                                |
+#    Abilities:                                                                |
+#    1. Nothing special                                                        |
+#------------------------------------------------------------------------------|
+#  * Instructions                                                              |
+#    1. Open the script editor and put this script into an open slot between   |
+#       DoubleX RMVXA Basic ATB and Main, save to take effect.                 |
+#------------------------------------------------------------------------------|
+#  * Links                                                                     |
+#    Script Usage 101:                                                         |
+#    1. forums.rpgmakerweb.com/index.php?/topic/32752-rmvxa-script-usage-101/  |
+#    2. rpgmakervxace.net/topic/27475-rmvxa-script-usage-101/                  |
+#    How to write an atb system script:                                        |
+#    1. http://rpgmaker.net/articles/1127/                                     |
+#    This script:                                                              |
+#    1. http://pastebin.com/BnZZ0npB                                           |
+#    Video:                                                                    |
+#    1. https://www.youtube.com/watch?v=EASgWfV_Nxs                            |
+#    Mentioned Patreon Supporters:                                             |
+#    https://www.patreon.com/posts/71738797                                    |
+#------------------------------------------------------------------------------|
+#  * Authors                                                                   |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.00a(GMT 0400 9-8-2015):                                                |
+#    1. 1st version of this script finished                                    |
+#==============================================================================|
+
+($doublex_rmvxa ||= {})[:BATB_Delay] = "v1.00a"
+
+#==============================================================================|
+#  ** Script Configurations                                                    |
+#     You only need to edit this part as it's about what this script does      |
+#------------------------------------------------------------------------------|
+
+module DoubleX_RMVXA
+
+  module BATB_Delay
+
+    # Sets the scale applied to the skill/item's invocation speed
+    # The sum of all inputted skills/items' invocation speeds, multiplied by
+    # this scale, will be subtracted from the battler's atb value right after
+    # that battler finished inputting all that battler's action slots
+    # If INVOCATION_SPEED_SCALE_VAR_ID is a natural number, the value of
+    # variable with id INVOCATION_SPEED_SCALE_VAR_ID will be used instead of
+    # using INVOCATION_SPEED_SCALE
+    # The value of variable with id INVOCATION_SPEED_SCALE_VAR_ID should remain
+    # the same during the same battle to ensure proper invocation speed scaling
+    INVOCATION_SPEED_SCALE = 10
+    INVOCATION_SPEED_SCALE_VAR_ID = 0
+
+    # Sets the maximum atb value displayed on the atb bars
+    # If the actual atb value's greater than this, the atb bar's overlaid
+    # If MAX_ATB_VAL_VAR_ID is a natural number, the value of variable with id
+    # MAX_ATB_VAL_VAR_ID will be used instead of using MAX_ATB_VAL
+    # The value of variable with id MAX_ATB_VAL_VAR_ID should remain the same
+    # during the same battle to ensure proper atb bar display
+    MAX_ATB_VAL = 60000
+    MAX_ATB_VAL_VAR_ID = 0
+
+    # Sets the atb value added when the battler's atb's reset
+    # If RESET_ATB_VAL_VAR_ID is a natural number, the value of variable with id
+    # RESET_ATB_VAL_VAR_ID will be used instead of using RESET_ATB_VAL
+    RESET_ATB_VAL = 60000
+    RESET_ATB_VAL_VAR_ID = 0
+
+    # Sets the maximum atb value at the start of a battle
+    # If START_ATB_VAL_VAR_ID is a natural number, the value of variable with id
+    # START_ATB_VAL_VAR_ID will be used instead of using START_ATB_VAL
+    START_ATB_VAL = 60000
+    START_ATB_VAL_VAR_ID = 0
+
+    # Sets the 1st atb bar overlay color as text color ATB_OVERLAY_COLOR1
+    # It'll be used when the atb bar's overlaid
+    # If ATB_OVERLAY_COLOR1_VAR_ID is a natural number, the value of variable
+    # with id ATB_OVERLAY_COLOR1_VAR_ID will be used instead of using
+    # ATB_OVERLAY_COLOR1
+    # The value of variable with id ATB_OVERLAY_COLOR1_VAR_ID should remain the
+    # same during the same battle to ensure proper atb bar color displays
+    ATB_OVERLAY_COLOR1 = 19
+    ATB_OVERLAY_COLOR1_VAR_ID = 0
+
+    # Sets the 2nd atb bar overlay color as text color ATB_OVERLAY_COLOR2
+    # It'll be used when the atb bar's overlaid
+    # If ATB_OVERLAY_COLOR2_VAR_ID is a natural number, the value of variable
+    # with id ATB_OVERLAY_COLOR2_VAR_ID will be used instead of using
+    # ATB_OVERLAY_COLOR2
+    # The value of variable with id ATB_OVERLAY_COLOR2_VAR_ID should remain the
+    # same during the same battle to ensure proper atb bar color displays
+    ATB_OVERLAY_COLOR2 = 26
+    ATB_OVERLAY_COLOR2_VAR_ID = 0
+
+#==============================================================================|
+#  ** Script Implementations                                                   |
+#     You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+#  * Script Support Info:                                                      |
+#    1. Prerequisites                                                          |
+#       - Basic atb concept and default RMVXA battle system knowledge          |
+#       - Some RGSS3 scripting proficiency to fully comprehend this script     |
+#    2. Method documentation                                                   |
+#       - The 1st part describes why this method's rewritten/aliased for       |
+#         rewritten/aliased methods or what the method does for new methods    |
+#       - The 2nd part describes what the arguments of the method are          |
+#       - The 3rd part informs which version rewritten, aliased or created this|
+#         method                                                               |
+#       - The 4th part informs whether the method's rewritten or new           |
+#       - The 5th part describes how this method works for new methods only,   |
+#         and describes the parts added, removed or rewritten for rewritten or |
+#         aliased methods only                                                 |
+#       Example:                                                               |
+# #--------------------------------------------------------------------------| |
+# #  Why rewrite/alias/What this method does                                 | |
+# #--------------------------------------------------------------------------| |
+# # *argv: What these variables are                                            |
+# # &argb: What this block is                                                  |
+# def def_name(*argv, &argb) # Version X+; Rewrite/New                         |
+#   # Added/Removed/Rewritten to do something/How this method works            |
+#   def_name_code                                                              |
+#   #                                                                          |
+# end # def_name                                                               |
+#------------------------------------------------------------------------------|
+
+    #--------------------------------------------------------------------------|
+    #  Helper methods simplifying the uses of the configuration values         |
+    #--------------------------------------------------------------------------|
+
+    def self.invocation_speed_scale
+      return INVOCATION_SPEED_SCALE if INVOCATION_SPEED_SCALE_VAR_ID <= 0
+      $game_variables[INVOCATION_SPEED_SCALE_VAR_ID]
+    end # invocation_speed_scale
+
+    def self.max_atb_val
+      MAX_ATB_VAL_VAR_ID > 0 ? $game_variables[MAX_ATB_VAL_VAR_ID] : MAX_ATB_VAL
+    end # max_atb_val
+
+    def self.reset_atb_val
+      return RESET_ATB_VAL if RESET_ATB_VAL_VAR_ID <= 0
+      $game_variables[RESET_ATB_VAL_VAR_ID]
+    end # reset_atb_val
+
+    def self.start_atb_val
+      return START_ATB_VAL if START_ATB_VAL_VAR_ID <= 0
+      $game_variables[START_ATB_VAL_VAR_ID]
+    end # start_atb_val
+
+    def self.atb_overlay_color1
+      return ATB_OVERLAY_COLOR1 if ATB_OVERLAY_COLOR1_VAR_ID <= 0
+      $game_variables[ATB_OVERLAY_COLOR1_VAR_ID]
+    end # atb_overlay_color1
+
+    def self.atb_overlay_color2
+      return ATB_OVERLAY_COLOR2 if ATB_OVERLAY_COLOR2_VAR_ID <= 0
+      $game_variables[ATB_OVERLAY_COLOR2_VAR_ID]
+    end # atb_overlay_color2
+
+  end # BATB_Delay
+
+end # DoubleX_RMVXA
+
+if $doublex_rmvxa[:BATB]
+
+class << BattleManager # Edit
+
+  #----------------------------------------------------------------------------|
+  #  Gets rid of the conflicting batb features                                 |
+  #----------------------------------------------------------------------------|
+  def process_escape # Rewrite
+    @batb_can_esc && process_escape_batb # Rewritten
+  end # process_escape
+
+end # BattleManager
+
+class Game_BattlerBase # Edit
+
+  #----------------------------------------------------------------------------|
+  #  Uses the atb decrement mechanics and open atb value scale instead         |
+  #----------------------------------------------------------------------------|
+  def batb_start(start) # Rewrite
+    # Rewritten
+    @batb_val += DoubleX_RMVXA::BATB_Delay.start_atb_val
+    return if DoubleX_RMVXA::BATB.atb_start_mode == 0
+    return if start == :surprise && actor? || start == :preempt && enemy?
+    @batb_val = (@batb_val * ((param_max(6) - agi) * 1.0 / param_max(6))).to_i
+    make_actions if @batb_val <= 0
+    #
+  end # batb_start
+
+end # Game_BattlerBase
+
+#------------------------------------------------------------------------------|
+#  * Gets rid of the conflicting batb features and uses the batb delay ones    |
+#------------------------------------------------------------------------------|
+class Game_Battler < Game_BattlerBase # Edit
+
+  #----------------------------------------------------------------------------|
+  #  New public instance variable                                              |
+  #----------------------------------------------------------------------------|
+  attr_reader :last_batb_inputable # The action inputability flag
+
+  #----------------------------------------------------------------------------|
+  #  Gets rid of the atb fill mode and uses the atb decrement mechanics instead|
+  #----------------------------------------------------------------------------|
+  def batb_start(start) # Rewrite
+    @batb_val_change = true
+    # Rewritten
+    @last_batb_inputable = false
+    return @batb_val = DoubleX_RMVXA::BATB_Delay.start_atb_val unless movable?
+    if start == :preempt && actor? || start == :surprise && enemy?
+      @batb_val = 0
+      return make_actions
+    end
+    #
+    super(start)
+  end # batb_start
+
+  #----------------------------------------------------------------------------|
+  #  Gets rid of the atb fill mode and uses the atb decrement mechanics instead|
+  #----------------------------------------------------------------------------|
+  def batb_update # Rewrite
+    # Rewritten
+    return if restriction > 3
+    if @batb_val > 0
+      @batb_val_change = @batb_val != @batb_val -= batb_rate
+    elsif @last_batb_inputable && @actions.all? { |act| act.batb_confirm }
+      @batb_val_change = @batb_val != @batb_val -= batb_speed
+      @last_batb_inputable = false
+    end
+    return unless @batb_val <= 0
+    @batb_val = 0
+    make_actions if @actions.empty?
+    #
+  end # batb_update
+
+  #----------------------------------------------------------------------------|
+  #  Gets rid of the atb fill mode and uses integer instead of floating points |
+  #----------------------------------------------------------------------------|
+  def batb_rate # Rewrite
+    # Rewritten
+    return agi if DoubleX_RMVXA::BATB.atb_rate_code == 0
+    (agi * (agi * 1.0 / BattleManager.batb_avg_agi)).to_i
+    #
+  end # batb_rate
+
+  #----------------------------------------------------------------------------|
+  #  Uses the atb decrement mechanics and open atb value scale instead         |
+  #----------------------------------------------------------------------------|
+  def reset_batb_val(reset = true) # Rewrite
+    # Rewritten
+    if reset
+      @batb_val += DoubleX_RMVXA::BATB_Delay.reset_atb_val
+      @batb_val_change = true
+    end
+    @last_batb_inputable = false
+    #
+    clear_actions
+    BattleManager.action_battlers.delete(self)
+    BattleManager.clear_actor if actor? && BattleManager.actor == self
+  end # reset_batb_val
+
+  #----------------------------------------------------------------------------|
+  #  Marks that this battler becomes able to input actions as well             |
+  #----------------------------------------------------------------------------|
+  alias make_actions_batb_delay make_actions
+  def make_actions
+    make_actions_batb_delay
+    @last_batb_inputable = true # Added
+  end # make_actions
+
+  #----------------------------------------------------------------------------|
+  #  Ensures battlers added after the battle will have correct inputable flag  |
+  #----------------------------------------------------------------------------|
+  alias on_battle_end_batb_delay on_battle_end
+  def on_battle_end
+    on_battle_end_batb_delay
+    @last_batb_inputable = false # Added
+  end # on_battle_end
+
+  #----------------------------------------------------------------------------|
+  #  Gets rid of the party escape speed and uses the invocation speed scale    |
+  #----------------------------------------------------------------------------|
+  alias batb_speed_delay batb_speed
+  def batb_speed
+    # Rewritten
+    batb_speed_delay * DoubleX_RMVXA::BATB_Delay.invocation_speed_scale
+    #
+  end # batb_speed
+
+end # Game_Battler
+
+#------------------------------------------------------------------------------|
+#  * Displays the atb bars with overlay colors if they're overlaid as well     |
+#------------------------------------------------------------------------------|
+class Window_BattleStatus < Window_Selectable # Edit
+
+  # rect: The atb bar's rect
+  # actor: The atb bar's owner
+  # display_tp: The tp bar display flag
+  def draw_batb_bar(rect, actor, display_tp) # Rewrite
+    display_tp ? (x, w = rect.x + 184, 36) : (x, w = rect.x + 160, 60)
+    # Rewritten
+    colors = set_batb_bar_colors(actor.batb_val)
+    max = DoubleX_RMVXA::BATB_Delay.max_atb_val
+    batb_val = actor.batb_val > max ? max : actor.batb_val
+    draw_gauge(x, rect.y, w, batb_val * 1.0 / max, colors[0], colors[1])
+    #
+    change_color(system_color)
+    draw_text(x, rect.y, 30, line_height, DoubleX_RMVXA::BATB.atb_bar_text)
+    actor.batb_val_change = false
+  end # draw_batb_bar
+
+  # batb_val: The atb value
+  def set_batb_bar_colors(batb_val) # New
+    if batb_val <= DoubleX_RMVXA::BATB_Delay.max_atb_val
+      batb = DoubleX_RMVXA::BATB
+      return [text_color(batb.atb_bar_color1), text_color(batb.atb_bar_color2)]
+    end
+    delay = DoubleX_RMVXA::BATB_Delay
+    [text_color(delay.atb_overlay_color1), text_color(delay.atb_overlay_color2)]
+  end # set_batb_bar_colors
+
+end # Window_BattleStatus
+
+class Scene_Battle < Scene_Base # Edit
+
+  #----------------------------------------------------------------------------|
+  #  Uses the atb decrement mechanics and battler action inputable flag instead|
+  #----------------------------------------------------------------------------|
+  def process_action # Rewrite
+    return if scene_changing?
+    return process_batb_act(true) if @subject
+    esc = BattleManager.batb_esc
+    BattleManager.action_battlers.each { |battler|
+      next if esc && battler.actor?
+      next if battler.batb_val > 0 || battler.last_batb_inputable # Rewritten
+      @subject = battler
+      process_batb_act
+      @subject = nil
+    }
+  end # process_action
+
+end # Scene_Battle
+
+#------------------------------------------------------------------------------|
+
+else
+
+  # Informs users that they didn't place BATB above this script
+  msgbox("To use DoubleX RMVXA Basic ATB Delay, put it below:\n" + 
+         "DoubleX RMVXA Basic ATB\nbut above Main")
+
+end
+
+#==============================================================================|

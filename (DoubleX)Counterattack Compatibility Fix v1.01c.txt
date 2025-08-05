@@ -1,0 +1,129 @@
+#==============================================================================|
+#  ** DoubleX RMVXA Counterattack Compatibility Fix v1.01c                     |
+#------------------------------------------------------------------------------|
+#  * Changelog                                                                 |
+#    v1.01c(GMT 1500 14-7-2015):                                               |
+#    - Changed this script's terms of use                                      |
+#    - In sync with the latest DoubleX RMVXA Counterattack Edit version        |
+#    - Improved this script's readibility                                      |
+#    v1.01b(GMT 0200 5-7-2014):                                                |
+#    - Updated the compatibility with DoubleX RMVXA Substitute Edit            |
+#    v1.01a(GMT 0900 7-4-2014):                                                |
+#    - Updated the compatibility fix to Yanfly Engine Ace - Ace Battle Engine  |
+#    v1.00a(GMT 0900 13-2-2014):                                               |
+#    - 1st version of this script finished                                     |
+#------------------------------------------------------------------------------|
+#  * Author                                                                    |
+#    DoubleX                                                                   |
+#------------------------------------------------------------------------------|
+#  * Terms of use                                                              |
+#    None other than not claiming this script as created by anyone except      |
+#    DoubleX or his alias                                                      |
+#------------------------------------------------------------------------------|
+#  * Prerequisites                                                             |
+#    Scripts:                                                                  |
+#    - DoubleX RMVXA Counterattack Edit                                        |
+#    Knowledge:                                                                |
+#    That of using DoubleX RMVXA Counterattack Edit                            |
+#------------------------------------------------------------------------------|
+#  * Functions                                                                 |
+#    - Fixes compatibility issues of DoubleX RMVXA Counterattack Edit          |
+#------------------------------------------------------------------------------|
+#  * Manual                                                                    |
+#    To use this script, open the script editor and put this script into an    |
+#    open slot below scripts:                                                  |
+#    - DoubleX RMVXA Counterattack Edit                                        |
+#    - Yanfly Engine Ace - Ace Battle Engine                                   |
+#    but above ¡¿ Main. Save to take effect.                                    |
+#------------------------------------------------------------------------------|
+#  * Compatibility                                                             |
+#    - Same as that of DoubleX RMVXA Counterattack Edit except those fixed in  |
+#      this script                                                             |
+#==============================================================================|
+
+($imported ||= {})["DoubleX RMVXA Counterattack Compatibility Fix"] = true
+
+#==============================================================================|
+#  ** You need not edit this part as it's about how this script works          |
+#------------------------------------------------------------------------------|
+
+if $imported["DoubleX RMVXA Counterattack Edit"]
+
+if $imported["YEA-BattleEngine"]
+
+#------------------------------------------------------------------------------|
+#  * Edit class: Scene_Battle                                                  |
+#------------------------------------------------------------------------------|
+
+class Scene_Battle < Scene_Base
+
+  #----------------------------------------------------------------------------|
+  #  (v1.05a+)Alias method: show_attack_animation                              |
+  #----------------------------------------------------------------------------|
+  alias show_attack_animation_counterattack_fix show_attack_animation
+  def show_attack_animation(targets)
+    # Rewritten to handle the Keep_Ani case
+    if @cnt_subject && @cnt_subject.actor?
+      show_normal_animation(targets, @cnt_subject.atk_animation_id1, false)
+      wait_for_animation
+      show_normal_animation(targets, @cnt_subject.atk_animation_id2, true)
+    else
+      show_attack_animation_counterattack_fix(targets)
+    end
+    #
+  end # show_attack_animation
+
+  #----------------------------------------------------------------------------|
+  #  Alias method: apply_item_effects                                          |
+  #----------------------------------------------------------------------------|
+  alias apply_item_effects_counterattack_fix apply_item_effects
+  def apply_item_effects(target, item)
+    apply_item_effects_counterattack_fix(target, item)
+    # Added to invoke cnt upon mev or !CNT_Negate_Hit with chance cnt
+    return unless target.mev_invoke_cnt? && target.invoke_counter_attack || 
+    !DoubleX_RMVXA::Counterattack_Edit::CNT_Negate_Hit && 
+    rand < target.item_cnt_counterattack_edit(@subject, item)
+    invoke_counter_attack(target, item)
+    #
+  end # apply_item_effects
+
+  #----------------------------------------------------------------------------|
+  #  Rewrite method: invoke_counter_attack                                     |
+  #----------------------------------------------------------------------------|
+  def invoke_counter_attack(target, item)
+    cnte = DoubleX_RMVXA::Counterattack_Edit
+    @log_window.display_counter(target, item)
+    @cnt_subject = target if cnte::Keep_Ani
+    attack_skill = $data_skills[target.counterattack_skill_id]
+    if attack_skill.for_opponent?
+      if cnte::Keep_Scope
+        scope = targets_for_opponents_counterattack_edit(target, attack_skill)
+      else
+        scope = [@subject]
+      end
+      apply_counterattack_edit(target, attack_skill, scope, 
+      $imported["DoubleX RMVXA Substitute Edit"])
+    elsif attack_skill.for_friend?
+      if cnte::Keep_Scope
+        scope = targets_for_friends_counterattack_edit(target, attack_skill)
+      else
+        scope = [target]
+      end
+      apply_counterattack_edit(target, attack_skill, scope)
+    end
+    @cnt_subject &&= !cnte::Keep_Ani
+    # Rewritten to fix compatibility issues with YEA-BattleEngine
+    status_redraw_target(@subject)
+    status_redraw_target(target) unless target == @subject
+    perform_collapse_check(target)
+    perform_collapse_check(@subject)
+    #
+  end # invoke_counter_attack
+
+end # Scene_Battle
+
+end # $imported["YEA-BattleEngine"]
+
+end # if $imported["DoubleX RMVXA Counterattack Edit"]
+
+#==============================================================================|
